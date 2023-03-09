@@ -32,7 +32,12 @@ class MikoGPT(threading.Thread):
         return self._stop.isSet()
 
     def run(self):
-        asyncio.create_task(self.respond(message=self.mm.message))
+        num = -1
+        while True:
+            if self.stopped(): return
+            print(f"hi {num}")
+            num+=1
+            time.sleep(1)
     
     async def respond(self, message: discord.Message=None, interaction: discord.Interaction=None) -> None:
     

@@ -334,7 +334,7 @@ async def on_message(message: discord.Message):
                 return
 
             gpt = MikoGPT(mm=mm)
-            gpt.run()
+            gpt.start()
             # asyncio.create_task(response_thread(mm=mm))
             # return
         
