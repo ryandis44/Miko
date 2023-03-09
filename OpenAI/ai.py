@@ -1,24 +1,43 @@
+import asyncio
+import threading
+import time
 import openai
 import discord
 import re
 from tunables import tunables, GLOBAL_EMBED_COLOR
-from Database.GuildObjects import MikoMember
+from Database.GuildObjects import MikoMember, MikoMessage
 
 openai.api_key = tunables('OPENAI_API_KEY')
 
-class MikoGPT:
-    def __init__(self, u: MikoMember, client: discord.Client, prompt: str):
-        self.u = u
-        self.client = client
-        self.prompt = prompt.split()
+class MikoGPT(threading.Thread):
+    def __init__(self, mm: MikoMessage, *args, **kwargs):
+        super(MikoGPT, self).__init__(*args, **kwargs)
+        self._stop = threading.Event()
+        self.u = mm.user
+        self.mm = mm
+        self.client = mm.user.client
+        self.prompt = mm.message.content.split()
         self.response = {
             'type': "NORMAL", # NORMAL, SERIOUS, IMAGE
             'data': None
         }
         self.__sanitize_prompt()
+        print("MikoGPT object made")
+    
+    def stop(self):
+        print("Stopping GPT Thread")
+        self._stop.set()
+ 
+    def stopped(self):
+        return self._stop.isSet()
+
+    def run(self):
+        asyncio.create_task(self.respond(message=self.mm.message))
     
     async def respond(self, message: discord.Message=None, interaction: discord.Interaction=None) -> None:
     
+        print("hi")
+
         if message is not None:
             msg = await message.reply(content=tunables('LOADING_EMOJI'), mention_author=False, silent=True)
         elif interaction is not None:
@@ -51,6 +70,7 @@ class MikoGPT:
             await msg.edit(
                 content=f"{tunables('GENERIC_APP_COMMAND_ERROR_MESSAGE')[:-1]}: {e}"
             )
+        self.stop()
         
     
     def __sanitize_prompt(self) -> None:

@@ -333,8 +333,10 @@ async def on_message(message: discord.Message):
                 )
                 return
 
-            gpt = MikoGPT(u=mm.user, client=client, prompt=message.content)
-            await gpt.respond(message=message)
+            gpt = MikoGPT(mm=mm)
+            gpt.run()
+            # asyncio.create_task(response_thread(mm=mm))
+            # return
         
         # Basic response
         elif mm.channel.profile.feature_enabled('REPLY_TO_MENTION'):
@@ -343,6 +345,7 @@ async def on_message(message: discord.Message):
                 silent=True
             )
 
+    return
 
 
 async def load_extensions():
