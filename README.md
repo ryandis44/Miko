@@ -1,4 +1,0 @@
-# miko
-
-# contributors
-@ryandis44
