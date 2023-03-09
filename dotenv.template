@@ -1,0 +1,11 @@
+# File with all active environment variables. * means required
+
+*DISCORD_TOKEN=
+*DATABASE_USERNAME=
+*DATABASE_PASSWORD=
+*DATABASE=
+*CMD_PREFIX1=!
+*CMD_PREFIX2=!
+*APP_CMD_PREFIX=[MIKO TESTING]
+DATABASE_DEBUG=0 or 1 (none = 0 and 1 = debug)
+CONNECTION=REMOTE or LOCAL (not defined == local)

@@ -1,0 +1,16 @@
+node_modules/
+build/
+npm-debug.log
+.env
+.env.test
+.env.production
+.DS_Store
+.npm
+.eslintcache
+logs/
+*.log
+npm-debug.log*
+__pycache__
+**/__pycache__/*
+.env_miko
+ffmpeg/
