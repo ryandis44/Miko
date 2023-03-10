@@ -1,4 +1,5 @@
 # Miko Bot main file
+from Database.database_class import connect_db
 from tunables import fetch_tunables, tunables, GLOBAL_EMBED_COLOR
 fetch_tunables()
 
@@ -362,6 +363,7 @@ async def load_extensions_console():
 
 async def main():
     print('bot online')
+    asyncio.create_task(connect_db())
     asyncio.create_task(heartbeat())
     async with client:
         await load_extensions()
