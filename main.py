@@ -1,7 +1,4 @@
-# The Boys Hangout Homie Helper Bot
-
-
-from misc.ThreadTest import thread_test
+# Miko Bot main file
 from tunables import fetch_tunables, tunables, GLOBAL_EMBED_COLOR
 fetch_tunables()
 
@@ -259,31 +256,7 @@ async def on_message(message: discord.Message):
         await client.process_commands(message)
         return
     else: await client.process_commands(message)
-    
-    
-    
-    
-    
-    
-    
-    
-    if message.author.id == 221438665749037056:
-        msg = await message.reply(tunables('LOADING_EMOJI'))
-        
-        func = asyncio.to_thread(thread_test)
-        resp = await func
-        print(resp)
-        
-        await msg.edit(content=resp)
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
     
     if message.content.lower().startswith(f"{os.getenv('CMD_PREFIX1')}rt") and mm.user.bot_permission_level >= 5:
         await message.channel.send("Fetching tunables from database...")

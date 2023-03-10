@@ -246,7 +246,7 @@ class PlaytimeCog(commands.Cog):
         sel_cmd.append(query_limit)
 
         try:
-            playtime_by_game = app_cmd_db.db_executor(''.join(sel_cmd))
+            playtime_by_game = await app_cmd_db.executor(''.join(sel_cmd))
 
             if playtime_by_game == []:
                 msg = []

@@ -1,3 +1,4 @@
+import asyncio
 import mysql.connector as mariadb
 import dns.resolver
 import os
@@ -80,6 +81,10 @@ class Database:
         self.db = db
         self.cur = cur
         return
+    
+    async def executor(self, exec_cmd):
+        print("In executor func")
+        return await asyncio.to_thread(self.db_executor, exec_cmd)
 
     def db_executor(self, exec_cmd):
         for attempt in range(1,6):
