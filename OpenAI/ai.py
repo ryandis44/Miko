@@ -88,7 +88,7 @@ class MikoGPT:
 
         if self.response['type'] != "IMAGE":
             
-            role = "You are a helpful and knowledgeable assistant."
+            role = tunables('OPENAI_RESPONSE_ROLE_DEFAULT')
             match self.response['type']:
                 case 'SERIOUS' | 'IMAGE':
                     role = tunables('OPENAI_RESPONSE_ROLE_DEFAULT')
