@@ -85,11 +85,11 @@ class AsyncDatabase:
     async def execute(self, exec_cmd: str):
         for attempt in range(1,6):
             try:
-                self.cursor.execute(exec_cmd)
+                await self.cursor.execute(exec_cmd)
             except Exception as e:
                 if attempt < 5:
                     if os.getenv('DATABASE_DEBUG') != "1": await asyncio.sleep(5)
-                    check_conn()
+                    await check_conn()
                     self.__update_vars()
                     continue
                 else:
@@ -98,6 +98,7 @@ class AsyncDatabase:
         
         if exec_cmd.startswith("SELECT"):
             val = await self.conn.fetchall()
+            print(val)
             if len(val) == 1:
                 if len(val[0]) == 1: return val[0][0]
             return val
