@@ -333,10 +333,8 @@ async def on_message(message: discord.Message):
                 )
                 return
 
-            gpt = MikoGPT(mm=mm)
-            gpt.start()
-            # asyncio.create_task(response_thread(mm=mm))
-            # return
+            gpt = MikoGPT(u=mm.user, client=client, prompt=message.content)
+            await gpt.respond(message=message)
         
         # Basic response
         elif mm.channel.profile.feature_enabled('REPLY_TO_MENTION'):
