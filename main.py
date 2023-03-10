@@ -262,6 +262,7 @@ async def on_message(message: discord.Message):
     
     
     if message.author.id == 221438665749037056: await thread_test(mm=mm)
+    print(f"Response to {message.id} complete")
     
     if message.content.lower().startswith(f"{os.getenv('CMD_PREFIX1')}rt") and mm.user.bot_permission_level >= 5:
         await message.channel.send("Fetching tunables from database...")

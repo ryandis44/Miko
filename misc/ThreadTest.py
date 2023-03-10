@@ -39,11 +39,11 @@ class RefreshThread(threading.Thread):
 async def thread_test(mm: MikoMessage) -> None:
     
     msg = await mm.message.reply(
-        content=tunables('LOADING_EMOJI')
+        content=f"Responding to {mm.message.id} {tunables('LOADING_EMOJI')}"
     )
     
     await asyncio.sleep(5)
     
     await msg.edit(
-        content="Complete"
+        content=f"{mm.message.id } Complete"
     )
