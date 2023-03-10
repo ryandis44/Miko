@@ -1,3 +1,4 @@
+import asyncio
 import openai
 import discord
 import re
@@ -28,7 +29,8 @@ class MikoGPT:
             return
     
         try:
-            self.__openai_interaction()
+            block = asyncio.to_thread(self.__openai_interaction)
+            await block
 
             if len(self.response['data']) >= 750 or self.response['type'] == "IMAGE":
                 embed = self.__embed()

@@ -369,6 +369,7 @@ async def on_message(message: discord.Message):
                 silent=True
             )
 
+    return
 
 
 async def load_extensions():
