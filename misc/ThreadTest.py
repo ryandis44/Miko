@@ -42,7 +42,7 @@ async def thread_test(mm: MikoMessage) -> None:
         content=f"Responding to {mm.message.id} {tunables('LOADING_EMOJI')}"
     )
     
-    await asyncio.sleep(5)
+    time.sleep(5)
     
     await msg.edit(
         content=f"{mm.message.id } Complete"
