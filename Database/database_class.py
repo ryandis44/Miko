@@ -14,17 +14,14 @@ ip = None
 for ipval in resolve:
     ip = ipval.to_text()
 
-
-conn = None
-cursor = None
-async def connect_db():
-    global conn
-    global cursor
+pool = None
+async def connect_pool():
+    global pool
 
     try:
         print("\n\nAttempting local database connection...")
         if os.getenv('CONNECTION') == "REMOTE": raise Exception
-        conn = await aiomysql.connect(
+        pool = await aiomysql.create_pool(
                 host='192.168.0.12',
                 port=3306,
                 connect_timeout=2,
@@ -34,12 +31,11 @@ async def connect_db():
                 loop=asyncio.get_event_loop(),
                 autocommit=True
         )
-        cursor = await conn.cursor()
-        print("Connected to database locally!\n")
+        print("Database pool connected locally!\n")
     except Exception as e:
         print(f"Database server not running locally, attempting database connection via Cloudflare...")
         try:
-            conn = await aiomysql.connect(
+            pool = await aiomysql.create_pool(
                     host=ip,
                     port=3306,
                     user=os.getenv('DATABASE_USERNAME'),
@@ -48,60 +44,55 @@ async def connect_db():
                     loop=asyncio.get_event_loop(),
                     autocommit=True
             )
-            cursor = await conn.cursor()
-            print("ASYNC Connected to database via Cloudflare!\n")
+            # conn = await pool.acquire()
+            # cursor = await conn.cursor()
+            print("Database pool connected via Cloudflare!\n")
         except:
             print(f"\n##### FAILED TO CONNECT TO DATABASE! #####\n{e}\n")
 
-    await cursor.execute("SELECT * FROM SERVERS WHERE server_id='890638458211680256'")
-    val = await cursor.fetchall()
-    print(val)
-
-async def check_conn():
-    global conn
-    if conn is None:
-        await connect_db()
-    if conn.closed:
-        print(f"\n\n####### DATABASE CONNECTION LOST! Attempting to reconnect... #######")
-        await connect_db()
+async def check_pool():
+    global pool
+    if pool is None:
+        await connect_pool()
+    if pool.closed:
+        print(f"\n\n####### DATABASE POOL CONNECTION LOST! Attempting to reconnect... #######")
+        await connect_pool()
 
         
 class AsyncDatabase:
 
     def __init__(self, file):
-        global conn
-        global cursor
+        global pool
         self.file = file
-        self.conn = conn
-        self.cursor = cursor
+        self.pool = pool
 
     def __update_vars(self):
-        global conn
-        global cursor
-        self.conn = conn
-        self.cursor = cursor
-
+        global pool
+        self.pool = pool
 
     async def execute(self, exec_cmd: str):
         for attempt in range(1,6):
             try:
-                await self.cursor.execute(exec_cmd)
+                async with self.pool.acquire() as conn:
+                    cursor = await conn.cursor()
+                    await cursor.execute(exec_cmd)
             except Exception as e:
                 if attempt < 5:
                     if os.getenv('DATABASE_DEBUG') != "1": await asyncio.sleep(5)
-                    await check_conn()
+                    await check_pool()
                     self.__update_vars()
                     continue
                 else:
-                    print(f"\nDATABASE ERROR! [{self.name}] Could not execute: \"{exec_cmd}\"\n{e}")
-            break
+                    print(f"\nASYNC DATABASE ERROR! [{self.file}] Could not execute: \"{exec_cmd}\"\n{e}")
+                    break
         
         if exec_cmd.startswith("SELECT"):
-            val = await self.conn.fetchall()
-            print(val)
+            val = await cursor.fetchall()
             if len(val) == 1:
-                if len(val[0]) == 1: return val[0][0]
+                if len(val[0]) == 1:
+                    return val[0][0]
             return val
+        return
     
     def exists(self, rows):
         return rows > 0
