@@ -47,3 +47,4 @@ async def thread_test(mm: MikoMessage) -> None:
     await msg.edit(
         content=f"{mm.message.id } Complete"
     )
+    print("Complete in THREAD")
