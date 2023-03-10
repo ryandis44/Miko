@@ -36,15 +36,7 @@ class RefreshThread(threading.Thread):
             time.sleep(1)
             
 
-async def thread_test(mm: MikoMessage) -> None:
-    
-    msg = await mm.message.reply(
-        content=f"Responding to {mm.message.id} {tunables('LOADING_EMOJI')}"
-    )
+def thread_test() -> str:
     
     time.sleep(5)
-    
-    await msg.edit(
-        content=f"{mm.message.id } Complete"
-    )
-    print("Complete in THREAD")
+    return "Complete"
