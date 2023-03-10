@@ -919,6 +919,7 @@ class MikoMessage():
                         e = self.__big_emoji_embed(auth)
                         if auth is not None: await ref.reply(embed=e, silent=True)
                         else: await self.message.channel.send(embed=e, silent=True)
+                        self.user.increment_statistic('BIG_EMOJIS_SENT')
                         return True
                     except Exception as e: print(f"Big emoji error: {e}")
         return False
