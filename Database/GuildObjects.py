@@ -135,6 +135,14 @@ class MikoGuild():
             f"server_id='{self.guild.id}'"
         )
         return [item[0] for item in val] if type(val) is list else [val]
+    @property
+    def ymca_green_book_channel(self) -> discord.TextChannel:
+        val = go.db_executor(
+            "SELECT ymca_green_book_channel FROM SERVERS WHERE "
+            f"server_id='{self.guild.id}'"
+        )
+        if val == [] or val is None: return None
+        return self.client.get_channel(int(val))
 
     def set_member_numbers(self) -> None:
         member_ids = go.db_executor(
