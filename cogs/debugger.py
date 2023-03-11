@@ -17,7 +17,7 @@ from Polls.UI import active_polls
 from Music.LavalinkClient import AUDIO_SESSIONS
 load_dotenv()
 
-dbg = Database("debugger.py")
+dbg = Database("cogs.debugger.py")
 
 class Debugger(commands.Cog):
     def __init__(self, client):

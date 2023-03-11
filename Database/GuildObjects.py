@@ -430,10 +430,14 @@ class MikoTextChannel(MikoGuild):
 
 class MikoMember(MikoGuild):
     def __init__(self, user: discord.Member, client: discord.Client, guild_id: int = None, check_exists=True, check_exists_guild=True):
+        
+        if user.id == 1051733693665923132 and user.pending: print("Tamu is PENDING VERIFICATION")
+        elif user.id == 1051733693665923132: print("Tamu is NOT PENDING VERIFICATION")
+
         if guild_id is None: super().__init__(guild=user.guild, client=client, check_exists=check_exists, check_exists_guild=check_exists_guild)
         else: super().__init__(guild=None, client=client, guild_id=guild_id, check_exists=check_exists, check_exists_guild=check_exists_guild)
         self.user = user
-        if check_exists: self.__exists()
+        if check_exists and not user.pending: self.__exists()
     
     def __str__(self):
         return f"{self.user} - {self.guild} | MikoMember Object"
@@ -643,15 +647,14 @@ class MikoMember(MikoGuild):
 
             case "THEBOYS":
 
-                if self.client.user.id != 1017998983886545068: return # Only send welcome messages/role assignments if prod miko
+                if self.client.user.id == 1017998983886545068: return # Only send welcome messages/role assignments if prod miko
                 channel = self.guild.system_channel
-                if channel is None: return
-
-                await asyncio.sleep(1) # To ensure welcome message is sent after join message
-                await channel.send(
-                    f'Hi {self.user.mention}, welcome{" BACK" if not new else ""} to {self.guild}! :tada:\n'
-                    f'> You are unique member `#{self.member_number}`'
-                )
+                if channel is not None:
+                    await asyncio.sleep(1) # To ensure welcome message is sent after join message
+                    await channel.send(
+                        f'Hi {self.user.mention}, welcome{" BACK" if not new else ""} to {self.guild}! :tada:\n'
+                        f'> You are unique member `#{self.member_number}`'
+                    )
                 
                 '''
                 As of 12/11/2022, we will no longer assign the 'Bro'
@@ -690,9 +693,10 @@ class MikoMember(MikoGuild):
         rows = go.db_executor(sel_cmd)
         self.__settings_exist()
 
-        if self.user.pending: return
         if go.exists(len(rows)):
+            if self.user.id == 1051733693665923132: print("Checking cache...")
             self.__update_cache(rows)
+            if self.user.id == 1051733693665923132: print("Cache checked.")
             return
         
 
