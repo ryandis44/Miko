@@ -430,13 +430,10 @@ class MikoTextChannel(MikoGuild):
 
 class MikoMember(MikoGuild):
     def __init__(self, user: discord.Member, client: discord.Client, guild_id: int = None, check_exists=True, check_exists_guild=True):
-        
-        if user.id == 1051733693665923132 and user.pending: print("Tamu is PENDING VERIFICATION")
-        elif user.id == 1051733693665923132: print("Tamu is NOT PENDING VERIFICATION")
-
         if guild_id is None: super().__init__(guild=user.guild, client=client, check_exists=check_exists, check_exists_guild=check_exists_guild)
         else: super().__init__(guild=None, client=client, guild_id=guild_id, check_exists=check_exists, check_exists_guild=check_exists_guild)
         self.user = user
+        self.greeting_task = None
         if check_exists and not user.pending: self.__exists()
     
     def __str__(self):
@@ -655,6 +652,7 @@ class MikoMember(MikoGuild):
                         f'Hi {self.user.mention}, welcome{" BACK" if not new else ""} to {self.guild}! :tada:\n'
                         f'> You are unique member `#{self.member_number}`'
                     )
+                else: print(f"\n\n**************************\nCOULD NOT SEND WELCOME MESSAGE FOR {self.user}\n**************************\n\n")
                 
                 '''
                 As of 12/11/2022, we will no longer assign the 'Bro'
@@ -694,9 +692,7 @@ class MikoMember(MikoGuild):
         self.__settings_exist()
 
         if go.exists(len(rows)):
-            if self.user.id == 1051733693665923132: print("Checking cache...")
             self.__update_cache(rows)
-            if self.user.id == 1051733693665923132: print("Cache checked.")
             return
         
 
@@ -707,7 +703,7 @@ class MikoMember(MikoGuild):
             f"\"{self.user}\")"
         )
         go.db_executor(ins_cmd)
-        asyncio.create_task(self.__handle_new_member())
+        self.greeting_task = asyncio.create_task(self.__handle_new_member(), name=f"New member to {self.guild}: {self.user}")
         print(f"Added user {self.user.id} ({self.user}) in guild {self.guild} ({self.guild.id}) to database")
 
 
@@ -745,7 +741,8 @@ class MikoMember(MikoGuild):
            if updating: params_temp.append(",")
            updating = True
            params_temp.append(f"latest_join_time='{latest_join_time}'")
-           if rows[0][1] != 0 and type(rows[0][1] == int): asyncio.create_task(self.__handle_returning_member())
+           if rows[0][1] != 0 and type(rows[0][1] == int):
+               self.greeting_task = asyncio.create_task(self.__handle_returning_member(), name=f"Returning member to {self.guild}: {self.user}")
         
         if updating:
             params_temp.append(f" WHERE user_id=\"{self.user.id}\" AND server_id=\"{self.guild.id}\"")

@@ -202,10 +202,14 @@ async def on_raw_member_remove(payload: discord.RawMemberRemoveEvent):
 # Responsible for updating username history
 @client.event
 async def on_member_update(before: discord.Member, cur: discord.Member):
-    if cur.id == 1051733693665923132: print(f"MEMBER UPDATE: {cur}")
-    if not running or cur.pending: return
+    if not running: return
     u = MikoMember(user=cur, client=client)
-    if not u.profile.feature_enabled('GREET_NEW_MEMBERS'): return
+    await asyncio.sleep(1)
+    if u.greeting_task is not None:
+        if not u.greeting_task.done():
+            print(f"\nGreeting task not complete. Forcing completion... ({cur}) ({cur.guild})")
+            await u.greeting_task
+            print(f"**Greeting task status: {'COMPLETE' if u.greeting_task.done() else 'INCOMPLETE'}**\n")
 
     username_hist(cur)
 
@@ -221,7 +225,6 @@ async def on_guild_update(before: discord.Guild, after: discord.Guild):
 # Playtime
 @client.event
 async def on_presence_update(before: discord.Member, cur: discord.Member):
-    if cur.id == 1051733693665923132: print(f"PRESENCE UPDATE: {cur}")
     if not running: return
     u = MikoMember(user=cur, client=client)
     if not u.profile.feature_enabled('TRACK_PLAYTIME'): return
