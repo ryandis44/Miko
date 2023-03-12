@@ -658,6 +658,7 @@ class LogChannelButton(discord.ui.Button):
         await self.bview.respond_log_channel_button()
 
 
+
 class UseChannelIDButton(discord.ui.Button):
     def __init__(self, bview: BookView):
         super().__init__(
@@ -670,39 +671,54 @@ class UseChannelIDButton(discord.ui.Button):
         self.bview = bview
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        await interaction.response.edit_message()
-        # await self.bview.respond_log_channel_button()
+        await interaction.response.send_modal(self.ChannelIDModal(bview=self.bview))
+
+    class ChannelIDModal(discord.ui.Modal):
+
+        def __init__(self, bview: BookView):
+            super().__init__(title="Enter Channel ID", custom_id="channel_id_modal")
+            self.bview = bview
+
+        id = discord.ui.TextInput(
+                label="Enter Channel ID:",
+                placeholder=f"1084326524683038880",
+                min_length=1,
+                max_length=30
+            )
+        async def on_submit(self, interaction: discord.Interaction) -> None:
+            await interaction.response.edit_message()
+            e = self.check_error()
+            if e['age'] or e['wristband']: raise Exception
+        
+        async def on_error(self, interaction: discord.Interaction, error) -> None:
+            e = self.check_error()
+            
+            temp = []
+            if e['type']: temp.append("`Channel ID` must be a number")
+            if e['len']: temp.append("`Channel ID` must be between 15 and 30 numbers in length.")
+
+            await interaction.response.send_message(
+                content="\n".join(temp),
+                ephemeral=True,
+                view=ModalTryAgain(calling_modal=self, error_interaction=interaction)
+            )
+        
+
+        def check_error(self) -> dict:
+            e = {
+                'type': False,
+                'len': False
+            }
+            try: int(self.id.value)
+            except: e['type'] = True
+
+            if len(str(self.id.value)) < 15: e['len'] = True
+            return e
 
 
 class SelectLogChannel(discord.ui.ChannelSelect):
-    def __init__(self, bview: BookView, channels: list):
+    def __init__(self, bview: BookView):
         self.bview = bview
-        self.channels = channels
-
-        # emoji = self.bview.original_interaction.client.get_emoji(1084346752020262912)
-        # if emoji is None: emoji = "#️⃣"
-
-        # options = []
-        # for i, channel in enumerate(channels):
-        #     channel: discord.TextChannel = channel
-        #     options.append(
-        #         discord.SelectOption(
-        #             label=channel.name,
-        #             description=f"{channel.id}",
-        #             value=channel,
-        #             emoji=emoji
-        #         )
-        #     )
-        #     if i > 20: break
-
-        # options.append(
-        #     discord.SelectOption(
-        #         label="sdafjkdsf",
-        #         description=f"brown",
-        #         value=1,
-        #         emoji=emoji
-        #     )
-        # )
 
         super().__init__(
             placeholder="Select a channel",
