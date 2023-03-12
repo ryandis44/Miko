@@ -64,6 +64,8 @@ class BookView(discord.ui.View):
         if res_len > 0: self.add_item(SelectEntries(bview=self, res=res))
         self.add_item(NewEntry(bview=self))
         self.add_item(SearchButton(bview=self))
+        if self.u.user.guild_permissions.manage_guild:
+            self.add_item(LogChannelButton(bview=self))
         # if admin, add more stuff self.add_item(admin)
 
         if init: self.msg = await self.original_interaction.original_response()
@@ -166,7 +168,7 @@ class BookView(discord.ui.View):
         
         return temp
 
-
+    # Response for selecting individual user
     async def respond_detailed_entry(self, t: str, p: Person=None, modal=None) -> None:
         desc = []
 
@@ -259,6 +261,69 @@ class BookView(discord.ui.View):
             view=self
         )
 
+    async def respond_log_channel_button(self) -> None:
+        channels = self.u.guild.text_channels
+        ch_len = len(channels)
+        def __default_embed() -> discord.Embed:
+            temp = []
+
+
+            cc = self.u.ymca_green_book_channel
+            if cc is not None:
+                cc = self.u.guild.get_channel(cc)
+                cc = cc.mention
+            else: cc = "`None`"
+            
+            temp.append(
+                f"Current Log channel: {cc}\n\n"
+            )
+
+
+            temp.append(
+                "Use the dropdown below to set the channel "
+                "that Miko will send new Green Book entries "
+                "to. Select 'None' (top) to remove current channel "
+                "(if any)."
+                "\n\n"
+                "**Note**: If your channel does not appear, it could be "
+                "because "
+                "1) Miko does not have `Send Message` and `View Channel` "
+                "permissions in that channel or "
+                "2) You have more than 20 channels and not all of "
+                "them can be listed. In which case, follow the below instructions."
+                "\n\n"
+                "Press the \"Use ID\" "
+                "button to choose a channel by pasting in its channel ID. To get "
+                "a channel ID, type `#` in chat and begin typing its name. Select "
+                "it from the list of channels that pop up and then put a backslash "
+                "`\\` in front of it. It will give you something that looks like "
+                "`<#1084326524683038880>`. The ID is the numbers and the numbers only."
+            )
+            
+
+
+            embed = discord.Embed(description=''.join(temp), color=GREEN_BOOK_NEUTRAL_COLOR)
+            embed.set_author(
+                icon_url=self.u.guild.icon,
+                name=f"{self.u.guild} Green Book"
+            )
+            return embed
+        
+        self.clear_items()
+        b = BackToMainButton(bview=self)
+        b.row = 2
+        self.add_item(b)
+        self.add_item(SelectLogChannel(bview=self, channels=channels))
+        self.add_item(UseChannelIDButton(bview=self))
+
+        await self.msg.edit(
+            content=None,
+            embed=__default_embed(),
+            view=self
+        )
+
+    async def respond_select_log_channel(self, channel: discord.TextChannel) -> None:
+        print(channel)
 
 class SearchButton(discord.ui.Button):
 
@@ -575,3 +640,80 @@ class DeleteConfirm(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.edit_message()
         await self.bview.respond_detailed_entry(t='DELETE_CONFIRM', p=self.p)
+
+
+class LogChannelButton(discord.ui.Button):
+    def __init__(self, bview: BookView):
+        super().__init__(
+            style=discord.ButtonStyle.gray,
+            label="Log Channel",
+            emoji=None,
+            custom_id="logc_button",
+            row=2
+        )
+        self.bview = bview
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await interaction.response.edit_message()
+        await self.bview.respond_log_channel_button()
+
+
+class UseChannelIDButton(discord.ui.Button):
+    def __init__(self, bview: BookView):
+        super().__init__(
+            style=discord.ButtonStyle.gray,
+            label="Use ID",
+            emoji=None,
+            custom_id="id_button",
+            row=2
+        )
+        self.bview = bview
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await interaction.response.edit_message()
+        # await self.bview.respond_log_channel_button()
+
+
+class SelectLogChannel(discord.ui.ChannelSelect):
+    def __init__(self, bview: BookView, channels: list):
+        self.bview = bview
+        self.channels = channels
+
+        # emoji = self.bview.original_interaction.client.get_emoji(1084346752020262912)
+        # if emoji is None: emoji = "#️⃣"
+
+        # options = []
+        # for i, channel in enumerate(channels):
+        #     channel: discord.TextChannel = channel
+        #     options.append(
+        #         discord.SelectOption(
+        #             label=channel.name,
+        #             description=f"{channel.id}",
+        #             value=channel,
+        #             emoji=emoji
+        #         )
+        #     )
+        #     if i > 20: break
+
+        # options.append(
+        #     discord.SelectOption(
+        #         label="sdafjkdsf",
+        #         description=f"brown",
+        #         value=1,
+        #         emoji=emoji
+        #     )
+        # )
+
+        super().__init__(
+            placeholder="Select a channel",
+            min_values=1,
+            max_values=1,
+            row=1,
+            custom_id="select_channel",
+            disabled=False,
+            channel_types=[discord.ChannelType.text]
+        )
+    
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.edit_message()
+        await self.bview.respond_select_log_channel(channel=self.values[0])
