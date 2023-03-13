@@ -19,7 +19,7 @@ async def connect_pool():
     global pool
 
     try:
-        print("\n\nAttempting local database connection...")
+        print("\n\nAttempting local database pool connection...")
         if os.getenv('CONNECTION') == "REMOTE": raise Exception
         pool = await aiomysql.create_pool(
                 host='192.168.0.12',
@@ -33,7 +33,7 @@ async def connect_pool():
         )
         print("Database pool connected locally!\n")
     except Exception as e:
-        print(f"Database server not running locally, attempting database connection via Cloudflare...")
+        print(f"Database server not running locally, attempting database pool connection via Cloudflare...")
         try:
             pool = await aiomysql.create_pool(
                     host=ip,
