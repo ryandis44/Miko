@@ -70,13 +70,13 @@ class MikoGPT:
                 # Mention does not have to be first word
                 self.prompt.pop(i)
         
-        if re.search('s:', self.prompt[0]):
-            if self.prompt[0] == "s:":
+        if re.search('s:', self.prompt[0].lower()):
+            if self.prompt[0].lower() == "s:":
                 self.prompt.pop(0)
             else:
                 self.prompt[0] = self.prompt[0][2:]
             self.response['type'] = "SERIOUS"
-        if re.search('i:', self.prompt[0]):
+        if re.search('i:', self.prompt[0].lower()):
             if self.prompt[0] == "i:":
                 self.prompt.pop(0)
             else:
