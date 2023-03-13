@@ -84,14 +84,14 @@ class AsyncDatabase:
                     continue
                 else:
                     print(f"\nASYNC DATABASE ERROR! [{self.file}] Could not execute: \"{exec_cmd}\"\n{e}")
-                    break
+            break
         
         if exec_cmd.startswith("SELECT"):
             val = await cursor.fetchall()
             if len(val) == 1:
                 if len(val[0]) == 1:
                     return val[0][0]
-            return val
+            return val if val != () else [] # easier migration from old synchronous code
         return
     
     def exists(self, rows):
@@ -186,8 +186,7 @@ class Database:
         self.cur = cur
         return
     
-    async def executor(self, exec_cmd):
-        print("In executor func")
+    async def db_executor_thread(self, exec_cmd):
         return await asyncio.to_thread(self.db_executor, exec_cmd)
 
     def db_executor(self, exec_cmd):
