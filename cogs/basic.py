@@ -172,9 +172,7 @@ class Basic(commands.Cog):
         except: user = ctx.author
 
 
-        await ctx.channel.send(
-            content=str(await ab.execute(f"SELECT * FROM SERVERS WHERE server_id='{ctx.guild.id}'"))
-        )
+        await u.ainit()
 
 
         # await ctx.channel.send(f"{playtimeContentMessage()}")

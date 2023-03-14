@@ -13,7 +13,7 @@ from misc.embeds import help_embed
 from misc.holiday_roles import get_holiday
 from misc.misc import generate_nickname, react_all_emoji_list, today
 from tunables import *
-go = Database("Database.GuildObjects.py")
+# go = Database("Database.GuildObjects.py")
 ago = AsyncDatabase("Database.GuildObjects.py")
 
 class MikoGuild():
@@ -24,6 +24,9 @@ class MikoGuild():
         self.client = client
         self.log_channel = client.get_channel(1073509692363517962) # miko-logs channel in The Boys Hangout
         if check_exists and check_exists_guild: self.__exists()
+
+    async def ainit(self):
+        await self.__exists()
 
     def __str__(self):
         return f"{self.guild} | MikoGuild Object"
@@ -282,11 +285,11 @@ class MikoGuild():
 
     def __exists(self) -> None:
         sel_cmd = f"SELECT cached_name,owner_name,owner_id,total_members,latest_join_time FROM SERVERS WHERE server_id='{self.guild.id}'"
-        rows = go.db_executor(sel_cmd)
+        rows = await ago.execute(sel_cmd)
 
         # If guild exists in database, update cache and return
-        if go.exists(len(rows)):
-            self.__update_cache(rows)
+        if ago.exists(len(rows)):
+            await self.__update_cache(rows)
             return
 
 
@@ -296,7 +299,7 @@ class MikoGuild():
             f"('{self.guild.id}', '{int(self.guild.me.joined_at.timestamp())}', \"{self.guild.name}\", \"{self.guild.owner.name}\", "
             f"'{self.guild.owner.id}', '{self.guild.member_count}', '{tunables('DEFAULT_GUILD_STATUS')}')"
         )
-        go.db_executor(ins_cmd)
+        await ago.execute(ins_cmd)
         asyncio.create_task(self.__handle_new_guild())
         print(f"Added server {self.guild.name} ({self.guild.id}) to database")
         
@@ -304,7 +307,7 @@ class MikoGuild():
             u = MikoMember(user=member, client=self.client, check_exists_guild=False)
         self.set_member_numbers()
 
-    def __update_cache(self, rows) -> None:
+    async def __update_cache(self, rows) -> None:
         params_temp = []
         params_temp.append("UPDATE SERVERS SET ")
 
@@ -338,7 +341,7 @@ class MikoGuild():
         if updating:
             params_temp.append(f" WHERE server_id=\"{self.guild.id}\"")
             upd_cmd = f"{''.join(params_temp)}"
-            go.db_executor(upd_cmd)
+            await ago.execute(upd_cmd)
         return
 
 
@@ -435,8 +438,12 @@ class MikoMember(MikoGuild):
         else: super().__init__(guild=None, client=client, guild_id=guild_id, check_exists=check_exists, check_exists_guild=check_exists_guild)
         self.user = user
         self.greeting_task = None
-        if check_exists and not user.pending: self.__exists()
+        self.check_exists_guild = check_exists_guild
     
+    async def ainit(self):
+        if self.check_exists_guild: await super().ainit()
+        if not self.user.pending: await self.__exists()
+
     def __str__(self):
         return f"{self.user} - {self.guild} | MikoMember Object"
 
@@ -687,13 +694,13 @@ class MikoMember(MikoGuild):
         await self.__new_member_greeting(new=False)
 
 
-    def __exists(self) -> None:
+    async def __exists(self) -> None:
         sel_cmd = f"SELECT cached_username,latest_join_time FROM USERS WHERE user_id='{self.user.id}' AND server_id='{self.guild.id}'"
-        rows = go.db_executor(sel_cmd)
-        self.__settings_exist()
+        rows = await ago.execute(sel_cmd)
+        await self.__settings_exist()
 
-        if go.exists(len(rows)):
-            self.__update_cache(rows)
+        if ago.exists(len(rows)):
+            await self.__update_cache(rows)
             return
         
 
@@ -703,8 +710,8 @@ class MikoMember(MikoGuild):
             f"('{self.guild.id}', '{self.user.id}', '{latest_join_time}', '{latest_join_time}',"
             f"\"{self.user}\")"
         )
-        go.db_executor(ins_cmd)
-        self.greeting_task = asyncio.create_task(self.__handle_new_member(), name=f"New member to {self.guild}: {self.user}")
+        await ago.execute(ins_cmd)
+        # self.greeting_task = asyncio.create_task(self.__handle_new_member(), name=f"New member to {self.guild}: {self.user}")
         print(f"Added user {self.user.id} ({self.user}) in guild {self.guild} ({self.guild.id}) to database")
 
 
@@ -713,22 +720,22 @@ class MikoMember(MikoGuild):
             "SELECT unique_number FROM USERS WHERE "
             f"server_id='{self.guild.id}' ORDER BY unique_number DESC LIMIT 1"
         )
-        val = go.db_executor(sel_cmd)
+        val = await ago.execute(sel_cmd)
         if val == [] or val is None: return
         upd_cmd = (
             f"UPDATE USERS SET unique_number={int(val)+1} WHERE user_id='{self.user.id}' "
             f"AND server_id='{self.guild.id}'"
         )
-        go.db_executor(upd_cmd)
+        await ago.execute(upd_cmd)
     
-    def __settings_exist(self):
-        rows = go.db_executor(f"SELECT * FROM USER_SETTINGS WHERE user_id='{self.user.id}'")
-        if go.exists(len(rows)): return
-        go.db_executor(
+    async def __settings_exist(self):
+        rows = await ago.execute(f"SELECT * FROM USER_SETTINGS WHERE user_id='{self.user.id}'")
+        if ago.exists(len(rows)): return
+        await ago.execute(
             f"INSERT INTO USER_SETTINGS (user_id) VALUES ('{self.user.id}')"
         )
 
-    def __update_cache(self, rows) -> None:
+    async def __update_cache(self, rows) -> None:
         params_temp = []
         params_temp.append("UPDATE USERS SET ")
 
@@ -748,7 +755,7 @@ class MikoMember(MikoGuild):
         if updating:
             params_temp.append(f" WHERE user_id=\"{self.user.id}\" AND server_id=\"{self.guild.id}\"")
             upd_cmd = f"{''.join(params_temp)}"
-            go.db_executor(upd_cmd)
+            await ago.execute(upd_cmd)
     
     def add_rename_hell(self) -> bool:
         val = go.db_executor(
