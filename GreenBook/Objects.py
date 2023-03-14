@@ -317,7 +317,8 @@ class GreenBook:
                         f"{self.u.user.mention} added `{rp.last}`, `{rp.first}`『`Age {rp.age}`』to the book "
                         f"as a {rp.wristband_emoji} `{rp.wristband}` band on {rp.pass_time_formatted}"
                     ),
-                    allowed_mentions=discord.AllowedMentions(users=False)
+                    allowed_mentions=discord.AllowedMentions(users=False),
+                    silent=True
                 )
         except: pass
 
