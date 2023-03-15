@@ -1,5 +1,5 @@
 import discord
-from Database.database_class import Database
+from Database.database_class import AsyncDatabase
 from PIL import Image
 import requests, aiohttp
 from io import BytesIO
@@ -9,19 +9,19 @@ from tunables import *
 from dotenv import load_dotenv
 
 load_dotenv()
-eg = Database("emoji_generator.py")
+aeg = AsyncDatabase("Emojis.emoji_generator.py")
 
 async def get_guild_emoji(client: discord.Client, guild: discord.Guild) -> discord.Emoji:
 
     sel_cmd = f"SELECT emoji FROM SERVERS WHERE server_id='{guild.id}'"
-    emoji_id = eg.db_executor(sel_cmd)
+    emoji_id = await aeg.execute(sel_cmd)
 
     if emoji_id is None:
         emoji = await create_guild_emoji(guild)
     else: emoji = client.get_emoji(int(emoji_id))
     if emoji is None:
         upd_cmd = f"UPDATE SERVERS SET emoji=NULL WHERE server_id='{guild.id}'"
-        eg.db_executor(upd_cmd)
+        await aeg.execute(upd_cmd)
         emoji = await get_guild_emoji(client, guild)
     return emoji
 
@@ -61,18 +61,18 @@ async def create_guild_emoji(guild: discord.Guild):
     if emoji is None: return "❗"
     
     upd_cmd = f"UPDATE SERVERS SET emoji='{emoji.id}' WHERE server_id='{guild.id}'"
-    eg.db_executor(upd_cmd)
+    await aeg.execute(upd_cmd)
     return emoji
 
 async def regen_guild_emoji(client: discord.Client, guild: discord.Guild) -> None:
     sel_cmd = f"SELECT emoji FROM SERVERS WHERE server_id='{guild.id}'"
-    emoji_id = eg.db_executor(sel_cmd)
+    emoji_id = await aeg.execute(sel_cmd)
 
     if emoji_id is not None:
         emoji = client.get_emoji(int(emoji_id))
         if emoji is not None:
             await emoji.delete()
             upd_cmd = f"UPDATE SERVERS SET emoji=NULL WHERE server_id='{guild.id}'"
-            eg.db_executor(upd_cmd)
+            await aeg.execute(upd_cmd)
     await get_guild_emoji(client, guild)
     return

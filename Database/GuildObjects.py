@@ -23,69 +23,68 @@ class MikoGuild():
         else: self.guild = client.get_guild(int(guild_id))
         self.client = client
         self.log_channel = client.get_channel(1073509692363517962) # miko-logs channel in The Boys Hangout
-        if check_exists and check_exists_guild: self.__exists()
 
-    async def ainit(self):
-        await self.__exists()
+    async def ainit(self, check_exists: bool = True):
+        if check_exists: await self.__exists()
 
     def __str__(self):
         return f"{self.guild} | MikoGuild Object"
 
     @property
-    def __last_updated(self) -> int:
+    async def __last_updated(self) -> int:
         sel_cmd = f"SELECT last_updated FROM SERVERS WHERE server_id='{self.guild.id}'"
-        val = go.db_executor(sel_cmd)
+        val = await ago.execute(sel_cmd)
         if val is not None and val != []: return int(val)
         print(f"Error when checking 'last_updated' in MikoGuild object: {val} | {self.guild.name} | {self.guild.id} | {int(time.time())}")
         return 1
     @property
-    def guild_messages(self) -> int:
+    async def guild_messages(self) -> int:
         sel_cmd = (
             "SELECT SUM(count) FROM USER_MESSAGE_COUNT WHERE "
             f"server_id='{self.guild.id}'"
         )
-        val = go.db_executor(sel_cmd)
+        val = await ago.execute(sel_cmd)
         if val is None or val == []: return 0
         return int(val)
     @property
-    def guild_messages_nobots(self) -> int:
+    async def guild_messages_nobots(self) -> int:
         sel_cmd = (
             "SELECT SUM(mc.count) FROM USER_MESSAGE_COUNT AS mc "
             "INNER JOIN USERS AS u ON "
             "(mc.user_id=u.user_id AND mc.server_id=u.server_id AND u.is_bot!='TRUE') WHERE "
             f"mc.server_id='{self.guild.id}'"
         )
-        val = go.db_executor(sel_cmd)
+        val = await ago.execute(sel_cmd)
         if val is None or val == []: return 0
         return int(val)
     @property
-    def guild_messages_today(self) -> int:
+    async def guild_messages_today(self) -> int:
         sel_cmd = (
             "SELECT messages_today FROM SERVERS WHERE "
             f"server_id='{self.guild.id}'"
         )
-        val = go.db_executor(sel_cmd)
+        val = await ago.execute(sel_cmd)
         if val == [] or val is None: return 0
-        if self.__last_updated >= today(): return int(val)
+        if await self.__last_updated >= today(): return int(val)
         return 0
     @property
-    def status(self) -> str:
+    async def status(self) -> str:
         sel_cmd = f"SELECT status FROM SERVERS WHERE server_id={self.guild.id}"
-        val: str = go.db_executor(sel_cmd)
+        val: str = await ago.execute(sel_cmd)
         if val == []: return None
         return val.upper()
     @property
-    def music_channel(self) -> discord.TextChannel:
+    async def music_channel(self) -> discord.TextChannel:
         sel_cmd = f"SELECT music_channel FROM SERVERS WHERE server_id='{self.guild.id}'"
-        val = go.db_executor(sel_cmd)
+        val = await ago.execute(sel_cmd)
         if val is None or val == []: return None
         return self.guild.get_channel(int(val))
     @property
     async def emoji(self) -> discord.Emoji:
         return await get_guild_emoji(self.client, self.guild)
     @property
-    def top_ten_total_messages_nobots(self):
-        val = go.db_executor(
+    async def top_ten_total_messages_nobots(self):
+        val = await ago.execute(
             "SELECT cnt,user_id FROM ("
             "SELECT grouped.*, ROW_NUMBER() OVER ("
             "PARTITION BY grouped.server_id ORDER BY grouped.cnt DESC) AS row "
@@ -100,16 +99,16 @@ class MikoGuild():
         if val == [] or val is None: return None
         return val
     @property
-    def nickname_in_ctx(self) -> bool:
-        val = go.db_executor(
+    async def nickname_in_ctx(self) -> bool:
+        val = await ago.execute(
             "SELECT nickname_in_ctx FROM SERVERS WHERE "
             f"server_id='{self.guild.id}'"
         )
         if val == "TRUE" and tunables('NICKNAME_IN_CONTEXT'): return True
         return False
     @property
-    def guild_do_big_emojis(self) -> bool:
-        val = go.db_executor(
+    async def guild_do_big_emojis(self) -> bool:
+        val = await ago.execute(
             "SELECT big_emojis FROM SERVERS WHERE "
             f"server_id='{self.guild.id}'"
         )
@@ -119,22 +118,22 @@ class MikoGuild():
     def profile(self) -> GuildProfile:
         return tunables(f'GUILD_PROFILE_{self.status}')
     @property
-    def renamehell_members(self) -> list:
-        val = go.db_executor(
+    async def renamehell_members(self) -> list:
+        val = await ago.execute(
             "SELECT user_id FROM USERS WHERE rename_any_true_false=\"TRUE\" "
             f"AND server_id='{self.guild.id}'"
         )
         return [item[0] for item in val] if type(val) is list else [val]
     @property
-    def clown_react_users(self) -> list:
-        val = go.db_executor(
+    async def clown_react_users(self) -> list:
+        val = await ago.execute(
             "SELECT user_id FROM USERS WHERE react_true_false=\"TRUE\" AND "
             f"server_id='{self.guild.id}'"
         )
         return [item[0] for item in val] if type(val) is list else [val]
     @property
-    def react_all_users(self) -> list:
-        val = go.db_executor(
+    async def react_all_users(self) -> list:
+        val = await ago.execute(
             "SELECT user_id FROM USERS WHERE react_all_true_false=\"TRUE\" AND "
             f"server_id='{self.guild.id}'"
         )
@@ -148,19 +147,19 @@ class MikoGuild():
         if val == [] or val is None: return None
         return self.guild.get_channel(int(val))
 
-    def set_member_numbers(self) -> None:
-        member_ids = go.db_executor(
+    async def set_member_numbers(self) -> None:
+        member_ids = await ago.execute(
             "SELECT user_id FROM USERS WHERE "
             f"server_id='{self.guild.id}' "
             "ORDER BY original_join_time ASC"
         )
         for i, db_member in enumerate(member_ids):
-            go.db_executor(
+            await ago.execute(
                 f"UPDATE USERS SET unique_number='{i+1}' WHERE "
                 f"user_id='{db_member[0]}' AND server_id='{self.guild.id}'"
             )
 
-    def daily_msg_increment_guild(self) -> None:
+    async def daily_msg_increment_guild(self) -> None:
         upd_cmd = []
         upd_cmd.append("UPDATE SERVERS SET ")
 
@@ -168,12 +167,12 @@ class MikoGuild():
         # sends a message in a guild for the first time that day. And again
         # when a message is sent on a following day
         if self.__last_updated >= today():
-            upd_cmd.append(f"messages_today='{self.guild_messages_today + 1}'")
+            upd_cmd.append(f"messages_today='{await self.guild_messages_today + 1}'")
         else:
-            upd_cmd.append(f"messages_today='{self.guild_messages_today + 1}',last_updated='{int(time.time())}'")
+            upd_cmd.append(f"messages_today='{await self.guild_messages_today + 1}',last_updated='{int(time.time())}'")
 
         upd_cmd.append(f" WHERE server_id={self.guild.id}")
-        go.db_executor(''.join(upd_cmd))
+        await ago.execute(''.join(upd_cmd))
         return
     
     async def __leave_guild_log_message(self) -> None:
@@ -283,7 +282,7 @@ class MikoGuild():
     async def __handle_new_guild(self) -> None:
         await self.__new_guild_log_message()
 
-    def __exists(self) -> None:
+    async def __exists(self) -> None:
         sel_cmd = f"SELECT cached_name,owner_name,owner_id,total_members,latest_join_time FROM SERVERS WHERE server_id='{self.guild.id}'"
         rows = await ago.execute(sel_cmd)
 
@@ -305,7 +304,8 @@ class MikoGuild():
         
         for member in self.guild.members:
             u = MikoMember(user=member, client=self.client, check_exists_guild=False)
-        self.set_member_numbers()
+            await u.ainit()
+        await self.set_member_numbers()
 
     async def __update_cache(self, rows) -> None:
         params_temp = []
@@ -352,43 +352,46 @@ class MikoTextChannel(MikoGuild):
         self.channel = channel
         self.__exists()
 
+    async def ainit(self, check_exists: bool = True, check_exists_guild: bool = True):
+        if check_exists_guild: await super().ainit(check_exists=check_exists_guild)
+        if check_exists: await self.__exists()
 
     @property
-    def is_private(self) -> bool:
+    async def is_private(self) -> bool:
         sel_cmd = (
             "SELECT private_true_false FROM CHANNELS WHERE "
             f"channel_id='{self.channel.id}' AND server_id='{self.guild.id}'"
         )
-        val = go.db_executor(sel_cmd)
+        val = await ago.execute(sel_cmd)
         if val == [] or "FALSE": return True
         return False
     @property
-    def channel_messages(self):
+    async def channel_messages(self):
         sel_cmd = (
             "SELECT SUM(count) FROM USER_MESSAGE_COUNT WHERE "
             f"channel_id='{self.channel.id}' AND server_id='{self.guild.id}'"
         )
-        val = go.db_executor(sel_cmd)
+        val = await ago.execute(sel_cmd)
         if val == [] or val is None: return 0
         return int(val)
     @property
-    def channel_messages_nobots(self):
+    async def channel_messages_nobots(self):
         sel_cmd = (
             "SELECT SUM(mc.count) FROM USER_MESSAGE_COUNT AS mc "
             "INNER JOIN USERS AS u ON "
             "(mc.user_id=u.user_id AND mc.server_id=u.server_id AND u.is_bot!='TRUE') WHERE "
             f"mc.channel_id='{self.channel.id}' AND mc.server_id='{self.guild.id}'"
         )
-        val = go.db_executor(sel_cmd)
+        val = await ago.execute(sel_cmd)
         if val == [] or val is None: return 0
         return int(val)
 
-    def __exists(self) -> None:
+    async def __exists(self) -> None:
         sel_cmd = f"SELECT * FROM CHANNELS WHERE server_id='{self.guild.id}' AND channel_id='{self.channel.id}'"
-        rows = go.db_executor(sel_cmd)
+        rows = await ago.execute(sel_cmd)
 
         # If channel exists in database, update cache and return
-        if go.exists(len(rows)):
+        if ago.exists(len(rows)):
             self.__update_cache(rows)
             return
         
@@ -398,10 +401,10 @@ class MikoTextChannel(MikoGuild):
             f"('{self.guild.id}', '{self.channel.id}', \"{self.channel.name}\", "
             f"'{int(self.channel.created_at.timestamp())}')"
         )
-        go.db_executor(ins_cmd)
+        await ago.execute(ins_cmd)
         print(f"Added channel {self.channel.name} ({self.channel.id}) from {self.guild.name} ({self.guild.id}) to database")
     
-    def __update_cache(self, rows) -> None:
+    async def __update_cache(self, rows) -> None:
         params_temp = []
         params_temp.append("UPDATE CHANNELS SET ")
 
@@ -426,7 +429,7 @@ class MikoTextChannel(MikoGuild):
         if updating:
             params_temp.append(f" WHERE server_id=\"{self.guild.id}\" AND channel_id=\"{self.channel.id}\"")
             upd_cmd = f"{''.join(params_temp)}"
-            go.db_executor(upd_cmd)
+            await ago.execute(upd_cmd)
         return
 
 
@@ -438,18 +441,17 @@ class MikoMember(MikoGuild):
         else: super().__init__(guild=None, client=client, guild_id=guild_id, check_exists=check_exists, check_exists_guild=check_exists_guild)
         self.user = user
         self.greeting_task = None
-        self.check_exists_guild = check_exists_guild
     
-    async def ainit(self):
-        if self.check_exists_guild: await super().ainit()
-        if not self.user.pending: await self.__exists()
+    async def ainit(self, check_exists: bool = True, check_exists_guild: bool = True):
+        await super().ainit(check_exists=check_exists_guild)
+        if check_exists and not self.user.pending: await self.__exists()
 
     def __str__(self):
         return f"{self.user} - {self.guild} | MikoMember Object"
 
     @property
-    def __last_updated(self) -> int:
-        val = go.db_executor(
+    async def __last_updated(self) -> int:
+        val = await ago.execute(
             "SELECT last_updated FROM USERS WHERE "
             f"user_id='{self.user.id}' AND server_id='{self.guild.id}'"
         )
@@ -457,24 +459,24 @@ class MikoMember(MikoGuild):
         print(f"Error when checking 'last_updated' in MikoMember object: {val} | {self.user} | {self.user.id} | {self.guild} | {self.guild.id} | {int(time.time())}")
         return 1
     @property
-    def first_joined(self) -> int:
-        val = go.db_executor(
+    async def first_joined(self) -> int:
+        val = await ago.execute(
             "SELECT original_join_time FROM USERS WHERE "
             f"user_id='{self.user.id}' AND server_id='{self.guild.id}'"
         )
         if val == [] or val is None: return -1
         return int(val)
     @property
-    def member_number(self) -> int:
-        val = go.db_executor(
+    async def member_number(self) -> int:
+        val = await ago.execute(
             "SELECT unique_number FROM USERS WHERE "
             f"user_id='{self.user.id}' AND server_id='{self.guild.id}'"
         )
         if val == [] or val is None: return -1
         return int(val)
     @property
-    def user_voicetime(self) -> int:
-        val = go.db_executor(
+    async def user_voicetime(self) -> int:
+        val = await ago.execute(
             "SELECT SUM(end_time - start_time) FROM VOICE_HISTORY WHERE "
             f"user_id='{self.user.id}' AND server_id='{self.guild.id}' AND end_time is not NULL AND "
             f"(end_time - start_time)>={tunables('THRESHOLD_LIST_VOICE_ACTIVITY')} GROUP BY user_id"
@@ -482,65 +484,65 @@ class MikoMember(MikoGuild):
         if val == [] or val is None: return 0
         return int(val)
     @property
-    def user_messages(self) -> int:
-        val = go.db_executor(
+    async def user_messages(self) -> int:
+        val = await ago.execute(
             "SELECT SUM(count) FROM USER_MESSAGE_COUNT WHERE "
             f"user_id='{self.user.id}' AND server_id='{self.guild.id}'"
         )
         if val == [] or val is None: return 0
         return int(val)
     @property
-    def user_messages_today(self) -> int:
-        val = go.db_executor(
+    async def user_messages_today(self) -> int:
+        val = await ago.execute(
             "SELECT messages_today FROM USERS WHERE "
             f"user_id='{self.user.id}' AND server_id='{self.guild.id}'"
         )
         if val == [] or val is None: return 0
-        if self.__last_updated >= today(): return int(val)
+        if await self.__last_updated >= today(): return int(val)
         return 0
     @property
-    def considered_bot(self) -> bool:
-        val = go.db_executor(
+    async def considered_bot(self) -> bool:
+        val = await ago.execute(
             "SELECT is_bot FROM USERS WHERE "
             f"user_id='{self.user.id}' AND server_id='{self.guild.id}'"
         )
         if val == [] or val is None or val == "FALSE": return False
         return True
     @property
-    def react(self) -> bool:
-        val = go.db_executor(
+    async def react(self) -> bool:
+        val = await ago.execute(
             "SELECT react_true_false FROM USERS WHERE "
             f"user_id='{self.user.id}' AND server_id='{self.guild.id}'"
         )
         if val == [] or val is None or val == "FALSE": return False
         return True
     @property
-    def reactall(self) -> bool:
-        val = go.db_executor(
+    async def reactall(self) -> bool:
+        val = await ago.execute(
             "SELECT react_all_true_false FROM USERS WHERE "
             f"user_id='{self.user.id}' AND server_id='{self.guild.id}'"
         )
         if val == [] or val is None or val == "FALSE": return False
         return True
     @property
-    def rename(self) -> bool:
-        val = go.db_executor(
+    async def rename(self) -> bool:
+        val = await ago.execute(
             "SELECT rename_true_false FROM USERS WHERE "
             f"user_id='{self.user.id}' AND server_id='{self.guild.id}'"
         )
         if val == [] or val is None or val == "FALSE": return False
         return True
     @property
-    def renameany(self) -> bool:
-        val = go.db_executor(
+    async def renameany(self) -> bool:
+        val = await ago.execute(
             "SELECT rename_any_true_false FROM USERS WHERE "
             f"user_id='{self.user.id}' AND server_id='{self.guild.id}'"
         )
         if val == [] or val is None or val == "FALSE": return False
         return True
     @property
-    def usernames(self):
-        val = go.db_executor(
+    async def usernames(self):
+        val = await ago.execute(
             f"SELECT name,last_change FROM USERNAME_HISTORY WHERE "
             f"user_id={self.user.id} ORDER BY last_change DESC"
         )
@@ -550,8 +552,8 @@ class MikoMember(MikoGuild):
             names.append(item[1])
         return names
     @property
-    def message_rank(self):
-        val = go.db_executor(
+    async def message_rank(self):
+        val = await ago.execute(
             "SELECT row FROM ("
             "SELECT grouped.*, ROW_NUMBER() OVER ("
             "PARTITION BY grouped.server_id ORDER BY grouped.cnt DESC) AS row "
@@ -576,8 +578,8 @@ class MikoMember(MikoGuild):
     # def pets(self) -> PetOwner:
     #     return PetOwner(user=self.user)
     @property
-    def bot_permission_level(self):
-        val = go.db_executor(
+    async def bot_permission_level(self):
+        val = await ago.execute(
             "SELECT bot_permission_level FROM USERS WHERE "
             f"user_id='{self.user.id}' "
             "ORDER BY bot_permission_level DESC LIMIT 1"
@@ -585,41 +587,41 @@ class MikoMember(MikoGuild):
         if val == [] or val is None: return 0
         return int(val)
     @property
-    def do_big_emojis(self):
-        val = go.db_executor(
+    async def do_big_emojis(self):
+        val = await ago.execute(
             "SELECT big_emojis FROM USER_SETTINGS WHERE "
             f"user_id='{self.user.id}'"
         )
         if not self.profile.feature_enabled('BIG_EMOJIS'): return False
-        if val == "FALSE" or not self.guild_do_big_emojis: return False
+        if val == "FALSE" or not await self.guild_do_big_emojis: return False
         return True
     @property
-    def track_playtime(self):
-        val = go.db_executor(
+    async def track_playtime(self):
+        val = await ago.execute(
             "SELECT track_playtime FROM USER_SETTINGS WHERE "
             f"user_id='{self.user.id}'"
         )
         if val == "FALSE" or not tunables('TRACK_PLAYTIME'): return False
         return True
     @property
-    def public_playtime(self):
-        val = go.db_executor(
+    async def public_playtime(self):
+        val = await ago.execute(
             "SELECT public_playtime FROM USER_SETTINGS WHERE "
             f"user_id='{self.user.id}'"
         )
         if val == "FALSE": return False
         return True
     @property
-    def track_voicetime(self):
-        val = go.db_executor(
+    async def track_voicetime(self):
+        val = await ago.execute(
             "SELECT track_voicetime FROM USER_SETTINGS WHERE "
             f"user_id='{self.user.id}'"
         )
         if val == "FALSE" or not tunables('TRACK_VOICETIME'): return False
         return True
     @property
-    def public_voicetime(self):
-        val = go.db_executor(
+    async def public_voicetime(self):
+        val = await ago.execute(
             "SELECT public_voicetime FROM USER_SETTINGS WHERE "
             f"user_id='{self.user.id}'"
         )
@@ -757,27 +759,27 @@ class MikoMember(MikoGuild):
             upd_cmd = f"{''.join(params_temp)}"
             await ago.execute(upd_cmd)
     
-    def add_rename_hell(self) -> bool:
-        val = go.db_executor(
+    async def add_rename_hell(self) -> bool:
+        val = await ago.execute(
             "SELECT rename_any_true_false FROM USERS WHERE "
             f"user_id='{self.user.id}' AND server_id='{self.guild.id}'"
         )
         if val == "TRUE": return False
 
-        go.db_executor(
+        await ago.execute(
             "UPDATE USERS SET rename_any_true_false=\"TRUE\" WHERE "
             f"user_id='{self.user.id}' AND server_id='{self.guild.id}'"
         )
         return True
 
-    def del_rename_hell(self) -> bool:
-        val = go.db_executor(
+    async def del_rename_hell(self) -> bool:
+        val = await ago.execute(
             "SELECT rename_any_true_false FROM USERS WHERE "
             f"user_id='{self.user.id}' AND server_id='{self.guild.id}'"
         )
         if val == "FALSE" or val == "": return False
 
-        go.db_executor(
+        await ago.execute(
             "UPDATE USERS SET rename_any_true_false=\"FALSE\" WHERE "
             f"user_id='{self.user.id}' AND server_id='{self.guild.id}'"
         )
@@ -790,7 +792,7 @@ class MikoMember(MikoGuild):
         if self.bot_permission_level >= 5: return True
         return False
     
-    def daily_msg_increment_user(self) -> None:
+    async def daily_msg_increment_user(self) -> None:
         self.daily_msg_increment_guild()
         upd_cmd = []
         upd_cmd.append("UPDATE USERS SET ")
@@ -799,36 +801,36 @@ class MikoMember(MikoGuild):
         # sends a message in a guild for the first time that day. And again
         # when a message is sent on a following day
         if self.__last_updated >= today():
-            upd_cmd.append(f"messages_today='{self.user_messages_today + 1}'")
+            upd_cmd.append(f"messages_today='{await self.user_messages_today + 1}'")
         else:
-            upd_cmd.append(f"messages_today='{self.user_messages_today + 1}',last_updated='{int(time.time())}'")
+            upd_cmd.append(f"messages_today='{await self.user_messages_today + 1}',last_updated='{int(time.time())}'")
 
         upd_cmd.append(f" WHERE server_id={self.guild.id} AND user_id='{self.user.id}'")
-        go.db_executor(''.join(upd_cmd))
+        await ago.execute(''.join(upd_cmd))
         return
     
-    def increment_statistic(self, key: str, increment: int=1) -> None:
+    async def increment_statistic(self, key: str, increment: int=1) -> None:
         key = key.upper()
-        val = go.db_executor(
+        val = await ago.execute(
             "SELECT value FROM STATISTICS WHERE "
             f"server_id='{self.guild.id}' AND user_id='{self.user.id}' "
             f"AND stat=\"{key}\" LIMIT 1"
         )
         if val is None or val == []:
-            go.db_executor(
+            await ago.execute(
                 "INSERT INTO STATISTICS (server_id,user_id,stat,value) VALUES "
                 f"('{self.guild.id}', '{self.user.id}', '{key}', '{increment}')"
             )
             return
         
-        go.db_executor(
+        await ago.execute(
             f"UPDATE STATISTICS SET value='{val + increment}' WHERE "
             f"server_id='{self.guild.id}' AND user_id='{self.user.id}' AND "
             f"stat='{key}'"
         )
 
-    def get_statistic(self, key: str) -> int:
-        val = go.db_executor(
+    async def get_statistic(self, key: str) -> int:
+        val = await ago.execute(
             "SELECT value FROM STATISTICS WHERE "
             f"server_id='{self.guild.id}' AND user_id='{self.user.id}' "
             f"AND stat='{key}' LIMIT 1"
@@ -844,34 +846,37 @@ class MikoMessage():
         self.message = message
         self.__exists()
     
+    async def ainit(self):
+        await self.user.ainit()
+        await self.channel.ainit(check_exists_guild=False)
     
-    def __exists(self) -> None:
-        row = go.db_executor(
+    async def __exists(self) -> None:
+        row = await ago.execute(
             "SELECT count FROM USER_MESSAGE_COUNT WHERE "
             f"user_id={self.user.user.id} AND channel_id={self.channel.channel.id} "
             f"AND server_id={self.user.guild.id}"
         )
-        if type(row) is int or go.exists(len(row)):
+        if type(row) is int or ago.exists(len(row)):
             self.__cached_count = int(row)
-            self.__increment_msg_count()
+            await self.__increment_msg_count()
             return
         self.__cached_count = 1
 
-        go.db_executor(
+        await ago.execute(
             "INSERT INTO USER_MESSAGE_COUNT (user_id,channel_id,server_id,count) VALUES "
             f"('{self.user.user.id}', '{self.channel.channel.id}', '{self.user.guild.id}', '1')"
         )
         print(f"Added user_message_count for {self.user.user} ({self.user.user.id}) in channel {self.channel.channel} ({self.channel.channel.id}) in server {self.user.guild} ({self.user.guild.id}) to database")
     
-    def __increment_msg_count(self) -> None:
+    async def __increment_msg_count(self) -> None:
         # Increment USER_MESSAGE_COUNT
-        go.db_executor(
+        await ago.execute(
             f"UPDATE USER_MESSAGE_COUNT SET count='{self.__cached_count + 1}' WHERE "
             f"user_id={self.user.user.id} AND channel_id={self.channel.channel.id} AND server_id={self.user.guild.id}"
         )
 
         # Increment messages_today [MEMBER, GUILD]
-        self.user.daily_msg_increment_user()
+        await self.user.daily_msg_increment_user()
     
     async def handle_leveling(self) -> None:
         if not self.message.author.bot and self.channel.profile.feature_enabled('LEVELING'):
@@ -906,7 +911,7 @@ class MikoMessage():
     def __big_emoji_embed(self, auth) -> discord.Embed:
         msg: discord.Message = self.message
         embed = discord.Embed (
-            color = 0x2f3136,
+            color = 0x2f3136, # Discord dark mode gray
         )
         embed.set_author(icon_url=self.user.user_avatar, name=f"{self.user.username}{'' if auth is None else f' → {auth.username}'}")
         url, emoji_name = get_emoji_url(msg.content)
