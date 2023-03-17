@@ -36,11 +36,14 @@ class SettingsCog(commands.Cog):
 
 
 
-    async def interaction_check(self, interaction: discord.Interaction):
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
         # u = MikoMember(user=interaction.user, client=interaction.client)
-        await interaction.response.send_message("Opening settings menu...", ephemeral=True)
-        return True
+        if tunables('COMMAND_ENABLED_SETTINGS'):
+            await interaction.response.send_message("Opening settings menu...", ephemeral=True)
+            return True
 
+        await interaction.response.send_message("The settings menu has been temporarily disabled for all users globally.", ephemeral=True)
+        return False
 
 
 async def setup(client: commands.Bot):

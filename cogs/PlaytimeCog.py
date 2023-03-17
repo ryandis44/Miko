@@ -276,7 +276,8 @@ class PlaytimeCog(commands.Cog):
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         u = MikoMember(user=interaction.user, client=interaction.client)
-        if not u.profile.cmd_enabled('PLAYTIME'):
+        await u.ainit()
+        if not (await u.profile).cmd_enabled('PLAYTIME'):
             await interaction.response.send_message(content=tunables('GENERIC_BOT_DISABLED_MESSAGE'), ephemeral=True)
             return False
         
@@ -284,7 +285,7 @@ class PlaytimeCog(commands.Cog):
             await interaction.response.send_message(content=tunables('COMMAND_DISABLED_MESSAGE'), ephemeral=True)
             return False
 
-        u.increment_statistic('PLAYTIME_COMMAND')
+        await u.increment_statistic('PLAYTIME_COMMAND')
         return True
 
 

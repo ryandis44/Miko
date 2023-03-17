@@ -47,7 +47,7 @@ class dev_cog(commands.Cog):
             m = MikoMember(user=member, client=interaction.client)
             if member.bot: continue
             await member.remove_roles(*leveling_roles)
-            await member.add_roles(m.leveling.get_role())
+            await member.add_roles(await m.leveling.get_role())
             if i % 10 == 0:
                 temp[2] = f"{i+1}"
                 await msg.edit(content=''.join(temp))
@@ -83,11 +83,11 @@ class dev_cog(commands.Cog):
             u = MikoMember(user=user_obj, client=interaction.client, guild_id=interaction.guild.id)
             lc = u.leveling
 
-            times_to_give_xp = int(lc.msgs / tunables('THRESHOLD_MESSAGES_FOR_XP'))
+            times_to_give_xp = int(await lc.msgs / tunables('THRESHOLD_MESSAGES_FOR_XP'))
             xp = times_to_give_xp * tunables('XP_GAINED_FROM_MESSAGES')
             await lc.add_xp_msg(xp=xp, manual=True)
 
-            times_to_give_xp = int(u.user_voicetime / tunables('THRESHOLD_VOICETIME_FOR_XP'))
+            times_to_give_xp = int(await u.user_voicetime / tunables('THRESHOLD_VOICETIME_FOR_XP'))
             xp = times_to_give_xp * tunables('XP_GAINED_FROM_VOICETIME')
             await lc.add_xp_voice(xp=xp, manual=True)
             if type(msg_totals) == int: break
@@ -158,9 +158,10 @@ class dev_cog(commands.Cog):
 
     async def interaction_check(self, interaction: discord.Interaction):
         u = MikoMember(user=interaction.user, client=interaction.client)
-        if u.bot_permission_level >= 5:
+        await u.ainit()
+        if await u.bot_permission_level >= 5:
             await interaction.response.send_message("Executing dev command...")
-            u.increment_statistic('DEV_CMDS_USED')
+            await u.increment_statistic('DEV_CMDS_USED')
             return True
         
         await interaction.response.send_message(tunables('NO_PERM'), ephemeral=True)

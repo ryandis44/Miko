@@ -53,11 +53,12 @@ class PlexCog(commands.Cog):
 
     async def interaction_check(self, interaction: discord.Interaction):
         u = MikoMember(user=interaction.user, client=interaction.client)
-        if not u.profile.cmd_enabled('PLEX_CALENDAR'):
+        await u.ainit()
+        if not (await u.profile).cmd_enabled('PLEX_CALENDAR'):
             await interaction.response.send_message("This command can only be run in **The Boys Hangout** guild.\nhttps://discord.gg/the-boys", ephemeral=True)
             return False
 
-        if u.bot_permission_level >= 0:
+        if await u.bot_permission_level >= 0:
             await interaction.response.send_message(f"{tunables('LOADING_EMOJI')}", ephemeral=True)
             return True
         

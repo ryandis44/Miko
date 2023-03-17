@@ -36,7 +36,7 @@ class Slash(commands.Cog):
     async def sync(
       self, ctx: commands.Context, guilds: commands.Greedy[discord.Object], spec: typing.Optional[typing.Literal["~", "*", "^", "G"]] = None) -> None:
         u = MikoMember(user=ctx.author, client=self.client)
-        if u.bot_permission_level <= 4: return
+        if await u.bot_permission_level <= 4: return
         if spec is not None: await ctx.channel.send("Attempting to sync commands...")
         if not guilds:
             if spec == "~":
@@ -117,7 +117,7 @@ class Slash(commands.Cog):
                   name: typing.Optional[str] = None):
         
         u = MikoMember(user=interaction.user, client=interaction.client)
-        if u.bot_permission_level <= 3 and interaction.guild.owner.id != interaction.user.id:
+        if await u.bot_permission_level <= 3 and interaction.guild.owner.id != interaction.user.id:
             await interaction.response.send_message(tunables('NO_PERM'))
             return
         
@@ -179,7 +179,8 @@ class Slash(commands.Cog):
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         u = MikoMember(user=interaction.user, client=interaction.client)
-        if not u.profile.cmd_enabled('MISC_CMDS'):
+        await u.ainit()
+        if not (await u.profile).cmd_enabled('MISC_CMDS'):
             await interaction.response.send_message(content=tunables('GENERIC_BOT_DISABLED_MESSAGE'), ephemeral=True)
             return False
         return True

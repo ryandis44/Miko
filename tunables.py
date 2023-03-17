@@ -46,6 +46,7 @@ class GuildProfile():
         self.params = str(tunables(f'GUILD_PROFILE_{profile}')).split(',')
         self.profile = profile
         self.vals = HashTable(1_000)
+        # self.vals = {}
         
         self.__commands = {'all_enabled': False, 'inverse': False}
         self.__features = {'all_enabled': False, 'inverse': False}

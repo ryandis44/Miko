@@ -221,7 +221,7 @@ async def process_voice_state(u: MikoMember, bef: discord.VoiceState, cur: disco
             del VOICE_SESSIONS[sesh[1]]
            
     async def start():
-        if not u.track_voicetime: return
+        if not await u.track_voicetime: return
         sesh = locate_htable_obj(map=VOICE_SESSIONS,
                                  key=u.user.id,
                                  comparable=u.guild.id)

@@ -39,16 +39,16 @@ class PlaylistButtons(discord.ui.View):
     async def load_playlist(self, interaction: discord.Interaction, button = discord.Button):
         msg = await self.original_interaction.original_response()
 
-        if self.u.music_channel is None:
+        if await self.u.music_channel is None:
             ad = f"\n\n{tunables('MUSIC_BOT_MUSIC_CHANNEL_AD')}"
         else: ad = ""
         await msg.edit(content=f"Added {len(self.results.tracks)} songs to queue.{ad}", embed=None, view=None)
 
         try: sesh = AUDIO_SESSIONS[self.original_interaction.guild.id]
         except:
-            AUDIO_SESSIONS[self.original_interaction.guild.id] = PersistentPlayer(
-                original_interaction=self.original_interaction
-            )
+            pp = PersistentPlayer(original_interaction=self.original_interaction)
+            await pp.ainit()
+            AUDIO_SESSIONS[self.original_interaction.guild.id] = pp
             sesh = AUDIO_SESSIONS[self.original_interaction.guild.id]
 
         await sesh.play(
@@ -56,7 +56,7 @@ class PlaylistButtons(discord.ui.View):
             requester=self.original_interaction.user.id
         )
 
-        mc = self.u.music_channel
+        mc = await self.u.music_channel
         if mc is None: return
         await mc.send(
             content=f"🎶 {self.u.user.mention} added `{len(self.results.tracks)} songs` to the queue.",
@@ -125,7 +125,7 @@ class SongSelectDropdown(discord.ui.Select):
         # await ensure_voice(interaction=self.original_interaction)
         track = self.results.tracks[int(self.values[0]) - 1]
         
-        if self.u.music_channel is None:
+        if await self.u.music_channel is None:
             ad = f"\n\n{tunables('MUSIC_BOT_MUSIC_CHANNEL_AD')}"
         else: ad = ""
 
@@ -139,12 +139,12 @@ class SongSelectDropdown(discord.ui.Select):
         u = MikoMember(user=self.original_interaction.user, client=self.original_interaction.client, check_exists=False)
         try: sesh = AUDIO_SESSIONS[self.original_interaction.guild.id]
         except:
-            AUDIO_SESSIONS[self.original_interaction.guild.id] = PersistentPlayer(
-                    original_interaction=self.original_interaction
-                )
+            pp = PersistentPlayer(original_interaction=self.original_interaction)
+            await pp.ainit()
+            AUDIO_SESSIONS[self.original_interaction.guild.id] = pp
             sesh = AUDIO_SESSIONS[self.original_interaction.guild.id]
         
-        mc = u.music_channel
+        mc = await u.music_channel
         if mc is not None:
             await mc.send(
                 content=f"🎵 {u.user.mention} added `{track.title}` by `{track.author}` to the queue.",

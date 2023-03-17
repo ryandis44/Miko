@@ -128,15 +128,15 @@ def end_all_sessions():
 
 
 # WIP
-def scrape_sessions(client):
+# def scrape_sessions(client):
 
-    for guild in client.guilds:
-        for member in guild.members:
-            if member.activities != () and not member.bot:
-                determine_activity(member, member, True)
-    print("Complete.")
+#     for guild in client.guilds:
+#         for member in guild.members:
+#             if member.activities != () and not member.bot:
+#                 determine_activity(member, member, True)
+#     print("Complete.")
 
-    return
+#     return
 
 
 def translate_application_name(name):
@@ -252,7 +252,7 @@ def has_app_id(activity):
         except: return False
         return True
 
-def determine_activity(bef: discord.Member, cur: discord.Member, u, scrape=False):
+async def determine_activity(bef: discord.Member, cur: discord.Member, u, scrape=False):
 
 
     # First, we need to determine if the user activity has changed. Presence updates do not just include activity
@@ -314,8 +314,8 @@ def determine_activity(bef: discord.Member, cur: discord.Member, u, scrape=False
     # game[1][0] is CURRENT game name
     # game[1][1] is CURRENT game ID
 
-    def start(user, app_id):
-        if not u.track_playtime: return
+    async def start(user, app_id):
+        if not await u.track_playtime: return
 
         val = sessions_hash_table.get_val(user.id)
         if val is None: # No current session, create one
@@ -325,30 +325,30 @@ def determine_activity(bef: discord.Member, cur: discord.Member, u, scrape=False
             sessions_hash_table.delete_val(user.id)
             sessions_hash_table.set_val(user.id, GameActivity(user, app_id, cur_playing[1]))
 
-    def stop(user, app_id, initial):
+    async def stop(user, app_id, initial):
         try:
             sessions_hash_table.get_val(user.id).close_activity_entry()
             sessions_hash_table.delete_val(user.id)
         except:
-            start(user, app_id)
-            if initial: stop(user, app_id, False)
+            await start(user, app_id)
+            if initial: await stop(user, app_id, False)
 
     # Final activity status check: start, stop, change
     # start activity
     if game[1][0] is not None and game[0][0] is None:
-        if sessions_hash_table.get_val(cur.id) is None: start(cur, game[1][1])
+        if sessions_hash_table.get_val(cur.id) is None: await start(cur, game[1][1])
         else: return
         
     # stopped activity
     if game[0][0] is not None and game[1][0] is None:
-        stop(bef, game[0][1], True)
+        await stop(bef, game[0][1], True)
             
     
     #game_change = False
     # changed activity
     if game[0][0] is not None and game[1][0] is not None and game[0] != game[1]:
-        stop(bef, game[0][1], True)
-        start(cur, game[1][1])
+        await stop(bef, game[0][1], True)
+        await start(cur, game[1][1])
     
     if sesh_id(cur.activities[cur_playing[1]]) is not None:
         try: sessions_hash_table.get_val(cur.id).update_session_id()

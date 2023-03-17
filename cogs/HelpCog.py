@@ -54,8 +54,9 @@ class HelpCog(commands.Cog):
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         u = MikoMember(user=interaction.user, client=interaction.client)
+        await u.ainit()
         await interaction.response.send_message(content=f"{tunables('LOADING_EMOJI')}", ephemeral=True)
-        u.increment_statistic('HELP_COMMAND')
+        await u.increment_statistic('HELP_COMMAND')
         return True
 
 
@@ -121,7 +122,7 @@ async def help(interaction: discord.Interaction, category) -> None:
             )
 
         case _: # No category specified
-            temp.append(''.join(help_embed(u=u)))
+            temp.append(''.join(await help_embed(u=u)))
 
 
     

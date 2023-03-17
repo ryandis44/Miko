@@ -46,11 +46,12 @@ class SettingsScopeDropdown(discord.ui.Select):
 
         msg = await self.original_interaction.original_response()
         u = MikoMember(user=interaction.user, client=interaction.client)
+        await u.ainit()
         i = int(self.values[0])
 
         if i == 0: s = all_user_settings()
         else:
-            if u.manage_guild(): s = all_guild_settings()
+            if await u.manage_guild(): s = all_guild_settings()
             else:
                 await interaction.response.send_message(
                     content=(
@@ -64,7 +65,7 @@ class SettingsScopeDropdown(discord.ui.Select):
 
         await interaction.response.edit_message()
         view = ScopeSettingsView(original_interaction=self.original_interaction, s=s, u=u)
-        await msg.edit(embed=settings_list(u=u, settings=s[0:5]), view=view)
+        await msg.edit(embed=await settings_list(u=u, settings=s[0:5]), view=view)
 
 
 class ScopeSettingsView(discord.ui.View):
@@ -117,7 +118,7 @@ class ScopeSettingsView(discord.ui.View):
         await msg.edit(
             view=self,
             content=None,
-            embed=settings_list(u=self.u, settings=self.s[self.offset:self.offset + 5])
+            embed=await settings_list(u=self.u, settings=self.s[self.offset:self.offset + 5])
         )
     
     @discord.ui.button(style=discord.ButtonStyle.gray, label=None, emoji=tunables('GENERIC_NEXT_BUTTON'), custom_id="next", disabled=True, row=2)
@@ -131,7 +132,7 @@ class ScopeSettingsView(discord.ui.View):
         await msg.edit(
             view=self,
             content=None,
-            embed=settings_list(u=self.u, settings=self.s[self.offset:self.offset + 5])
+            embed=await settings_list(u=self.u, settings=self.s[self.offset:self.offset + 5])
         )
     
     # @discord.ui.button(style=discord.ButtonStyle.gray, emoji=tunables('GENERIC_NEXT_BUTTON'), custom_id="next")
@@ -184,7 +185,7 @@ class ScopeSettingsDropdown(discord.ui.Select):
         msg = await self.original_interaction.original_response()
         i = int(self.values[0])
 
-        embed = setting_embed(u=self.u, s=self.s[i])
+        embed = await setting_embed(u=self.u, s=self.s[i])
         view = ToggleSettingView(original_interaction=self.original_interaction, s=self.s, u=self.u, i=i)
         await msg.edit(content=None, embed=embed, view=view)
 
@@ -212,7 +213,7 @@ class ToggleSettingView(discord.ui.View):
     async def confirm_callback(self, interaction: discord.Interaction, button = discord.Button):
         await interaction.response.edit_message()
         msg = await self.original_interaction.original_response()
-        self.u.increment_statistic('SETTINGS_CHANGED')
+        await self.u.increment_statistic('SETTINGS_CHANGED')
 
 
         if self.s[self.i].table == "SERVERS":

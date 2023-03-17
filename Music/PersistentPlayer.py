@@ -25,16 +25,18 @@ class PersistentPlayer():
         self.u = MikoMember(user=original_interaction.user, client=original_interaction.client, check_exists=False)
         self.original_interaction = original_interaction
         self.player: lavalink.DefaultPlayer = original_interaction.client.lavalink.player_manager.create(original_interaction.guild.id)
-        self.__embed()
-        self.__channel = self.u.music_channel
         self.__elapsed_timestamp = "0:00:00"
         self.__elapsed = 0
         self.stopping = False
         self.__repositioning = False
         self.message: discord.Message = None
         self.view = PlayerButtons(pp=self)
+    
+    async def ainit(self):
+        await self.__embed()
+        self.__channel = await self.u.music_channel
 
-    def __embed(self):
+    async def __embed(self):
         temp = []
         i = 0
         cnt = len(self.player.queue)
@@ -83,7 +85,7 @@ class PersistentPlayer():
         )
         embed.set_footer(text="This embed will update automatically.")
         embed.set_thumbnail(url=self.original_interaction.guild.icon)
-        embed.set_author(name=f"Requested by {u.username}", icon_url=u.user_avatar)
+        embed.set_author(name=f"Requested by {await u.username}", icon_url=await u.user_avatar)
         self.embed = embed
 
     async def __enqueue(self, tracks, requester: int):
@@ -91,10 +93,10 @@ class PersistentPlayer():
         if type(tracks) == list:
             for track in tracks:
                 self.player.add(track=track, requester=requester)
-                self.u.increment_statistic('MUSICBOT_TRACKS_QUEUED')
+                await self.u.increment_statistic('MUSICBOT_TRACKS_QUEUED')
         else:
             self.player.add(track=tracks, requester=requester)
-            self.u.increment_statistic('MUSICBOT_TRACKS_QUEUED')
+            await self.u.increment_statistic('MUSICBOT_TRACKS_QUEUED')
         if not self.player.is_playing: await self.player.play()
 
     async def play(self, tracks, requester: int):
@@ -134,8 +136,8 @@ class PersistentPlayer():
                 msg = "Playback ended because I was disconnected from voice chat."
         else:
             u = MikoMember(user=interaction.user, client=interaction.client, check_exists=False)
-            u.increment_statistic('MUSICBOT_SESSIONS_ENDED')
-            msg = f"{u.username} ended playback"
+            await u.increment_statistic('MUSICBOT_SESSIONS_ENDED')
+            msg = f"{await u.username} ended playback"
 
 
         embed = discord.Embed(
@@ -144,7 +146,7 @@ class PersistentPlayer():
         )
         embed.set_author(
             name=msg,
-            icon_url= None if interaction is None else u.user_avatar
+            icon_url= None if interaction is None else await u.user_avatar
         )
         await asyncio.sleep(1) # ensure __update_embed() does not overwrite new embed
         if self.message is not None: await self.message.edit(embed=embed, view=None)
@@ -237,7 +239,7 @@ class PlayerButtons(discord.ui.View):
     async def pause_callback(self, interaction: discord.Interaction, button = discord.Button):
         await interaction.response.edit_message()
         await self.pp.toggle_pause()
-        self.pp.u.increment_statistic('MUSICBOT_PAUSE_BUTTONS_PRESSED')
+        await self.pp.u.increment_statistic('MUSICBOT_PAUSE_BUTTONS_PRESSED')
 
     # Not processing stop button in __button_presence because it is always enabled
     @discord.ui.button(style=discord.ButtonStyle.red, emoji="⏹", custom_id="stop_song", disabled=True, row=2)
@@ -248,13 +250,13 @@ class PlayerButtons(discord.ui.View):
     async def resume_callback(self, interaction: discord.Interaction, button = discord.Button):
         await interaction.response.edit_message()
         await self.pp.toggle_pause()
-        self.pp.u.increment_statistic('MUSICBOT_PLAY_BUTTONS_PRESSED')
+        await self.pp.u.increment_statistic('MUSICBOT_PLAY_BUTTONS_PRESSED')
 
     @discord.ui.button(style=discord.ButtonStyle.success, emoji="⏭", custom_id="next_song", disabled=True, row=2)
     async def next_song_callback(self, interaction: discord.Interaction, button = discord.Button):
         await interaction.response.edit_message()
         await self.pp.skip()
-        self.pp.u.increment_statistic('MUSICBOT_TRACKS_SKIPPED')
+        await self.pp.u.increment_statistic('MUSICBOT_TRACKS_SKIPPED')
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.voice is None or interaction.user.voice.channel.id != \
@@ -362,4 +364,4 @@ class VolumeDropdown(discord.ui.Select):
         self.placeholder = f"🔊 Volume: {self.pp.player.volume:,}%"
         await self.view.refresh_view()
         await interaction.response.edit_message()
-        self.pp.u.increment_statistic('MUSICBOT_VOLUME_CHANGED')
+        await self.pp.u.increment_statistic('MUSICBOT_VOLUME_CHANGED')

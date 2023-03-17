@@ -317,31 +317,32 @@ def del_bot(bot_id, server):
 
 
 # User statistics embed
-def user_info_embed(u):
-    u.increment_statistic('USER_INFO_TIMES_REFERENCED')
-    usr_total_msg = u.user_messages
-    usernames = u.usernames
+async def user_info_embed(u):
+    await u.increment_statistic('USER_INFO_TIMES_REFERENCED')
+    usr_total_msg = await u.user_messages
+    usernames = await u.usernames
     user_created_at = int(u.user.created_at.timestamp())
     temp = []
     temp.append(f":pencil: Name: {u.user.mention}\n"+
                 f"<a:right_arrow_animated:1011515382672150548> Account created <t:{user_created_at}:R>\n"+
-                f"<a:right_arrow_animated:1011515382672150548> First joined <t:{u.first_joined}:R>\n"+
-                f"<a:right_arrow_animated:1011515382672150548> `{str(num2words(u.member_number, to = 'ordinal_num'))}` user to join **{u.guild}**\n"+
+                f"<a:right_arrow_animated:1011515382672150548> First joined <t:{await u.first_joined}:R>\n"+
+                f"<a:right_arrow_animated:1011515382672150548> `{str(num2words(await u.member_number, to = 'ordinal_num'))}` user to join **{u.guild}**\n"+
                 f"<a:right_arrow_animated:1011515382672150548> Total messages sent in this server: `{usr_total_msg:,}`\n"+
-                f"<a:right_arrow_animated:1011515382672150548> Messages sent in this server today: `{u.user_messages_today}`\n")
+                f"<a:right_arrow_animated:1011515382672150548> Messages sent in this server today: `{await u.user_messages_today}`\n")
 
 
-    placement = u.message_rank
+    placement = await u.message_rank
+    guild_messages = await u.guild_messages
     temp.append("\n")
-    temp.append(f"**{u.guild}** total messages: `{human_format(u.guild_messages)}`\n")
+    temp.append(f"**{u.guild}** total messages: `{human_format(guild_messages)}`\n")
 
     if placement == -1:
         temp.append('`This is a` <:bot1:963660599810740264><:bot2:963660577379598336> `account and does not have\na message ranking.`\n\n')
     else:
         temp.append(f'`#{placement}` out of all users on this server.\n\n')
 
-    percentage = (usr_total_msg / u.guild_messages) * 100
-    percentage_nobots = (usr_total_msg / u.guild_messages_nobots) * 100
+    percentage = (usr_total_msg / guild_messages) * 100
+    percentage_nobots = (usr_total_msg / await u.guild_messages_nobots) * 100
     temp.append(f"Percentage of server messages: `{str('{:.2f}'.format(round(percentage, 2)))}%`")
     if placement != -1:
         temp.append(f" (`{str('{:.2f}'.format(round(percentage_nobots, 2)))}%` _without_ bots)")
@@ -368,7 +369,7 @@ def user_info_embed(u):
 
 
     embed = discord.Embed (
-        title = f'{u.user.nick if u.user.nick is not None and u.nickname_in_ctx else u.user.name} user info',
+        title = f'{u.username} user info',
         color = GLOBAL_EMBED_COLOR,
         description=f"{''.join(temp)}"
     )

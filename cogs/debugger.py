@@ -30,8 +30,8 @@ class Debugger(commands.Cog):
         #if len(ctx.message.mentions) >= 1: user = ctx.message.mentions[0]
         #else: user = ctx.author
         u = MikoMember(user=ctx.author, client=self.client)
-        if u.bot_permission_level <= 4: return
-        u.increment_statistic('DEBUGGER_USED')
+        if await u.bot_permission_level <= 4: return
+        await u.increment_statistic('DEBUGGER_USED')
 
         if len(args) == 0:
             await ctx.channel.send(

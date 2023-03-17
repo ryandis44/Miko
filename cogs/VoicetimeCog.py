@@ -335,14 +335,15 @@ class VoicetimeCog(commands.Cog):
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         u = MikoMember(user=interaction.user, client=interaction.client)
-        if not u.profile.cmd_enabled('VOICETIME'):
+        await u.ainit()
+        if not (await u.profile).cmd_enabled('VOICETIME'):
             await interaction.response.send_message(content=tunables('GENERIC_BOT_DISABLED_MESSAGE'), ephemeral=True)
             return False
         
         if not tunables('COMMAND_ENABLED_VOICETIME_GENERIC'):
             await interaction.response.send_message(content=tunables('COMMAND_DISABLED_MESSAGE'), ephemeral=True)
             return False
-        u.increment_statistic('VOICETIME_COMMAND')
+        await u.increment_statistic('VOICETIME_COMMAND')
         return True
 
 

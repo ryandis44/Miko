@@ -4,7 +4,7 @@ import re
 import time
 import discord
 from Music.LavalinkClient import AUDIO_SESSIONS
-from Database.database_class import Database, AsyncDatabase
+from Database.database_class import AsyncDatabase
 from Leveling.LevelClass import LevelClass
 # from Pets.PetClass import PetOwner
 # from Tokens.TokenClass import Token
@@ -115,15 +115,23 @@ class MikoGuild():
         if val == "FALSE" or not tunables('BIG_EMOJIS_ENABLED'): return False
         return True
     @property
-    def profile(self) -> GuildProfile:
-        return tunables(f'GUILD_PROFILE_{self.status}')
+    async def profile(self) -> GuildProfile:
+        return tunables(f'GUILD_PROFILE_{await self.status}')
     @property
+    
+    
+    
+    # REDO THIS AT SOME POINT
     async def renamehell_members(self) -> list:
         val = await ago.execute(
             "SELECT user_id FROM USERS WHERE rename_any_true_false=\"TRUE\" "
             f"AND server_id='{self.guild.id}'"
         )
         return [item[0] for item in val] if type(val) is list else [val]
+    #########################
+    
+    
+    
     @property
     async def clown_react_users(self) -> list:
         val = await ago.execute(
@@ -166,7 +174,7 @@ class MikoGuild():
         # Using this logic, 'last_updated' will only be updated when a user
         # sends a message in a guild for the first time that day. And again
         # when a message is sent on a following day
-        if self.__last_updated >= today():
+        if await self.__last_updated >= today():
             upd_cmd.append(f"messages_today='{await self.guild_messages_today + 1}'")
         else:
             upd_cmd.append(f"messages_today='{await self.guild_messages_today + 1}',last_updated='{int(time.time())}'")
@@ -194,7 +202,7 @@ class MikoGuild():
                 f"> Guild name: **{self.guild.name}** [`{self.guild.id}`]\n"
                 f"> Guild owner: {self.guild.owner.mention} [`{self.guild.owner.id}`] 『`{self.guild.owner}`』\n"
                 f"> Guild members: `{self.guild.member_count}`\n"
-                f"> Guild profile [DB]: `{self.status}`\n"
+                f"> Guild profile [DB]: `{await self.status}`\n"
                 f"> Guild Locale (Region): `{self.guild.preferred_locale}`\n"
                 f"> Guild 2FA Level: `{self.guild.mfa_level}`\n"
                 f"> Guild NSFW Level: `{self.guild.nsfw_level}`\n"
@@ -224,7 +232,7 @@ class MikoGuild():
                 u = MikoMember(user=self.guild.owner, client=self.client, check_exists=False)
                 embed=discord.Embed(
                     color=GLOBAL_EMBED_COLOR,
-                    description=''.join(help_embed(u=u))
+                    description=''.join(await help_embed(u=u))
                 )
                 embed.set_author(
                     icon_url=self.client.user.avatar,
@@ -257,7 +265,7 @@ class MikoGuild():
                 f"> Guild name: **{self.guild.name}** [`{self.guild.id}`]\n"
                 f"> Guild owner: {self.guild.owner.mention} [`{self.guild.owner.id}`] 『`{self.guild.owner}`』\n"
                 f"> Guild members: `{self.guild.member_count}`\n"
-                f"> Guild profile [DB]: `{self.status}`\n"
+                f"> Guild profile [DB]: `{await self.status}`\n"
                 f"> Guild Locale (Region): `{self.guild.preferred_locale}`\n"
                 f"> Guild 2FA Level: `{self.guild.mfa_level}`\n"
                 f"> Guild NSFW Level: `{self.guild.nsfw_level}`\n"
@@ -350,7 +358,6 @@ class MikoTextChannel(MikoGuild):
     def __init__(self, channel: discord.TextChannel, client: discord.Client):
         super().__init__(guild=channel.guild, client=client)
         self.channel = channel
-        self.__exists()
 
     async def ainit(self, check_exists: bool = True, check_exists_guild: bool = True):
         if check_exists_guild: await super().ainit(check_exists=check_exists_guild)
@@ -392,7 +399,7 @@ class MikoTextChannel(MikoGuild):
 
         # If channel exists in database, update cache and return
         if ago.exists(len(rows)):
-            self.__update_cache(rows)
+            await self.__update_cache(rows)
             return
         
         # If channel does not exist, create it
@@ -592,7 +599,7 @@ class MikoMember(MikoGuild):
             "SELECT big_emojis FROM USER_SETTINGS WHERE "
             f"user_id='{self.user.id}'"
         )
-        if not self.profile.feature_enabled('BIG_EMOJIS'): return False
+        if not (await self.profile).feature_enabled('BIG_EMOJIS'): return False
         if val == "FALSE" or not await self.guild_do_big_emojis: return False
         return True
     @property
@@ -637,20 +644,20 @@ class MikoMember(MikoGuild):
         or will return user name (without discriminator)
     '''
     @property
-    def user_avatar(self):
+    async def user_avatar(self):
         if self.user.guild_avatar is None: return self.user.avatar
-        elif self.nickname_in_ctx: return self.user.guild_avatar
+        elif await self.nickname_in_ctx: return self.user.guild_avatar
         return self.user.avatar
     @property
-    def username(self):
+    async def username(self):
         if self.user.nick is None: return self.user.name
-        elif self.nickname_in_ctx: return self.user.nick
+        elif await self.nickname_in_ctx: return self.user.nick
         return self.user.name
 
     # async def __member_leave_message(self) -> None: pass
 
     async def __new_member_greeting(self, new=True) -> None:
-        match self.status:
+        match await self.status:
 
             case "THEBOYS":
 
@@ -660,7 +667,7 @@ class MikoMember(MikoGuild):
                     await asyncio.sleep(1) # To ensure welcome message is sent after join message
                     await channel.send(
                         f'Hi {self.user.mention}, welcome{" BACK" if not new else ""} to {self.guild}! :tada:\n'
-                        f'> You are unique member `#{self.member_number}`'
+                        f'> You are unique member `#{await self.member_number}`'
                     )
                 else: print(f"\n\n**************************\nCOULD NOT SEND WELCOME MESSAGE FOR {self.user}\n**************************\n\n")
                 
@@ -677,7 +684,7 @@ class MikoMember(MikoGuild):
                     await self.user.add_roles(bot)
                     return
 
-                leveling_role = self.leveling.get_role()
+                leveling_role = await self.leveling.get_role()
                 await self.user.add_roles(leveling_role)
             
             case "YMCA":
@@ -785,22 +792,22 @@ class MikoMember(MikoGuild):
         )
         return True
     
-    def manage_guild(self):
+    async def manage_guild(self):
         perms = self.user.guild_permissions
         if perms.administrator: return True
         if perms.manage_guild: return True
-        if self.bot_permission_level >= 5: return True
+        if await self.bot_permission_level >= 5: return True
         return False
     
     async def daily_msg_increment_user(self) -> None:
-        self.daily_msg_increment_guild()
+        await self.daily_msg_increment_guild()
         upd_cmd = []
         upd_cmd.append("UPDATE USERS SET ")
 
         # Using this logic, 'last_updated' will only be updated when a user
         # sends a message in a guild for the first time that day. And again
         # when a message is sent on a following day
-        if self.__last_updated >= today():
+        if await self.__last_updated >= today():
             upd_cmd.append(f"messages_today='{await self.user_messages_today + 1}'")
         else:
             upd_cmd.append(f"messages_today='{await self.user_messages_today + 1}',last_updated='{int(time.time())}'")
@@ -844,11 +851,11 @@ class MikoMessage():
         self.user = MikoMember(user=message.author, client=client)
         self.channel = MikoTextChannel(channel=message.channel, client=client)
         self.message = message
-        self.__exists()
     
     async def ainit(self):
         await self.user.ainit()
         await self.channel.ainit(check_exists_guild=False)
+        await self.__exists()
     
     async def __exists(self) -> None:
         row = await ago.execute(
@@ -879,7 +886,7 @@ class MikoMessage():
         await self.user.daily_msg_increment_user()
     
     async def handle_leveling(self) -> None:
-        if not self.message.author.bot and self.channel.profile.feature_enabled('LEVELING'):
+        if not self.message.author.bot and (await self.channel.profile).feature_enabled('LEVELING'):
             lc = self.user.leveling
             await lc.determine_xp_gained_msg()
             # tc = mm.user.tokens
@@ -890,14 +897,14 @@ class MikoMessage():
         # it so the embed is always the first message in the channel.
         try: sesh = AUDIO_SESSIONS[self.message.guild.id]
         except: sesh = None
-        if sesh is not None and self.channel.music_channel.id == self.message.channel.id:
+        if sesh is not None and (await self.channel.music_channel).id == self.message.channel.id:
             # If message is not from miko OR if message IS from miko AND is not an embed, reposition
             if self.message.author != self.user.client.user or (self.message.embeds == [] and self.message.author == self.user.client.user):
                 await sesh.reposition()
     
     async def handle_rename_hell(self) -> None:
-        if self.channel.guild_messages % 20 == 0 and self.message.channel.id != 963928489248063539:
-            users = self.user.renamehell_members
+        if await self.channel.guild_messages % 20 == 0 and self.message.channel.id != 963928489248063539:
+            users = await self.user.renamehell_members
             if users != [] and users is not None:
                 await self.message.add_reaction('<:nametag:1011514395630764032>')
                 for user in users:
@@ -906,21 +913,21 @@ class MikoMessage():
                     try: await u.user.edit(nick=generate_nickname(self.message))
                     except discord.Forbidden as e:
                         await self.message.channel.send(f"Unable to rename {u.user.mention}, removing them from the renameany list: `{e}`")
-                        u.del_rename_hell()
+                        await u.del_rename_hell()
 
-    def __big_emoji_embed(self, auth) -> discord.Embed:
+    async def __big_emoji_embed(self, auth) -> discord.Embed:
         msg: discord.Message = self.message
         embed = discord.Embed (
             color = 0x2f3136, # Discord dark mode gray
         )
-        embed.set_author(icon_url=self.user.user_avatar, name=f"{self.user.username}{'' if auth is None else f' → {auth.username}'}")
+        embed.set_author(icon_url=await self.user.user_avatar, name=f"{await self.user.username}{'' if auth is None else f' → {await auth.username}'}")
         url, emoji_name = get_emoji_url(msg.content)
         embed.set_image(url=url)
         embed.set_footer(text=f":{emoji_name}:")
         return embed
 
     async def handle_big_emojis(self) -> bool:
-        if self.user.do_big_emojis and not self.message.author.bot:
+        if await self.user.do_big_emojis and not self.message.author.bot:
             if len(self.message.content.split()) == 1 and self.message.author.id != self.user.client.user.id:
                 if self.message.content.startswith("<") and self.message.content[1] not in ['@', '#']:
                     try:
@@ -930,16 +937,16 @@ class MikoMessage():
                         else: auth = None
 
                         await self.message.delete()
-                        e = self.__big_emoji_embed(auth)
+                        e = await self.__big_emoji_embed(auth)
                         if auth is not None: await ref.reply(embed=e, silent=True)
                         else: await self.message.channel.send(embed=e, silent=True)
-                        self.user.increment_statistic('BIG_EMOJIS_SENT')
+                        await self.user.increment_statistic('BIG_EMOJIS_SENT')
                         return True
                     except Exception as e: print(f"Big emoji error: {e}")
         return False
     
     async def handle_bruh_react(self) -> None:
-        if not self.channel.profile.feature_enabled('BRUH_REACT') or self.user.client.user.id != 1017998983886545068: return
+        if not (await self.channel.profile).feature_enabled('BRUH_REACT') or self.user.client.user.id != 1017998983886545068: return
         for word in tunables('BRUH_REACT_WORDS').split():
             racist_regex =  rf".*\b{word}\b.*"
             if re.match(racist_regex, self.message.content.lower()) or word == self.message.content.lower():
@@ -955,7 +962,7 @@ class MikoMessage():
                 break
     
     async def handle_instagram_reel_links(self) -> bool:
-        if not self.channel.profile.feature_enabled('DELETE_INSTAGRAM_REEL_LINKS'): return False
+        if not (await self.channel.profile).feature_enabled('DELETE_INSTAGRAM_REEL_LINKS'): return False
         ig_regex = r".*\binstagram.com\/reel\b.*"
         if re.match(ig_regex, self.message.content.lower()):
             await self.message.delete()
@@ -963,7 +970,7 @@ class MikoMessage():
         return False
     
     async def handle_clown_react(self) -> None:
-        if self.message.author.id in self.channel.clown_react_users:
+        if self.message.author.id in await self.channel.clown_react_users:
             await self.message.add_reaction('<:clown:903162517365330000>')
             
     async def handle_react_all(self) -> None:
@@ -976,7 +983,7 @@ class MikoMessage():
             "\N{REGIONAL INDICATOR SYMBOL LETTER Y}"
         ]
         sample_list = random.sample(react_all_emoji_list(), 19)
-        if self.message.author.id in self.channel.react_all_users:
+        if self.message.author.id in await self.channel.react_all_users:
             num = random.randint(0, 10)
             if num == 5:
                 for emoji in imgay:

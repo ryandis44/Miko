@@ -174,7 +174,7 @@ async def on_raw_member_remove(payload: discord.RawMemberRemoveEvent):
     
     temp = []
     temp.append(f"<@{payload.user.id}>『`{payload.user}`』left")
-    match g.status:
+    match await g.status:
 
         case "THEBOYS":
             if client.user.id != 1017998983886545068: return
@@ -226,11 +226,11 @@ async def on_guild_update(before: discord.Guild, after: discord.Guild):
 async def on_presence_update(before: discord.Member, cur: discord.Member):
     if not running: return
     u = MikoMember(user=cur, client=client)
-    if not u.profile.feature_enabled('TRACK_PLAYTIME'): return
+    if not (await u.profile).feature_enabled('TRACK_PLAYTIME'): return
 
-    u.increment_statistic('PRESENCE_UPDATES')
+    await u.increment_statistic('PRESENCE_UPDATES')
     if cur.bot: return
-    determine_activity(before, cur, u)
+    await determine_activity(before, cur, u)
 
 
 # Voicetime
@@ -247,9 +247,9 @@ async def on_voice_state_update(member: discord.Member, bef: discord.VoiceState,
         if sesh is not None:
             await sesh.stop()
     
-    if not u.profile.feature_enabled('TRACK_VOICETIME'): return
+    if not (await u.profile).feature_enabled('TRACK_VOICETIME'): return
     if not running: return
-    u.increment_statistic('VOICE_STATE_UPDATES')
+    await u.increment_statistic('VOICE_STATE_UPDATES')
     if member.bot: return # do not track bots
     await process_voice_state(u=u, bef=bef, cur=cur)
 
@@ -258,13 +258,14 @@ async def on_voice_state_update(member: discord.Member, bef: discord.VoiceState,
 async def on_message(message: discord.Message):
     if not running: return
     mm = MikoMessage(message=message, client=client)
-    if not mm.channel.profile.feature_enabled('MESSAGE_HANDLING'):
+    await mm.ainit()
+    if not (await mm.channel.profile).feature_enabled('MESSAGE_HANDLING'):
         await client.process_commands(message)
         return
     else: await client.process_commands(message)
 
     
-    if message.content.lower().startswith(f"{os.getenv('CMD_PREFIX1')}rt") and mm.user.bot_permission_level >= 5:
+    if message.content.lower().startswith(f"{os.getenv('CMD_PREFIX1')}rt") and await mm.user.bot_permission_level >= 5:
         await message.channel.send("Fetching tunables from database...")
         db_class.refresh_tunables()
         fetch_tunables()
@@ -280,7 +281,7 @@ async def on_message(message: discord.Message):
     await mm.handle_react_all()
 
 
-    if mm.channel.profile.feature_enabled('KARUTA_EXTRAS'):
+    if (await mm.channel.profile).feature_enabled('KARUTA_EXTRAS'):
         karuta_id = 646937666251915264 #Karuta bot ID
         # Analyze embed from karuta bot, retrieve inventory items from embed, and calculate values
         # for trades according to hard coded bot IDs
@@ -327,8 +328,8 @@ async def on_message(message: discord.Message):
                             
     # Respond to being mentioned
     if str(client.user.id) in message.content and message.author.id != client.user.id:
-        if mm.channel.profile.feature_enabled('REPLY_TO_MENTION_OPENAI') or\
-            mm.channel.profile.feature_enabled('REPLY_TO_MENTION_OPENAI_SARCASTIC'):
+        if (await mm.channel.profile).feature_enabled('REPLY_TO_MENTION_OPENAI') or\
+            (await mm.channel.profile).feature_enabled('REPLY_TO_MENTION_OPENAI_SARCASTIC'):
 
             # Send help menu if only @ ing Miko
             if len(message.content.split()) <= 1:
@@ -342,7 +343,7 @@ async def on_message(message: discord.Message):
             await gpt.respond(message=message)
         
         # Basic response
-        elif mm.channel.profile.feature_enabled('REPLY_TO_MENTION'):
+        elif (await mm.channel.profile).feature_enabled('REPLY_TO_MENTION'):
             await message.reply(
                 content="Please use </help:1064277864863772683> for help.",
                 silent=True

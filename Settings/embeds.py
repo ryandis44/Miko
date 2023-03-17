@@ -24,7 +24,7 @@ def settings_initial(interaction: discord.Interaction) -> discord.Embed:
     embed.set_author(icon_url=interaction.client.user.avatar, name="Miko Settings")
     return embed
 
-def settings_list(u: MikoMember, settings: list) -> discord.Embed:
+async def settings_list(u: MikoMember, settings: list) -> discord.Embed:
 
     temp = []
     temp.append("__Select a setting to modify__:\n\n")
@@ -47,12 +47,12 @@ def settings_list(u: MikoMember, settings: list) -> discord.Embed:
         description=f"{''.join(temp)}"
     )
     embed.set_author(
-        icon_url=u.guild.icon if server else u.user_avatar,
-        name=f"{u.guild if server else u.username} Settings"
+        icon_url=u.guild.icon if server else await u.user_avatar,
+        name=f"{u.guild if server else await u.username} Settings"
     )
     return embed
 
-def setting_embed(u: MikoMember, s: Setting) -> discord.Embed:
+async def setting_embed(u: MikoMember, s: Setting) -> discord.Embed:
 
     temp = []
     temp.append("• ")
@@ -78,8 +78,8 @@ def setting_embed(u: MikoMember, s: Setting) -> discord.Embed:
         description=f"{''.join(temp)}"
     )
     embed.set_author(
-        icon_url=u.guild.icon if s.table == 'SERVERS' else u.user_avatar,
-        name=f"{u.guild if s.table == 'SERVERS' else f'{u.username} Personal'} Settings"
+        icon_url=u.guild.icon if s.table == 'SERVERS' else await u.user_avatar,
+        name=f"{u.guild if s.table == 'SERVERS' else f'{await u.username} Personal'} Settings"
     )
     return embed
 
