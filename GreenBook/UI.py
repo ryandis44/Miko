@@ -1,5 +1,7 @@
 import asyncio
 import time
+import cProfile
+import pstats
 import discord
 from tunables import *
 from GreenBook.Objects import GreenBook, Person
@@ -18,7 +20,7 @@ class BookView(discord.ui.View):
         self.book = GreenBook(self.u)
 
     async def ainit(self):
-        await self.respond(init=True)    
+        await self.respond(init=True)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.u.user.id
@@ -721,8 +723,14 @@ class LogChannelButton(discord.ui.Button):
         self.bview = bview
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        await interaction.response.edit_message()
-        await self.bview.respond_log_channel(t='DEFAULT')
+
+        with cProfile.Profile() as profile:
+            await interaction.response.edit_message()
+            await self.bview.respond_log_channel(t='DEFAULT')
+
+        result = pstats.Stats(profile)
+        result.sort_stats(pstats.SortKey.TIME)
+        result.print_stats()
 
 
 
