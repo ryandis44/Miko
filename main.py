@@ -330,7 +330,6 @@ async def on_message(message: discord.Message):
         (message.reference is not None and message.reference.resolved is not None and \
             message.reference.resolved.author.id == client.user.id):
         
-        print("Responding to mention")
         if mm.channel.profile.feature_enabled('REPLY_TO_MENTION_OPENAI') or\
             mm.channel.profile.feature_enabled('REPLY_TO_MENTION_OPENAI_SARCASTIC'):
 

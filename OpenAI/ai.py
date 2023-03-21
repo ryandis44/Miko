@@ -24,40 +24,54 @@ class MikoGPT:
         if message is not None:
             msg = await message.reply(content=tunables('LOADING_EMOJI'), mention_author=False, silent=True)
             
-            
-            if message.reference is not None:
-                refs = [message.reference.resolved]
-                
-                i = 0
-                while True:
-                    if refs[-1].reference is not None and i <= tunables('MAX_CONSIDER_REPLIES_OPENAI'):
-                        if refs[-1].reference.cached_message is not None:
-                            refs.append(
-                                refs[-1].reference.cached_message
+            try:
+                if message.reference is not None:
+                    refs = [message.reference.resolved]
+                    
+                    i = 0
+                    while True:
+                        if refs[-1].reference is not None and i <= tunables('MAX_CONSIDER_REPLIES_OPENAI'):
+                            
+                            
+                            if refs[-1].reference.cached_message is not None:
+                                m: discord.Message = refs[-1].reference.cached_message
+                            else:
+                                m: discord.Message = await message.channel.fetch_message(refs[-1].reference.message_id)
+                                if m is None: continue
+
+
+                            refs.append(m)
+                            
+                        else: break
+                        
+                        i+=1
+                    
+                    refs.reverse()
+                    
+                    self.context = []
+                    self.context.append(
+                        {"role": "system", "content": tunables('OPENAI_RESPONSE_ROLE_DEFAULT')}
+                    )
+                    for m in refs:
+                        if m.content == "" or re.match(r"<@\d{15,30}>", m.content):
+                            try:
+                                mssg = m.embeds[0].description
+                            except: continue
+                        else:
+                            mssg = ' '.join(self.__remove_mention(m.content.split()))
+                        if m.author.id == m.guild.me.id:
+                            self.context.append(
+                                {"role": "assistant", "content": mssg}
                             )
                         else:
-                            refs.append(
-                                await message.channel.fetch_message(refs[-1].reference.message_id)
+                            self.context.append(
+                                {"role": "user", "content": mssg}
                             )
-                    else: break
-                    
-                    i+=1
-                
-                refs.reverse()
-                
-                self.context = []
-                self.context.append(
-                    {"role": "system", "content": tunables('OPENAI_RESPONSE_ROLE_DEFAULT')}
+            except Exception as e:
+                await message.edit(
+                    content=f"An error occurred when referencing previous messages: {e}"
                 )
-                for m in refs:
-                    if m.author.id == m.guild.me.id:
-                        self.context.append(
-                            {"role": "assistant", "content": m.content}
-                        )
-                    else:
-                        self.context.append(
-                            {"role": "user", "content": ' '.join(self.__remove_mention(m.content.split()))}
-                        )
+                return
                 
         elif interaction is not None:
             msg = await interaction.original_response()
@@ -148,8 +162,8 @@ class MikoGPT:
                 )
                 messages = self.context
             
-            for m in messages:
-                print(m)
+            # for m in messages:
+            #     print(m)
             
             resp = openai.ChatCompletion.create(
                     model="gpt-3.5-turbo",
