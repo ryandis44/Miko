@@ -11,7 +11,7 @@ class MikoGPT:
     def __init__(self, u: MikoMember, client: discord.Client, prompt: str):
         self.u = u
         self.client = client
-        self.prompt = prompt.split()
+        self.prompt = prompt
         self.response = {
             'type': "NORMAL", # NORMAL, SERIOUS, IMAGE
             'data': None
@@ -27,27 +27,37 @@ class MikoGPT:
             
             if message.reference is not None:
                 refs = [message.reference.resolved]
-                print(refs[-1].content)
+                
+                i = 0
                 while True:
-                    if refs[-1].reference is not None:
-                        print("Reference is not none. Appending.")
-                        print(refs[-1].reference.resolved)
-                        refs.append(refs[-1].reference.resolved)
+                    if refs[-1].reference is not None and i <= tunables('MAX_CONSIDER_REPLIES_OPENAI'):
+                        if refs[-1].reference.cached_message is not None:
+                            refs.append(
+                                refs[-1].reference.cached_message
+                            )
+                        else:
+                            refs.append(
+                                await message.channel.fetch_message(refs[-1].reference.message_id)
+                            )
                     else: break
-                
-                print(refs)
-                
-                # print("message reference is not none")
-                # def ref_recurse(ref: discord.MessageReference, cnt=0) -> list:
-                #     print(f"Recursing: {ref.resolved.content}")
-                #     if ref.resolved.reference is not None and cnt < tunables('MAX_CONSIDER_REPLIES_OPENAI'):
-                #         print(f"Reference is NOT none. Recursing: {ref.resolved.reference}")
-                #         return (ref_recurse(ref.resolved.reference, cnt+1))
                     
-                #     print("Reference is none. Returning")
-                #     return [ref.resolved]
-                # refs = ref_recurse(message.reference)
-                # print(refs)
+                    i+=1
+                
+                refs.reverse()
+                
+                self.context = []
+                self.context.append(
+                    {"role": "system", "content": tunables('OPENAI_RESPONSE_ROLE_DEFAULT')}
+                )
+                for m in refs:
+                    if m.author.id == m.guild.me.id:
+                        self.context.append(
+                            {"role": "assistant", "content": m.content}
+                        )
+                    else:
+                        self.context.append(
+                            {"role": "user", "content": ' '.join(self.__remove_mention(m.content.split()))}
+                        )
                 
         elif interaction is not None:
             msg = await interaction.original_response()
@@ -81,6 +91,13 @@ class MikoGPT:
                 content=f"{tunables('GENERIC_APP_COMMAND_ERROR_MESSAGE')[:-1]}: {e}"
             )
         
+    def __remove_mention(self, msg: list) -> list:
+        for i, word in enumerate(msg):
+            if word in [f"<@{str(self.client.user.id)}>"]:
+                # Remove word mentioning Miko
+                # Mention does not have to be first word
+                msg.pop(i)
+        return msg
     
     def __sanitize_prompt(self) -> None:
         '''
@@ -91,11 +108,7 @@ class MikoGPT:
         keep type as 'NORMAL'
         '''
         
-        for i, word in enumerate(self.prompt):
-            if word in [f"<@{str(self.client.user.id)}>"]:
-                # Remove word mentioning Miko
-                # Mention does not have to be first word
-                self.prompt.pop(i)
+        self.prompt = self.__remove_mention(self.prompt.split())
         
         if re.search('s:', self.prompt[0].lower()):
             if self.prompt[0].lower() == "s:":
@@ -123,12 +136,24 @@ class MikoGPT:
                 case _:
                     if self.u.profile.feature_enabled('REPLY_TO_MENTION_OPENAI_SARCASTIC'):
                         role = tunables('OPENAI_RESPONSE_ROLE_SARCASTIC')
-            resp = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
+            
+            if self.context is None:
+                messages = [
                         {"role": "system", "content": role},
                         {"role": "user", "content": prompt}
                     ]
+            else:
+                self.context.append(
+                    {"role": "user", "content": prompt}
+                )
+                messages = self.context
+            
+            for m in messages:
+                print(m)
+            
+            resp = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=messages
                 )
         else:
             resp = openai.Image.create(

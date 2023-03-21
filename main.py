@@ -326,12 +326,16 @@ async def on_message(message: discord.Message):
 
                             
     # Respond to being mentioned
-    if str(client.user.id) in message.content and message.author.id != client.user.id:
+    if str(client.user.id) in message.content and message.author.id != client.user.id or \
+        (message.reference is not None and message.reference.resolved is not None and \
+            message.reference.resolved.author.id == client.user.id):
+        
+        print("Responding to mention")
         if mm.channel.profile.feature_enabled('REPLY_TO_MENTION_OPENAI') or\
             mm.channel.profile.feature_enabled('REPLY_TO_MENTION_OPENAI_SARCASTIC'):
 
             # Send help menu if only @ ing Miko
-            if len(message.content.split()) <= 1:
+            if len(message.content.split()) <= 1 and message.content == f"<@{str(client.user.id)}>":
                 await message.reply(
                     content="Please use </help:1064277864863772683> for help.",
                     silent=True
