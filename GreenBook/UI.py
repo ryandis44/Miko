@@ -1,7 +1,5 @@
 import asyncio
 import time
-import cProfile
-import pstats
 import discord
 from tunables import *
 from GreenBook.Objects import GreenBook, Person
@@ -723,14 +721,8 @@ class LogChannelButton(discord.ui.Button):
         self.bview = bview
 
     async def callback(self, interaction: discord.Interaction) -> None:
-
-        with cProfile.Profile() as profile:
-            await interaction.response.edit_message()
-            await self.bview.respond_log_channel(t='DEFAULT')
-
-        result = pstats.Stats(profile)
-        result.sort_stats(pstats.SortKey.TIME)
-        result.print_stats()
+        await interaction.response.edit_message()
+        await self.bview.respond_log_channel(t='DEFAULT')
 
 
 
