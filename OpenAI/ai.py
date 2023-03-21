@@ -17,11 +17,38 @@ class MikoGPT:
             'data': None
         }
         self.__sanitize_prompt()
+        self.context = None
     
     async def respond(self, message: discord.Message=None, interaction: discord.Interaction=None) -> None:
     
         if message is not None:
             msg = await message.reply(content=tunables('LOADING_EMOJI'), mention_author=False, silent=True)
+            
+            
+            if message.reference is not None:
+                refs = [message.reference.resolved]
+                print(refs[-1].content)
+                while True:
+                    if refs[-1].reference is not None:
+                        print("Reference is not none. Appending.")
+                        print(refs[-1].reference.resolved)
+                        refs.append(refs[-1].reference.resolved)
+                    else: break
+                
+                print(refs)
+                
+                # print("message reference is not none")
+                # def ref_recurse(ref: discord.MessageReference, cnt=0) -> list:
+                #     print(f"Recursing: {ref.resolved.content}")
+                #     if ref.resolved.reference is not None and cnt < tunables('MAX_CONSIDER_REPLIES_OPENAI'):
+                #         print(f"Reference is NOT none. Recursing: {ref.resolved.reference}")
+                #         return (ref_recurse(ref.resolved.reference, cnt+1))
+                    
+                #     print("Reference is none. Returning")
+                #     return [ref.resolved]
+                # refs = ref_recurse(message.reference)
+                # print(refs)
+                
         elif interaction is not None:
             msg = await interaction.original_response()
         else:
