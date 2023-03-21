@@ -898,8 +898,6 @@ class MikoMessage():
 
     def __big_emoji_embed(self, auth) -> discord.Embed:
         msg: discord.Message = self.message
-        
-        
         embed = discord.Embed(color=0x2f3136)
         embed.set_author(icon_url=self.user.user_avatar, name=f"{self.user.username}{'' if auth is None else f' → {auth}'}")
         url, emoji_name = get_emoji_url(msg.content)
