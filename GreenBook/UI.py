@@ -8,9 +8,6 @@ from Database.GuildObjects import MikoMember
 from Database.database_class import AsyncDatabase
 db = AsyncDatabase("GreenBook.UI.py")
 
-if sys.platform == "linux":
-    from select import epoll
-
 
 class BookView(discord.ui.View):
     def __init__(self, original_interaction: discord.Interaction):
