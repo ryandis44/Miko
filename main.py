@@ -5,7 +5,8 @@ fetch_tunables()
 
 
 import time
-import select
+if sys.platform == "linux":
+    from select import epoll
 from OpenAI.ai import MikoGPT
 import asyncio
 import os

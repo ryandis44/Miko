@@ -1,6 +1,6 @@
-import select
 import asyncio
 import time
+import sys
 import discord
 from tunables import *
 from GreenBook.Objects import GreenBook, Person
@@ -8,7 +8,8 @@ from Database.GuildObjects import MikoMember
 from Database.database_class import AsyncDatabase
 db = AsyncDatabase("GreenBook.UI.py")
 
-        
+if sys.platform == "linux":
+    from select import epoll
 
 
 class BookView(discord.ui.View):
