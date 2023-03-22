@@ -6,6 +6,7 @@ fetch_tunables()
 
 import time
 import sys
+print(sys.platform)
 if sys.platform == "linux":
     from select import epoll
 from OpenAI.ai import MikoGPT
