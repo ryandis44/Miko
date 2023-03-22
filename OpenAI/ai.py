@@ -26,7 +26,7 @@ class MikoGPT:
     
     - consider which sender sent a message
     - change system context to discord chat bot
-    - message.txt for large messages
+    - (done) message.txt for large messages
     
     '''
     
