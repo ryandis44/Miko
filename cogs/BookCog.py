@@ -1,6 +1,5 @@
 import os
 import discord
-from discord.ui import Select, View, Button, Modal, ChannelSelect
 from importlib import reload
 from tunables import *
 from discord.ext import commands
