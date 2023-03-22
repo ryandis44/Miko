@@ -5,6 +5,7 @@ fetch_tunables()
 
 
 import time
+import select
 from OpenAI.ai import MikoGPT
 import asyncio
 import os

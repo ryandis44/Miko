@@ -1,3 +1,4 @@
+import select
 import asyncio
 import time
 import discord
