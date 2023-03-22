@@ -162,8 +162,8 @@ class MikoGPT:
                 )
                 messages = self.context
             
-            # for m in messages:
-            #     print(m)
+            for m in messages:
+                print(m)
             
             resp = openai.ChatCompletion.create(
                     model="gpt-3.5-turbo",
