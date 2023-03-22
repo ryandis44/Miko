@@ -5,6 +5,7 @@ fetch_tunables()
 
 
 import time
+import sys
 if sys.platform == "linux":
     from select import epoll
 from OpenAI.ai import MikoGPT
@@ -14,7 +15,6 @@ import discord
 import re
 import random
 import signal
-import sys
 from Plex.embeds import info_anime, info_dubbed, info_quality, info_subbed, plex_update_2_28_23, plex_update_2_3
 from misc.embeds import plex_requests_embed
 from dpyConsole import Console
