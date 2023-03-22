@@ -1,6 +1,7 @@
 import asyncio
 import time
 import discord
+from discord.ui import View, Select, Button, Modal, ChannelSelect
 from tunables import *
 from GreenBook.Objects import GreenBook, Person
 from Database.GuildObjects import MikoMember
@@ -10,7 +11,7 @@ db = AsyncDatabase("GreenBook.UI.py")
         
 
 
-class BookView(discord.ui.View):
+class BookView(View):
     def __init__(self, original_interaction: discord.Interaction):
         super().__init__(timeout=tunables('BOOK_VIEW_TIMEOUT'))
         self.original_interaction = original_interaction
@@ -373,7 +374,7 @@ class BookView(discord.ui.View):
             view=self
         )
 
-class SearchButton(discord.ui.Button):
+class SearchButton(Button):
 
     def __init__(self, bview: BookView):
         super().__init__(
@@ -405,7 +406,7 @@ class SearchButton(discord.ui.Button):
             await self.bview.respond_modal_search(modal=self)
 
 
-class BackToMainButton(discord.ui.Button):
+class BackToMainButton(Button):
 
     def __init__(self, bview: BookView):
         super().__init__(
@@ -490,7 +491,7 @@ async def on_modal_error(modal, error_interaction: discord.Interaction):
 
 
      
-class FullEntryModal(discord.ui.Modal):
+class FullEntryModal(Modal):
 
     def __init__(self, bview: BookView, p: Person=None):
         super().__init__(title="New Green Book Entry", custom_id="entry_modal")
@@ -536,7 +537,7 @@ class FullEntryModal(discord.ui.Modal):
         await on_modal_error(modal=self, error_interaction=interaction)
 
 
-class AgeWristbandModal(discord.ui.Modal):
+class AgeWristbandModal(Modal):
 
     def __init__(self, bview: BookView, p: Person):
         super().__init__(title="New Green Book Entry", custom_id="entry_modal")
@@ -566,7 +567,7 @@ class AgeWristbandModal(discord.ui.Modal):
         await on_modal_error(modal=self, error_interaction=interaction)
 
 
-class NewEntry(discord.ui.Button):
+class NewEntry(Button):
 
     def __init__(self, bview: BookView):
         super().__init__(
@@ -582,7 +583,7 @@ class NewEntry(discord.ui.Button):
         await interaction.response.send_modal(FullEntryModal(bview=self.bview))
 
 
-class EditEntry(discord.ui.Button):
+class EditEntry(Button):
     def __init__(self, bview: BookView, p: Person):
         super().__init__(
             style=discord.ButtonStyle.green,
@@ -608,7 +609,7 @@ class EditEntry(discord.ui.Button):
         await interaction.response.send_modal(self.m)
 
 
-class ModalTryAgain(discord.ui.View):
+class ModalTryAgain(View):
     def __init__(self, calling_modal, error_interaction: discord.Interaction):
         super().__init__(timeout=tunables('BOOK_VIEW_TIMEOUT'))
         self.calling_modal = calling_modal
@@ -627,7 +628,7 @@ class ModalTryAgain(discord.ui.View):
         except: pass
 
 
-class SelectEntries(discord.ui.Select):
+class SelectEntries(Select):
     def __init__(self, bview: BookView, res: list):
         self.bview = bview
         self.res = res
@@ -660,7 +661,7 @@ class SelectEntries(discord.ui.Select):
         p = self.res[int(self.values[0])]
         await self.bview.respond_select_person(p=p)
 
-class DeleteEntry(discord.ui.Button):
+class DeleteEntry(Button):
     def __init__(self, bview: BookView, p: Person):
         super().__init__(
             style=discord.ButtonStyle.red,
@@ -676,7 +677,7 @@ class DeleteEntry(discord.ui.Button):
         await interaction.response.edit_message()
         await self.bview.respond_detailed_entry(t='DELETE_WARN', p=self.p)
 
-class DeleteCancel(discord.ui.Button):
+class DeleteCancel(Button):
     def __init__(self, bview: BookView, p: Person):
         super().__init__(
             style=discord.ButtonStyle.red,
@@ -692,7 +693,7 @@ class DeleteCancel(discord.ui.Button):
         await interaction.response.edit_message()
         await self.bview.respond_detailed_entry(t='DELETE_CANCEL', p=self.p)
 
-class DeleteConfirm(discord.ui.Button):
+class DeleteConfirm(Button):
     def __init__(self, bview: BookView, p: Person):
         super().__init__(
             style=discord.ButtonStyle.green,
@@ -709,7 +710,7 @@ class DeleteConfirm(discord.ui.Button):
         await self.bview.respond_detailed_entry(t='DELETE_CONFIRM', p=self.p)
 
 
-class LogChannelButton(discord.ui.Button):
+class LogChannelButton(Button):
     def __init__(self, bview: BookView):
         super().__init__(
             style=discord.ButtonStyle.blurple,
@@ -726,7 +727,7 @@ class LogChannelButton(discord.ui.Button):
 
 
 
-class UseChannelIDButton(discord.ui.Button):
+class UseChannelIDButton(Button):
     def __init__(self, bview: BookView):
         super().__init__(
             style=discord.ButtonStyle.gray,
@@ -773,7 +774,7 @@ class UseChannelIDButton(discord.ui.Button):
             )
 
 
-class SelectLogChannel(discord.ui.ChannelSelect):
+class SelectLogChannel(ChannelSelect):
     def __init__(self, bview: BookView):
         self.bview = bview
 
@@ -795,7 +796,7 @@ class SelectLogChannel(discord.ui.ChannelSelect):
         await self.bview.respond_log_channel(t='SET', channel=ch)
 
 
-class DeselectChannel(discord.ui.Button):
+class DeselectChannel(Button):
     def __init__(self, bview: BookView):
         super().__init__(
             style=discord.ButtonStyle.red,
