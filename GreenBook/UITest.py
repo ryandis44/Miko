@@ -61,11 +61,11 @@ class BookView(discord.ui.View):
             return embed
         
         self.clear_items()
-        # if res_len > 0: self.add_item(SelectEntries(bview=self, res=res))
-        # self.add_item(NewEntry(bview=self))
-        # self.add_item(SearchButton(bview=self))
-        # if self.u.user.guild_permissions.manage_guild:
-        #     self.add_item(LogChannelButton(bview=self))
+        if res_len > 0: self.add_item(SelectEntries(bview=self, res=res))
+        self.add_item(NewEntry(bview=self))
+        self.add_item(SearchButton(bview=self))
+        if self.u.user.guild_permissions.manage_guild:
+            self.add_item(LogChannelButton(bview=self))
         # if admin, add more stuff self.add_item(admin)
 
         if init: self.msg = await self.original_interaction.original_response()
