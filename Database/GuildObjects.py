@@ -138,10 +138,12 @@ class MikoGuild():
         return [item[0] for item in val] if type(val) is list else [val]
     @property
     async def ymca_green_book_channel(self) -> discord.TextChannel:
+        print("Querying database for green book channel")
         val = await ago.execute(
             "SELECT ymca_green_book_channel FROM SERVERS WHERE "
             f"server_id='{self.guild.id}'"
         )
+        print("Channel pulled")
         if val == [] or val is None: return None
         return self.guild.get_channel(int(val))
 
