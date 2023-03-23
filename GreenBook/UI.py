@@ -9,6 +9,10 @@ from Database.database_class import AsyncDatabase
 db = AsyncDatabase("GreenBook.UI.py")
 
 
+async def bview(interaction: discord.Interaction) -> None:
+    await BookView(original_interaction=interaction).ainit()
+
+
 class BookView(discord.ui.View):
     def __init__(self, original_interaction: discord.Interaction):
         super().__init__(timeout=tunables('BOOK_VIEW_TIMEOUT'))
