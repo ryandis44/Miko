@@ -1,6 +1,3 @@
-import asyncio
-import time
-import sys
 import discord
 from tunables import *
 from GreenBook.Objects import GreenBook, Person
