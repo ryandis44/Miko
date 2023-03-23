@@ -295,6 +295,7 @@ class BookView(discord.ui.View):
         return temp
 
     async def respond_log_channel(self, t: str, channel: discord.TextChannel = None) -> None:
+        print("Inside respond log channel function")
         desc = []
 
         log_channel = await self.u.ymca_green_book_channel
@@ -720,8 +721,11 @@ class LogChannelButton(discord.ui.Button):
         print("Button made")
 
     async def callback(self, interaction: discord.Interaction) -> None:
+        print("Interaction received")
         await interaction.response.edit_message()
+        print("Message edited")
         await self.view.respond_log_channel(t='DEFAULT')
+        print("Responded to interaction")
 
 
 
