@@ -350,6 +350,7 @@ class BookView(discord.ui.View):
                     color = GREEN_BOOK_WARN_COLOR
                 
             case _:
+                print("DEFAULT CASE")
                 color = GREEN_BOOK_NEUTRAL_COLOR
 
         desc.append("\n\n")
@@ -366,6 +367,8 @@ class BookView(discord.ui.View):
         d = DeselectChannel(bview=self)
         if log_channel is not None: d.disabled=False
         self.add_item(d)
+
+        print("After all that stuff")
 
         await self.msg.edit(
             content=None,
