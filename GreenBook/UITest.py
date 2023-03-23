@@ -717,7 +717,7 @@ class LogChannelButton(discord.ui.Button):
             custom_id="logc_button",
             row=2
         )
-        self.view: BookView = self.view
+        print("Button made")
 
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.edit_message()
