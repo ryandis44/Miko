@@ -30,7 +30,7 @@ class BookCog(commands.Cog):
 
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        u = MikoMember(user=interaction.user, client=interaction.client, check_exists=False)
+        u = MikoMember(user=interaction.user, client=interaction.client)
         if not u.profile.cmd_enabled('GREEN_BOOK'):
             await interaction.response.send_message(content=tunables('GENERIC_BOT_DISABLED_MESSAGE'), ephemeral=True)
             return False

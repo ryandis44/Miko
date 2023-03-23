@@ -71,6 +71,7 @@ class AsyncDatabase:
         self.pool = pool
 
     async def execute(self, exec_cmd: str):
+        self.__update_vars()
         for attempt in range(1,6):
             try:
                 async with self.pool.acquire() as conn:
@@ -85,9 +86,6 @@ class AsyncDatabase:
                 else:
                     print(f"\nASYNC DATABASE ERROR! [{self.file}] Could not execute: \"{exec_cmd}\"\n{e}")
             break
-        
-        self.pool.close()
-        await self.pool.wait_closed()
         
         if exec_cmd.startswith("SELECT"):
             val = await cursor.fetchall()
