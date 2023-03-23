@@ -4,6 +4,7 @@ import time
 import asyncio
 import aiomysql
 import dns.resolver
+import mysql
 import mysql.connector as mariadb
 from dotenv import load_dotenv
 load_dotenv()
@@ -190,6 +191,7 @@ class Database:
         return await asyncio.to_thread(self.db_executor, exec_cmd)
 
     def db_executor(self, exec_cmd):
+        print(exec_cmd)
         for attempt in range(1,6):
             try:
                 self.cur.execute(exec_cmd)
