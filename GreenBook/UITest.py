@@ -27,8 +27,8 @@ class BookView(discord.ui.View):
     
     # /book and back button response
     async def respond(self, init=False) -> None:
-        # res = await self.book.recent_entries
-        res = []
+        res = await self.book.recent_entries
+        # res = []
         res_len = len(res)
         async def __default_embed() -> discord.Embed:
             temp = []
