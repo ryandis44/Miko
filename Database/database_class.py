@@ -86,6 +86,9 @@ class AsyncDatabase:
                     print(f"\nASYNC DATABASE ERROR! [{self.file}] Could not execute: \"{exec_cmd}\"\n{e}")
             break
         
+        self.pool.close()
+        await self.pool.wait_closed()
+        
         if exec_cmd.startswith("SELECT"):
             val = await cursor.fetchall()
             if len(val) == 1:
