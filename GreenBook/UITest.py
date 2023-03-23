@@ -1,3 +1,6 @@
+import asyncio
+import time
+import sys
 import discord
 from tunables import *
 from GreenBook.Objects import GreenBook, Person
@@ -28,7 +31,6 @@ class BookView(discord.ui.View):
     # /book and back button response
     async def respond(self, init=False) -> None:
         res = await self.book.recent_entries
-        # res = []
         res_len = len(res)
         async def __default_embed() -> discord.Embed:
             temp = []
@@ -42,8 +44,7 @@ class BookView(discord.ui.View):
                 "in the green book.\n\n"
             )
 
-            # total_entries = await self.book.total_entries
-            total_entries = 0
+            total_entries = await self.book.total_entries
             if res_len > 0: temp.append("__Recent entries__ `[Last Name, First Name]`:")
             else: temp.append("There are no entries in this book. Add one by pressing the  `New Entry`  button.")
             for result in res:

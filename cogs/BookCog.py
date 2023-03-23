@@ -6,7 +6,7 @@ from discord.ext import commands
 from discord import app_commands
 from Database.GuildObjects import MikoMember
 from Database.database_class import Database
-from GreenBook.UI import BookView
+from GreenBook.UITest import BookView
 from dotenv import load_dotenv
 load_dotenv()
 
