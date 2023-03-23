@@ -4,7 +4,6 @@ import time
 import asyncio
 import aiomysql
 import dns.resolver
-import mysql
 import mysql.connector as mariadb
 from dotenv import load_dotenv
 load_dotenv()
