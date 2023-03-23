@@ -66,7 +66,7 @@ class BookView(discord.ui.View):
         self.add_item(NewEntry(bview=self))
         self.add_item(SearchButton(bview=self))
         if self.u.user.guild_permissions.manage_guild:
-            self.add_item(LogChannelButton(bview=self))
+            self.add_item(LogChannelButton())
         # if admin, add more stuff self.add_item(admin)
 
         if init: self.msg = await self.original_interaction.original_response()
@@ -709,7 +709,7 @@ class DeleteConfirm(discord.ui.Button):
 
 
 class LogChannelButton(discord.ui.Button):
-    def __init__(self, bview: BookView):
+    def __init__(self, bview: BookView=None):
         super().__init__(
             style=discord.ButtonStyle.blurple,
             label="Log Channel",
@@ -717,11 +717,11 @@ class LogChannelButton(discord.ui.Button):
             custom_id="logc_button",
             row=2
         )
-        self.bview = bview
+        self.view: BookView = self.view
 
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.edit_message()
-        await self.bview.respond_log_channel(t='DEFAULT')
+        await self.view.respond_log_channel(t='DEFAULT')
 
 
 

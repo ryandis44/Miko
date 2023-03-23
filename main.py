@@ -372,7 +372,7 @@ async def load_extensions_console():
 async def main():
     print('bot online')
     # client.loop.create_task(connect_pool())
-    # await connect_pool()
+    await connect_pool()
     asyncio.create_task(heartbeat())
     async with client:
         await load_extensions()
@@ -399,4 +399,3 @@ async def on_ready():
         nullify_restore_time()
 
 asyncio.run(main())
-client.loop.create_task(heartbeat())
