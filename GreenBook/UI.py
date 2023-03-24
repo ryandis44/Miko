@@ -1,13 +1,9 @@
-import asyncio
-import time
 import discord
 from tunables import *
 from GreenBook.Objects import GreenBook, Person
 from Database.GuildObjects import MikoMember
 from Database.database_class import AsyncDatabase
 db = AsyncDatabase("GreenBook.UI.py")
-
-        
 
 
 class BookView(discord.ui.View):
@@ -18,7 +14,7 @@ class BookView(discord.ui.View):
         self.book = GreenBook(self.u)
 
     async def ainit(self):
-        await self.respond(init=True)    
+        await self.respond(init=True)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.u.user.id

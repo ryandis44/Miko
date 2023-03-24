@@ -1,4 +1,5 @@
 import asyncio
+from io import BytesIO
 import openai
 import discord
 import re
@@ -11,17 +12,79 @@ class MikoGPT:
     def __init__(self, u: MikoMember, client: discord.Client, prompt: str):
         self.u = u
         self.client = client
-        self.prompt = prompt.split()
+        self.prompt = prompt
         self.response = {
             'type': "NORMAL", # NORMAL, SERIOUS, IMAGE
             'data': None
         }
         self.__sanitize_prompt()
+        self.context = None
+    
+    
+    '''
+    THINGS TO ADD:
+    
+    - consider which sender sent a message
+    - change system context to discord chat bot
+    - message.txt for large messages
+    
+    '''
+    
     
     async def respond(self, message: discord.Message=None, interaction: discord.Interaction=None) -> None:
     
         if message is not None:
             msg = await message.reply(content=tunables('LOADING_EMOJI'), mention_author=False, silent=True)
+            
+            try:
+                if message.reference is not None:
+                    refs = [message.reference.resolved]
+                    
+                    i = 0
+                    while True:
+                        if refs[-1].reference is not None and i <= tunables('MAX_CONSIDER_REPLIES_OPENAI'):
+                            
+                            
+                            if refs[-1].reference.cached_message is not None:
+                                m: discord.Message = refs[-1].reference.cached_message
+                            else:
+                                m: discord.Message = await message.channel.fetch_message(refs[-1].reference.message_id)
+                                if m is None: continue
+
+
+                            refs.append(m)
+                            
+                        else: break
+                        
+                        i+=1
+                    
+                    refs.reverse()
+                    
+                    self.context = []
+                    self.context.append(
+                        {"role": "system", "content": tunables('OPENAI_RESPONSE_ROLE_DEFAULT')}
+                    )
+                    for m in refs:
+                        if m.content == "" or re.match(r"<@\d{15,30}>", m.content):
+                            try:
+                                mssg = m.embeds[0].description
+                            except: continue
+                        else:
+                            mssg = ' '.join(self.__remove_mention(m.content.split()))
+                        if m.author.id == m.guild.me.id:
+                            self.context.append(
+                                {"role": "assistant", "content": mssg}
+                            )
+                        else:
+                            self.context.append(
+                                {"role": "user", "content": mssg}
+                            )
+            except Exception as e:
+                await message.edit(
+                    content=f"An error occurred when referencing previous messages: {e}"
+                )
+                return
+                
         elif interaction is not None:
             msg = await interaction.original_response()
         else:
@@ -29,13 +92,25 @@ class MikoGPT:
             return
     
         try:
-            p = await self.u.profile
-            block = asyncio.to_thread(self.__openai_interaction, p)
-            await block
+            await asyncio.to_thread(self.__openai_interaction)
 
-            if len(self.response['data']) >= 750 or self.response['type'] == "IMAGE":
+            if (len(self.response['data']) >= 750 or self.response['type'] == "IMAGE") and \
+                len(self.response['data']) <= 3999:
                 embed = await self.__embed()
                 content = self.u.user.mention
+            elif len(self.response['data']) >= 4000:
+                embed = None
+                content = self.u.user.mention
+                b = bytes(self.response['data'], 'utf-8')
+                await msg.edit(
+                    content=(
+                            "The response to your prompt was too long. I have sent it in this "
+                            "`response.txt` file. You can view on PC or Web (or Mobile if you "
+                            "are able to download the file)."
+                        ),
+                    attachments=[discord.File(BytesIO(b), "response.txt")]
+                )
+                return
             else:
                 embed = None
                 content = self.response['data']
@@ -55,6 +130,13 @@ class MikoGPT:
                 content=f"{tunables('GENERIC_APP_COMMAND_ERROR_MESSAGE')[:-1]}: {e}"
             )
         
+    def __remove_mention(self, msg: list) -> list:
+        for i, word in enumerate(msg):
+            if word in [f"<@{str(self.client.user.id)}>"]:
+                # Remove word mentioning Miko
+                # Mention does not have to be first word
+                msg.pop(i)
+        return msg
     
     def __sanitize_prompt(self) -> None:
         '''
@@ -65,11 +147,7 @@ class MikoGPT:
         keep type as 'NORMAL'
         '''
         
-        for i, word in enumerate(self.prompt):
-            if word in [f"<@{str(self.client.user.id)}>"]:
-                # Remove word mentioning Miko
-                # Mention does not have to be first word
-                self.prompt.pop(i)
+        self.prompt = self.__remove_mention(self.prompt.split())
         
         if re.search('s:', self.prompt[0].lower()):
             if self.prompt[0].lower() == "s:":
@@ -97,12 +175,24 @@ class MikoGPT:
                 case _:
                     if p.feature_enabled('REPLY_TO_MENTION_OPENAI_SARCASTIC'):
                         role = tunables('OPENAI_RESPONSE_ROLE_SARCASTIC')
-            resp = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
+            
+            if self.context is None:
+                messages = [
                         {"role": "system", "content": role},
                         {"role": "user", "content": prompt}
                     ]
+            else:
+                self.context.append(
+                    {"role": "user", "content": prompt}
+                )
+                messages = self.context
+            
+            # for m in messages:
+            #     print(m)
+            
+            resp = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=messages
                 )
         else:
             resp = openai.Image.create(
@@ -128,9 +218,9 @@ class MikoGPT:
 
         if self.response['type'] != "IMAGE":
             temp.append(
-                "```\n"
-                f"{self.response['data']}\n"
-                "```"
+                # "```\n"
+                f"{self.response['data']}"
+                # "\n```"
             )
         else:
             temp.append(
@@ -146,7 +236,7 @@ class MikoGPT:
             name=f"Generated by {await self.u.username}"
         )
         embed.set_footer(
-            text=f"{self.client.user.name} OpenAI/ChatGPT Integration [Beta]"
+            text=f"{self.client.user.name} ChatGPT Integration [Beta]"
         )
         if self.response['type'] == "IMAGE":
             embed.set_image(

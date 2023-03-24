@@ -5,6 +5,7 @@ fetch_tunables()
 
 
 import time
+import sys
 from OpenAI.ai import MikoGPT
 import asyncio
 import os
@@ -12,7 +13,6 @@ import discord
 import re
 import random
 import signal
-import sys
 from Plex.embeds import info_anime, info_dubbed, info_quality, info_subbed, plex_update_2_28_23, plex_update_2_3
 from misc.embeds import plex_requests_embed
 from dpyConsole import Console
@@ -327,12 +327,15 @@ async def on_message(message: discord.Message):
 
                             
     # Respond to being mentioned
-    if str(client.user.id) in message.content and message.author.id != client.user.id:
+    if str(client.user.id) in message.content and message.author.id != client.user.id or \
+        (message.reference is not None and message.reference.resolved is not None and \
+            message.reference.resolved.author.id == client.user.id):
+        
         if (await mm.channel.profile).feature_enabled('REPLY_TO_MENTION_OPENAI') or\
             (await mm.channel.profile).feature_enabled('REPLY_TO_MENTION_OPENAI_SARCASTIC'):
 
             # Send help menu if only @ ing Miko
-            if len(message.content.split()) <= 1:
+            if len(message.content.split()) <= 1 and message.content == f"<@{str(client.user.id)}>":
                 await message.reply(
                     content="Please use </help:1064277864863772683> for help.",
                     silent=True
@@ -369,7 +372,7 @@ async def load_extensions_console():
 
 async def main():
     print('bot online')
-    asyncio.create_task(connect_pool())
+    await connect_pool()
     asyncio.create_task(heartbeat())
     async with client:
         await load_extensions()

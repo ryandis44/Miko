@@ -917,10 +917,8 @@ class MikoMessage():
 
     async def __big_emoji_embed(self, auth) -> discord.Embed:
         msg: discord.Message = self.message
-        embed = discord.Embed (
-            color = 0x2f3136, # Discord dark mode gray
-        )
-        embed.set_author(icon_url=await self.user.user_avatar, name=f"{await self.user.username}{'' if auth is None else f' → {await auth.username}'}")
+        embed = discord.Embed(color=0x2f3136)
+        embed.set_author(icon_url=await self.user.user_avatar, name=f"{await self.user.username}{'' if auth is None else f' → {auth}'}")
         url, emoji_name = get_emoji_url(msg.content)
         embed.set_image(url=url)
         embed.set_footer(text=f":{emoji_name}:")
@@ -931,10 +929,15 @@ class MikoMessage():
             if len(self.message.content.split()) == 1 and self.message.author.id != self.user.client.user.id:
                 if self.message.content.startswith("<") and self.message.content[1] not in ['@', '#']:
                     try:
+                        auth = None
                         if self.message.reference is not None:
-                            ref: discord.Message = await self.message.channel.fetch_message(self.message.reference.message_id)
-                            auth = MikoMember(user=ref.author, client=self.user.client)
-                        else: auth = None
+                            ref = self.message.reference.resolved
+                            if ref.author.id == self.user.client.user.id:
+                                try:
+                                    embed = ref.embeds[0]
+                                    auth = embed.author.name.split("→")[0]
+                                except: pass
+                            else: auth = await MikoMember(user=ref.author, client=self.user.client).username
 
                         await self.message.delete()
                         e = await self.__big_emoji_embed(auth)
