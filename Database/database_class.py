@@ -73,7 +73,6 @@ class AsyncDatabase:
                 if attempt < 5:
                     if os.getenv('DATABASE_DEBUG') != "1": await asyncio.sleep(5)
                     await check_pool()
-                    
                     continue
                 else:
                     print(f"\nASYNC DATABASE ERROR! [{self.file}] Could not execute: \"{exec_cmd}\"\n{e}")
