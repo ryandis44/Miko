@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from Database.database import get_server_status
 from Leveling.embeds import leveling_stats
 from tunables import *
 import os

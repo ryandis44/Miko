@@ -368,7 +368,7 @@ class Poll(discord.ui.Select):
         await msg.delete()
 
 
-def results_embed(responses: list, author: discord.Member, ans: list, name) -> discord.Embed:
+async def results_embed(responses: list, author: discord.Member, ans: list, name) -> discord.Embed:
 
         temp = []
         temp.append("\n")
@@ -399,8 +399,8 @@ def results_embed(responses: list, author: discord.Member, ans: list, name) -> d
             description=f"{''.join(temp)}"
         )
         embed.set_author(
-                name=f"{author.username}'s Poll Results",
-                icon_url=author.user_avatar
+                name=f"{await author.username}'s Poll Results",
+                icon_url=await author.user_avatar
             )
         
         return embed

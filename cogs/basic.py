@@ -320,7 +320,7 @@ class Basic(commands.Cog):
         if not (await u.profile).cmd_enabled('TOP_USERS_BY_MESSAGES'): return
         await u.increment_statistic('TOP_USERS_BY_MESSAGES')
         
-        await ctx.send(embed=top_users_embed_server(MikoGuild(guild=ctx.guild, client=self.client)))
+        await ctx.send(embed=await top_users_embed_server(MikoGuild(guild=ctx.guild, client=self.client)))
 
     @commands.command(name='channelstop', aliases=['ct'])
     async def ctop(self, ctx: Context):

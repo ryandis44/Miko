@@ -373,15 +373,15 @@ async def user_info_embed(u):
         color = GLOBAL_EMBED_COLOR,
         description=f"{''.join(temp)}"
     )
-    embed.set_thumbnail(url=u.user_avatar)
+    embed.set_thumbnail(url=await u.user_avatar)
     return embed
 
 # mstop embed
-def top_users_embed_server(g):
-    users = g.top_ten_total_messages_nobots #get_top_ten_total_messages_nobots(g.guild)
-    total_server_messages = g.guild_messages
-    total_server_messages_nobots = g.guild_messages_nobots
-    total_msgs_today = g.guild_messages_today
+async def top_users_embed_server(g):
+    users = await g.top_ten_total_messages_nobots #get_top_ten_total_messages_nobots(g.guild)
+    total_server_messages = await g.guild_messages
+    total_server_messages_nobots = await g.guild_messages_nobots
+    total_msgs_today = await g.guild_messages_today
 
     temp = []
     temp.append("\n")
@@ -412,12 +412,12 @@ def top_users_embed_server(g):
     embed.set_image(url=g.guild.banner)
     return embed
 
-def top_channels_embed_server(c):
+async def top_channels_embed_server(c):
     channels = get_channels_by_message_count_nobots(c.guild)
     private_msg_count = get_private_channels_by_message_count(c.guild)
-    total_server_messages = c.guild_messages
-    total_server_messages_nobots = c.guild_messages_nobots
-    current_channel_msg_count = c.channel_messages_nobots
+    total_server_messages = await c.guild_messages
+    total_server_messages_nobots = await c.guild_messages_nobots
+    current_channel_msg_count = await c.channel_messages_nobots
 
     temp = []
     temp.append("\n")
