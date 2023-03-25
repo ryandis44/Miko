@@ -23,9 +23,20 @@ class SettingsCog(commands.Cog):
         self.tree = app_commands.CommandTree(self.client)
 
 
-    @app_commands.command(name="settings", description=f"{os.getenv('APP_CMD_PREFIX')}Modify Miko for yourself or this guild (if you have permission)")
+    @app_commands.command(name="settings", description=f"{os.getenv('APP_CMD_PREFIX')}Modify Miko settings for yourself or this guild (if you have permission)")
     @app_commands.guild_only
     async def settings(self, interaction: discord.Interaction):
+
+        msg = await interaction.original_response()
+        await msg.edit(
+            content=None,
+            embed=settings_initial(interaction),
+            view=SettingsScopeView(original_interaction=interaction)
+        )
+
+    @app_commands.command(name="msettings", description=f"{os.getenv('APP_CMD_PREFIX')}Modify Miko settings for yourself or this guild (if you have permission)")
+    @app_commands.guild_only
+    async def msettings(self, interaction: discord.Interaction):
 
         msg = await interaction.original_response()
         await msg.edit(
@@ -37,7 +48,6 @@ class SettingsCog(commands.Cog):
 
 
     async def interaction_check(self, interaction: discord.Interaction):
-        # u = MikoMember(user=interaction.user, client=interaction.client)
         await interaction.response.send_message("Opening settings menu...", ephemeral=True)
         return True
 
