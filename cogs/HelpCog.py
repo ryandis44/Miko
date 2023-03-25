@@ -36,7 +36,7 @@ class HelpCog(commands.Cog):
         await help(interaction=interaction, category=category)
 
 
-    @app_commands.command(name="mikohelp", description=f"{os.getenv('APP_CMD_PREFIX')}Miko Help")
+    @app_commands.command(name="mhelp", description=f"{os.getenv('APP_CMD_PREFIX')}Miko Help")
     @app_commands.guild_only
     @app_commands.describe(
         category="Select a category for a more detailed help menu"
