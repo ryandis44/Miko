@@ -210,7 +210,7 @@ async def on_member_update(before: discord.Member, cur: discord.Member):
             await u.greeting_task
             print(f"**Greeting task status: {'COMPLETE' if u.greeting_task.done() else 'INCOMPLETE'}**\n")
 
-    username_hist(cur)
+    await username_hist(cur)
 
 
 # Responsible for keeping guild emojis up-to-date

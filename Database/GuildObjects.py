@@ -13,7 +13,6 @@ from misc.embeds import help_embed
 from misc.holiday_roles import get_holiday
 from misc.misc import generate_nickname, react_all_emoji_list, today
 from tunables import *
-# go = Database("Database.GuildObjects.py")
 ago = AsyncDatabase("Database.GuildObjects.py")
 
 class MikoGuild():
@@ -144,6 +143,20 @@ class MikoGuild():
         val = await ago.execute(
             "SELECT user_id FROM USERS WHERE react_all_true_false=\"TRUE\" AND "
             f"server_id='{self.guild.id}'"
+        )
+        return [item[0] for item in val] if type(val) is list else [val]
+    @property
+    async def bot_list(self) -> list:
+        val = await ago.execute(
+            "SELECT user_id FROM USERS WHERE is_bot=\"TRUE\" "
+            f"AND server_id='{self.guild.id}'"
+        )
+        return [item[0] for item in val] if type(val) is list else [val]
+    @property
+    async def rename_users(self) -> list:
+        val = await ago.execute(
+            "SELECT user_id FROM USERS WHERE rename_true_false=\"TRUE\" "
+            f"AND server_id='{self.guild.id}'"
         )
         return [item[0] for item in val] if type(val) is list else [val]
     @property

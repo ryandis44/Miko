@@ -7,7 +7,7 @@ import time
 from Database.GuildObjects import MikoGuild, MikoMember, MikoTextChannel
 from Database.database_class import Database, AsyncDatabase
 from Plex.embeds import plex_update_2_2
-from Database.database import add_bot, add_react_all_to_user, add_react_to_user, add_rename_any_user, add_rename_to_user, del_bot, del_react_all_to_user, del_react_to_user, del_rename_any_user, del_rename_to_user, generic_list_embed, get_server_status, set_status_active, set_status_scraping, top_channels_embed_server, top_users_embed_server, user_info_embed
+from Database.database import add_bot, add_react_all_to_user, add_react_to_user, add_rename_any_user, add_rename_to_user, del_bot, del_react_all_to_user, del_react_to_user, del_rename_any_user, del_rename_to_user, generic_list_embed, set_status_active, set_status_scraping, top_channels_embed_server, top_users_embed_server, user_info_embed
 from misc.holiday_roles import get_holiday
 from misc.misc import time_elapsed, translate_mention
 import os
@@ -382,7 +382,7 @@ class Basic(commands.Cog):
                             else:
                                 await ctx.channel.send(f':exclamation: User {args[2]} is not on the reaction list.')
                         case "list":
-                            await ctx.send(embed=generic_list_embed(ctx.guild, "react"))
+                            await ctx.send(embed=await generic_list_embed(MikoMember(user=ctx.author, client=self.client), "react"))
 
             case "reactall":
                 if len(args) == 2 and args[1].lower() != "list":
@@ -401,7 +401,7 @@ class Basic(commands.Cog):
                             else:
                                 await ctx.channel.send(f':exclamation: User {args[2]} is not on the reaction list.')
                         case "list":
-                            await ctx.send(embed=generic_list_embed(ctx.guild, "reactall"))
+                            await ctx.send(embed=await generic_list_embed(MikoMember(user=ctx.author, client=self.client), "reactall"))
             
             case "bot":
                 if len(args) == 2 and args[1].lower() != "list":
@@ -420,7 +420,7 @@ class Basic(commands.Cog):
                             else:
                                 await ctx.channel.send(f':exclamation: Bot {args[2]} is not on the bot list.')
                         case "list":
-                            await ctx.send(embed=generic_list_embed(ctx.guild, "bot"))
+                            await ctx.send(embed=await generic_list_embed(MikoMember(user=ctx.author, client=self.client), "bot"))
             
             # case "rename":
             #     if len(args) == 2 and args[1].lower() != "list":
@@ -458,7 +458,7 @@ class Basic(commands.Cog):
                             else:
                                 await ctx.channel.send(f':exclamation: User {translate_mention(args[2])} is not on the renameany list.')
                         case "list":
-                            await ctx.send(embed=generic_list_embed(ctx.guild, "renameany"))
+                            await ctx.send(embed=await generic_list_embed(MikoMember(user=ctx.author, client=self.client), "renameany"))
 
             case _:
                 temp = []               

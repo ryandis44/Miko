@@ -4,11 +4,12 @@ import time
 from datetime import datetime
 from num2words import num2words
 from dotenv import load_dotenv
-from Database.database_class import Database
+from Database.database_class import AsyncDatabase, Database
 from misc.misc import human_format, percentage_two_decimals
 from tunables import *
 
-dbf = Database("database.py")
+# dbf = Database("database.py")
+db = AsyncDatabase("Database.database.py")
 
 def if_not_list_create_list(var):
     if type(var) is not list:
@@ -18,18 +19,18 @@ def if_not_list_create_list(var):
         users = [item[0] for item in var]
         return users
 
-def username_hist(user):
+async def username_hist(user):
 
     sel_cmd = f"SELECT name FROM USERNAME_HISTORY WHERE user_id={user.id} ORDER BY last_change DESC"
-    name = dbf.db_executor(sel_cmd)
+    name = await db.execute(sel_cmd)
 
     new = if_not_list_create_list(name)
     if len(name) == 0:
         ins1_cmd = f"INSERT INTO USERNAME_HISTORY (user_id,name,last_change) VALUES ('{user.id}',\"{user}\",'{int(user.created_at.timestamp())}')"
-        dbf.db_executor(ins1_cmd)
+        await db.execute(ins1_cmd)
     elif str(new[0]) != str(user) or len(name) == 0:
         ins2_cmd = f"INSERT INTO USERNAME_HISTORY (user_id,name,last_change) VALUES ('{user.id}',\"{user}\",'{int(round(time.time()))}')"
-        dbf.db_executor(ins2_cmd)
+        await db.execute(ins2_cmd)
     return
     
 def combine_two_items_list(list):
@@ -48,29 +49,9 @@ def add_all_list_items(li):
     return val
 
 # Several GETTER, SETTER, and DELETER functions
-def get_server_status(server_id):
-    sel_cmd = f"SELECT status FROM SERVERS WHERE server_id={server_id}"
-    val = dbf.db_executor(sel_cmd)
-    if val == []: return "DNE"
-    return val.lower()
-
-def get_daily_server_msg_count(server_id):
-    sel_cmd = f"SELECT messages_today FROM SERVERS WHERE server_id={server_id}"
-    return dbf.db_executor(sel_cmd)
-
-def get_daily_user_msg_count(user, server):
-    sel_cmd = f"SELECT messages_today FROM USERS WHERE user_id={user.id} AND server_id={server.id}"
-    return dbf.db_executor(sel_cmd)
-
-def get_user_total_msgs_server(user, server):
-    sel_cmd = f"SELECT SUM(count) FROM USER_MESSAGE_COUNT WHERE user_id={user.id} AND server_id={server.id}"
-    val = dbf.db_executor(sel_cmd)
-    if val == [] or val is None: return 0
-    return int(val)
-
-def get_react_to_users(server):
+async def get_react_to_users(server):
     sel_cmd = f"SELECT user_id FROM USERS WHERE react_true_false=\"TRUE\" AND server_id={server.id}"
-    val = dbf.db_executor(sel_cmd)
+    val = await db.execute(sel_cmd)
     return if_not_list_create_list(val)
 
 def get_react_all_to_users(server):
@@ -446,7 +427,7 @@ async def top_channels_embed_server(c):
     return embed
 
 # generic listing embed
-def generic_list_embed(server, list):
+async def generic_list_embed(u, list: str):
 
     list_name = "NULL"
     member_or_bot = "member"
@@ -455,24 +436,24 @@ def generic_list_embed(server, list):
 
         case "react":
             list_name = "Reaction"
-            users_temp = get_react_to_users(server)
+            users_temp = await u.clown_react_users
 
         case "reactall":
             list_name = "ReactAll"
-            users_temp = get_react_all_to_users(server)
+            users_temp = await u.react_all_users
         
         case "bot":
             list_name = "Bot"
             member_or_bot = "bot"
-            users_temp = get_bots(server)
+            users_temp = await u.bot_list
         
         case "rename":
             list_name = "Rename"
-            users_temp = get_rename_users(server)
+            users_temp = await u.rename_users
         
         case "renameany":
             list_name = "Rename Any"
-            users_temp = get_rename_any_users(server)
+            users_temp = await u.renamehell_members
         
         case _:
             list_name = "NULL"
@@ -484,14 +465,14 @@ def generic_list_embed(server, list):
 
     temp = []               
     if len(users_temp) == 0:
-        temp.append(f"There are no members on the {list_name.lower()}\nlist for **{server}**")
+        temp.append(f"There are no members on the {list_name.lower()}\nlist for **{u.guild}**")
     else:
         temp.append(f'`{len(users_temp)}` ')
         if len(users_temp) == 1:
             temp.append(f'{member_or_bot} is')
         else:
             temp.append(f'{member_or_bot}s are')
-        temp.append(f' on the {list_name.lower()} list\nfor **{server}**:\n')
+        temp.append(f' on the {list_name.lower()} list\nfor **{u.guild}**:\n')
 
     list_iterator = 0
     for user in users_temp:
@@ -508,5 +489,5 @@ def generic_list_embed(server, list):
     color = GLOBAL_EMBED_COLOR,
     description=f"{''.join(temp)}"
     )
-    embed.set_thumbnail(url=server.icon)
+    embed.set_thumbnail(url=u.guild.icon)
     return embed

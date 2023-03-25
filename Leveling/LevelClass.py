@@ -1,6 +1,5 @@
 import time
 import discord
-from Database.database import get_user_total_msgs_server
 from Database.database_class import AsyncDatabase
 from Voice.VoiceActivity import VoiceActivity, VOICE_SESSIONS
 from tunables import *
