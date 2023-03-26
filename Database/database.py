@@ -4,11 +4,10 @@ import time
 from datetime import datetime
 from num2words import num2words
 from dotenv import load_dotenv
-from Database.database_class import AsyncDatabase, Database
+from Database.database_class import AsyncDatabase
 from misc.misc import human_format, percentage_two_decimals
 from tunables import *
 
-# dbf = Database("database.py")
 db = AsyncDatabase("Database.database.py")
 
 def if_not_list_create_list(var):
@@ -49,247 +48,122 @@ def add_all_list_items(li):
     return val
 
 # Several GETTER, SETTER, and DELETER functions
-async def get_react_to_users(server):
-    sel_cmd = f"SELECT user_id FROM USERS WHERE react_true_false=\"TRUE\" AND server_id={server.id}"
-    val = await db.execute(sel_cmd)
-    return if_not_list_create_list(val)
-
-def get_react_all_to_users(server):
-    sel_cmd = f"SELECT user_id FROM USERS WHERE react_all_true_false=\"TRUE\" AND server_id={server.id}"
-    val = dbf.db_executor(sel_cmd)
-    return if_not_list_create_list(val)
-
-def get_bot_devs():
-    sel_cmd = f"SELECT user_id FROM USERS WHERE bot_permission_level='5'"
-    val = dbf.db_executor(sel_cmd)
-    return if_not_list_create_list(val)
-
-def get_bot_admins():
-    sel_cmd = f"SELECT user_id FROM USERS WHERE bot_permission_level>='3'"
-    val = dbf.db_executor(sel_cmd)
-    return if_not_list_create_list(val)
-
-def get_rename_users(server):
-    sel_cmd = f"SELECT user_id FROM USERS WHERE rename_true_false=\"TRUE\" AND server_id={server.id}"
-    val = dbf.db_executor(sel_cmd)
-    return if_not_list_create_list(val)
-
-def get_rename_any_users(server):
-    sel_cmd = f"SELECT user_id FROM USERS WHERE rename_any_true_false=\"TRUE\" AND server_id={server.id}"
-    val = dbf.db_executor(sel_cmd)
-    return if_not_list_create_list(val)
-
-def get_channel_msg_count(channel):
-    sel_cmd = f"SELECT cnt FROM CHANNEL_MESSAGES_NOBOTS WHERE channel_id={channel.id}"
-    val = dbf.db_executor(sel_cmd)
-    if val is None: return 0
-    else: return val
-
-def get_music_channel(server_id):
-    sel_cmd = f"SELECT music_channel FROM SERVERS WHERE server_id='{server_id}'"
-    val = dbf.db_executor(sel_cmd)
-    if val is None: return None
-    else: return int(val)
-
-def get_top_ten_total_messages_nobots(server):
-    sel_cmd = (
-        "SELECT cnt, user_id FROM TOP_USERS_PER_GUILD_MSG_COUNT_NOBOTS "+
-        f"WHERE server_id={server.id}"
-    )
-    return dbf.db_executor(sel_cmd)
-
-def get_channels_by_message_count_nobots(server):
+async def get_channels_by_message_count_nobots(server):
     sel_cmd = (
         "SELECT channel_id,cnt "
         "FROM TOP_CHANNELS_PER_GUILD_MSG_COUNT_NOBOTS "
         f"WHERE server_id={server.id}"
     )
-    return dbf.db_executor(sel_cmd)
+    return await db.execute(sel_cmd)
 
-def get_private_channels_by_message_count(server):
+async def get_private_channels_by_message_count(server):
     sel_cmd = f"SELECT SUM(cnt) FROM CHANNEL_MESSAGES_NOBOTS WHERE server_id={server.id} AND private='TRUE'"
-    val = dbf.db_executor(sel_cmd)
+    val = await db.execute(sel_cmd)
     if val is None: return 0
     else: return int(val)
 
-def get_total_server_msgs(server):
-    sel_cmd = f"SELECT cnt FROM SERVER_MESSAGES WHERE server_id={server.id}"
-    return int(dbf.db_executor(sel_cmd))
-
-def get_total_server_msgs_nobots(server):
-    sel_cmd = f"SELECT cnt FROM SERVER_MESSAGES_NOBOTS WHERE server_id={server.id}"
-    return int(dbf.db_executor(sel_cmd))
-
-def get_bots(server):
-    sel_cmd = f"SELECT user_id FROM USERS WHERE is_bot=\"TRUE\" AND server_id={server.id}"
-    val = dbf.db_executor(sel_cmd)
-    return if_not_list_create_list(val)
-
-def get_all_bots():
-    sel_cmd = f"SELECT user_id FROM USERS WHERE is_bot=\"TRUE\""
-    val = dbf.db_executor(sel_cmd)
-    return if_not_list_create_list(val)
-
-def get_msg_rank(user, server):
-    sel_cmd = f"SELECT row FROM USERS_PER_GUILD_MSG_COUNT_NOBOTS WHERE user_id={user.id} AND server_id={server.id}"
-    return dbf.db_executor(sel_cmd)
-
-def get_react_to_words():
-    sel_cmd = "SELECT VALUE FROM TUNABLES WHERE VARIABLE=\"BRUH_REACT_WORDS\""
-    words = dbf.db_executor(sel_cmd).split()
-    return words
-
-def get_karuta_commands():
-    sel_cmd = "SELECT VALUE FROM TUNABLES WHERE VARIABLE=\"KARUTA_COMMANDS\""
-    cmds = dbf.db_executor(sel_cmd).split()
-    return cmds
-
-def get_all_usernames(user):
-    sel_cmd = f"SELECT name,last_change FROM USERNAME_HISTORY WHERE user_id={user.id} ORDER BY last_change DESC"
-    names = []
-    for item in dbf.db_executor(sel_cmd):
-        names.append(item[0])
-        names.append(item[1])
-    return names
-
-def set_status_scraping(server):
-    upd_cmd = f"UPDATE SERVERS SET status='scraping' WHERE server_id={server.id}"
-    dbf.db_executor(upd_cmd)
-    return
-
-def set_status_active(server):
-    upd_cmd = f"UPDATE SERVERS SET status='active' WHERE server_id={server.id}"
-    dbf.db_executor(upd_cmd)
-    return
-
-def add_react_to_user(user_id, server):
+async def add_react_to_user(user_id, server) -> bool:
     sel_cmd = f"SELECT react_true_false FROM USERS WHERE user_id={user_id} AND server_id={server.id}"
     # If the user is already being reacted to, we want to
     # return FALSE so that our 'if' statement in our parent
     # function will use its' else statement.
-    temp = dbf.db_executor(sel_cmd)
+    temp = await db.execute(sel_cmd)
     if temp == "TRUE":
         return False
 
     upd_cmd = f"UPDATE USERS SET react_true_false=\"TRUE\" WHERE user_id={user_id} AND server_id={server.id}"
-    dbf.db_executor(upd_cmd)
+    await db.execute(upd_cmd)
     return True
 
-def add_react_all_to_user(user_id, server):
+async def add_react_all_to_user(user_id, server):
     sel_cmd = f"SELECT react_all_true_false FROM USERS WHERE user_id={user_id} AND server_id={server.id}"
     # If the user is already being reacted to, we want to
     # return FALSE so that our 'if' statement in our parent
     # function will use its' else statement.
-    temp = dbf.db_executor(sel_cmd)
+    temp = await db.execute(sel_cmd)
     if temp == "TRUE":
         return False
 
     upd_cmd = f"UPDATE USERS SET react_all_true_false=\"TRUE\" WHERE user_id={user_id} AND server_id={server.id}"
-    dbf.db_executor(upd_cmd)
+    await db.execute(upd_cmd)
     return True
 
-def add_rename_to_user(user_id, server):
-    sel_cmd = f"SELECT rename_true_false FROM USERS WHERE user_id={user_id} AND server_id={server.id}"
-    # If the user is already being reacted to, we want to
-    # return FALSE so that our 'if' statement in our parent
-    # function will use its' else statement.
-    temp = dbf.db_executor(sel_cmd)
-    if temp == "TRUE":
-        return False
-
-    upd_cmd = f"UPDATE USERS SET rename_true_false=\"TRUE\" WHERE user_id={user_id} AND server_id={server.id}"
-    dbf.db_executor(upd_cmd)
-    return True
-
-def add_rename_any_user(user_id, server):
+async def add_rename_any_user(user_id, server):
     sel_cmd = f"SELECT rename_any_true_false FROM USERS WHERE user_id={user_id} AND server_id={server.id}"
     # If the user is already being reacted to, we want to
     # return FALSE so that our 'if' statement in our parent
     # function will use its' else statement.
-    temp = dbf.db_executor(sel_cmd)
+    temp = await db.execute(sel_cmd)
     if temp == "TRUE":
         return False
 
     upd_cmd = f"UPDATE USERS SET rename_any_true_false=\"TRUE\" WHERE user_id={user_id} AND server_id={server.id}"
-    dbf.db_executor(upd_cmd)
+    await db.execute(upd_cmd)
     return True
 
-def add_bot(bot_id, server):
+async def add_bot(bot_id, server):
     sel_cmd = f"SELECT is_bot FROM USERS WHERE user_id={bot_id} AND server_id={server.id}"
     # If the user is already being reacted to, we want to
     # return FALSE so that our 'if' statement in our parent
     # function will use its' else statement.
-    temp = dbf.db_executor(sel_cmd)
+    temp = await db.execute(sel_cmd)
     if temp == "TRUE":
         return False
 
     upd_cmd = f"UPDATE USERS SET is_bot=\"TRUE\" WHERE user_id={bot_id} AND server_id={server.id}"
-    dbf.db_executor(upd_cmd)
+    await db.execute(upd_cmd)
     return True
 
-def del_react_to_user(user_id, server):
+async def del_react_to_user(user_id, server):
     sel_cmd = f"SELECT react_true_false FROM USERS WHERE user_id={user_id} AND server_id={server.id}"
     # If the user is not already being reacted to, we want to
     # return FALSE so that our 'if' statement in our parent
     # function will use its' else statement.
-    temp =  dbf.db_executor(sel_cmd)
+    temp =  await db.execute(sel_cmd)
     if temp == "FALSE" or temp == "":
         return False
 
     upd_cmd = f"UPDATE USERS SET react_true_false=\"FALSE\" WHERE user_id={user_id} AND server_id={server.id}"
-    dbf.db_executor(upd_cmd)
+    await db.execute(upd_cmd)
     return True
 
-def del_react_all_to_user(user_id, server):
+async def del_react_all_to_user(user_id, server):
     sel_cmd = f"SELECT react_all_true_false FROM USERS WHERE user_id={user_id} AND server_id={server.id}"
     # If the user is not already being reacted to, we want to
     # return FALSE so that our 'if' statement in our parent
     # function will use its' else statement.
-    temp =  dbf.db_executor(sel_cmd)
+    temp =  await db.execute(sel_cmd)
     if temp == "FALSE" or temp == "":
         return False
 
     upd_cmd = f"UPDATE USERS SET react_all_true_false=\"FALSE\" WHERE user_id={user_id} AND server_id={server.id}"
-    dbf.db_executor(upd_cmd)
+    await db.execute(upd_cmd)
     return True
 
-def del_rename_to_user(user_id, server):
-    sel_cmd = f"SELECT rename_true_false FROM USERS WHERE user_id={user_id} AND server_id={server.id}"
-    # If the user is not already being reacted to, we want to
-    # return FALSE so that our 'if' statement in our parent
-    # function will use its' else statement.
-    temp = dbf.db_executor(sel_cmd)
-    if temp == "FALSE" or temp == "":
-        return False
-
-    upd_cmd = f"UPDATE USERS SET rename_true_false=\"FALSE\" WHERE user_id={user_id} AND server_id={server.id}"
-    dbf.db_executor(upd_cmd)
-    return True
-
-def del_rename_any_user(user_id, server):
+async def del_rename_any_user(user_id, server):
     sel_cmd = f"SELECT rename_any_true_false FROM USERS WHERE user_id={user_id} AND server_id={server.id}"
     # If the user is not already being reacted to, we want to
     # return FALSE so that our 'if' statement in our parent
     # function will use its' else statement.
-    temp = dbf.db_executor(sel_cmd)
+    temp = await db.execute(sel_cmd)
     if temp == "FALSE" or temp == "":
         return False
 
     upd_cmd = f"UPDATE USERS SET rename_any_true_false=\"FALSE\" WHERE user_id={user_id} AND server_id={server.id}"
-    dbf.db_executor(upd_cmd)
+    await db.execute(upd_cmd)
     return True
 
-def del_bot(bot_id, server):
+async def del_bot(bot_id, server):
     sel_cmd = f"SELECT is_bot FROM USERS WHERE user_id={bot_id} AND server_id={server.id}"
     # If the user is not already being reacted to, we want to
     # return FALSE so that our 'if' statement in our parent
     # function will use its' else statement.
-    temp = dbf.db_executor(sel_cmd)
+    temp = await db.execute(sel_cmd)
     if temp == "FALSE" or temp == "":
         return False
 
     upd_cmd = f"UPDATE USERS SET is_bot=\"FALSE\" WHERE user_id={bot_id} AND server_id={server.id}"
-    dbf.db_executor(upd_cmd)
+    await db.execute(upd_cmd)
     return True
 
 
@@ -350,7 +224,7 @@ async def user_info_embed(u):
 
 
     embed = discord.Embed (
-        title = f'{u.username} user info',
+        title = f'{await u.username} user info',
         color = GLOBAL_EMBED_COLOR,
         description=f"{''.join(temp)}"
     )
@@ -394,8 +268,8 @@ async def top_users_embed_server(g):
     return embed
 
 async def top_channels_embed_server(c):
-    channels = get_channels_by_message_count_nobots(c.guild)
-    private_msg_count = get_private_channels_by_message_count(c.guild)
+    channels = await get_channels_by_message_count_nobots(c.guild)
+    private_msg_count = await get_private_channels_by_message_count(c.guild)
     total_server_messages = await c.guild_messages
     total_server_messages_nobots = await c.guild_messages_nobots
     current_channel_msg_count = await c.channel_messages_nobots

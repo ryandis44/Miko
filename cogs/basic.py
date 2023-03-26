@@ -7,7 +7,7 @@ import time
 from Database.GuildObjects import MikoGuild, MikoMember, MikoTextChannel
 from Database.database_class import Database, AsyncDatabase
 from Plex.embeds import plex_update_2_2
-from Database.database import add_bot, add_react_all_to_user, add_react_to_user, add_rename_any_user, add_rename_to_user, del_bot, del_react_all_to_user, del_react_to_user, del_rename_any_user, del_rename_to_user, generic_list_embed, set_status_active, set_status_scraping, top_channels_embed_server, top_users_embed_server, user_info_embed
+from Database.database import add_bot, add_react_all_to_user, add_react_to_user, add_rename_any_user, del_bot, del_react_all_to_user, del_react_to_user, del_rename_any_user, generic_list_embed, top_channels_embed_server, top_users_embed_server, user_info_embed
 from misc.holiday_roles import get_holiday
 from misc.misc import time_elapsed, translate_mention
 import os
@@ -372,12 +372,12 @@ class Basic(commands.Cog):
 
                     match args[1].lower():
                         case "add":
-                            if add_react_to_user(translate_mention(args[2]), ctx.guild):
+                            if await add_react_to_user(translate_mention(args[2]), ctx.guild):
                                 await ctx.channel.send(f'<:green_plus:998447990035464233>  User {args[2]} added to reaction list.')
                             else:
                                 await ctx.channel.send(f':exclamation: User {args[2]} is already on the reaction list.')
                         case "del":
-                            if del_react_to_user(translate_mention(args[2]), ctx.guild):
+                            if await del_react_to_user(translate_mention(args[2]), ctx.guild):
                                 await ctx.channel.send(f'<:red_minus:998447601739386981>  User {args[2]} removed from reaction list.')
                             else:
                                 await ctx.channel.send(f':exclamation: User {args[2]} is not on the reaction list.')
@@ -391,12 +391,12 @@ class Basic(commands.Cog):
 
                     match args[1].lower():
                         case "add":
-                            if add_react_all_to_user(translate_mention(args[2]), ctx.guild):
+                            if await add_react_all_to_user(translate_mention(args[2]), ctx.guild):
                                 await ctx.channel.send(f'<:green_plus:998447990035464233>  User {args[2]} added to reaction list.')
                             else:
                                 await ctx.channel.send(f':exclamation: User {args[2]} is already on the reaction list.')
                         case "del":
-                            if del_react_all_to_user(translate_mention(args[2]), ctx.guild):
+                            if await del_react_all_to_user(translate_mention(args[2]), ctx.guild):
                                 await ctx.channel.send(f'<:red_minus:998447601739386981>  User {args[2]} removed from reaction list.')
                             else:
                                 await ctx.channel.send(f':exclamation: User {args[2]} is not on the reaction list.')
@@ -410,12 +410,12 @@ class Basic(commands.Cog):
 
                     match args[1].lower():
                         case "add":
-                            if add_bot(translate_mention(args[2]), ctx.guild):
+                            if await add_bot(translate_mention(args[2]), ctx.guild):
                                 await ctx.channel.send(f'<:green_plus:998447990035464233> Bot {args[2]} added to bot list.')
                             else:
                                 await ctx.channel.send(f':exclamation: Bot {args[2]} is already on the bot list.')
                         case "del":
-                            if del_bot(translate_mention(args[2]), ctx.guild):
+                            if await del_bot(translate_mention(args[2]), ctx.guild):
                                 await ctx.channel.send(f'<:red_minus:998447601739386981> Bot {args[2]} removed from bot list.')
                             else:
                                 await ctx.channel.send(f':exclamation: Bot {args[2]} is not on the bot list.')
@@ -448,12 +448,12 @@ class Basic(commands.Cog):
 
                     match args[1].lower():
                         case "add":
-                            if add_rename_any_user(translate_mention(args[2]), ctx.guild):
+                            if await add_rename_any_user(translate_mention(args[2]), ctx.guild):
                                 await ctx.channel.send(f'<:green_plus:998447990035464233>  User {translate_mention(args[2])} added to renameany list.')
                             else:
                                 await ctx.channel.send(f':exclamation: User {translate_mention(args[2])} is already on the renameany list.')
                         case "del":
-                            if del_rename_any_user(translate_mention(args[2]), ctx.guild):
+                            if await del_rename_any_user(translate_mention(args[2]), ctx.guild):
                                 await ctx.channel.send(f'<:red_minus:998447601739386981>  User {translate_mention(args[2])} removed from renameany list.')
                             else:
                                 await ctx.channel.send(f':exclamation: User {translate_mention(args[2])} is not on the renameany list.')

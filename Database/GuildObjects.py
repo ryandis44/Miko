@@ -126,7 +126,7 @@ class MikoGuild():
             "SELECT user_id FROM USERS WHERE rename_any_true_false=\"TRUE\" "
             f"AND server_id='{self.guild.id}'"
         )
-        return [item[0] for item in val] if type(val) is list else [val]
+        return [item[0] for item in val] if type(val) is tuple else [val] if val != [] else []
     #########################
     
     
@@ -137,28 +137,29 @@ class MikoGuild():
             "SELECT user_id FROM USERS WHERE react_true_false=\"TRUE\" AND "
             f"server_id='{self.guild.id}'"
         )
-        return [item[0] for item in val] if type(val) is list else [val]
+        return [item[0] for item in val] if type(val) is tuple else [val] if val != [] else []
     @property
     async def react_all_users(self) -> list:
         val = await ago.execute(
             "SELECT user_id FROM USERS WHERE react_all_true_false=\"TRUE\" AND "
             f"server_id='{self.guild.id}'"
         )
-        return [item[0] for item in val] if type(val) is list else [val]
+        
+        return [item[0] for item in val] if type(val) is tuple else [val] if val != [] else []
     @property
     async def bot_list(self) -> list:
         val = await ago.execute(
             "SELECT user_id FROM USERS WHERE is_bot=\"TRUE\" "
             f"AND server_id='{self.guild.id}'"
         )
-        return [item[0] for item in val] if type(val) is list else [val]
+        return [item[0] for item in val] if type(val) is tuple else [val] if val != [] else []
     @property
     async def rename_users(self) -> list:
         val = await ago.execute(
             "SELECT user_id FROM USERS WHERE rename_true_false=\"TRUE\" "
             f"AND server_id='{self.guild.id}'"
         )
-        return [item[0] for item in val] if type(val) is list else [val]
+        return [item[0] for item in val] if type(val) is tuple else [val] if val != [] else []
     @property
     async def ymca_green_book_channel(self) -> discord.TextChannel:
         val = await ago.execute(
