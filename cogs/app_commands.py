@@ -9,8 +9,7 @@ from Playtime.Views import PlaytimePageSelector, PlaytimeSearchPageSelector
 from Voice.Views import VoicetimePageSelector, VoicetimeSearchPageSelector
 from Voice.embeds import voicetime_embed, voicetime_search_embed
 from Voice.track_voice import avg_voicetime_result, get_average_voice_session, get_total_voice_activity_updates, get_total_voicetime_user, get_total_voicetime_user_guild, get_voicetime_today, total_voicetime_result
-from misc.embeds import modified_playtime_embed
-from Playtime.playtime import avg_playtime_result, get_app_from_str, get_average_session, get_total_activity_updates, get_total_playtime_user, playtime_embed, total_playtime_result
+from Playtime.playtime import avg_playtime_result, total_playtime_result
 from tunables import *
 from Database.database_class import Database
 import re

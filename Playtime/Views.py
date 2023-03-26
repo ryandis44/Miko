@@ -2,10 +2,11 @@ import time
 import discord
 from discord.ui import View
 import typing
+from Database.GuildObjects import MikoMember
 from Database.database_class import Database
 from tunables import *
 from misc.embeds import modified_playtime_embed
-from Playtime.playtime import avg_playtime_result, get_total_activity_updates, get_total_activity_updates_query, playtime_embed, total_playtime_result
+from Playtime.playtime import avg_playtime_result, playtime_embed, total_playtime_result
 
 ptv = Database("Playtime.Views.py")
 
@@ -153,8 +154,8 @@ class PlaytimeSearchPageSelector(View):
         self.button_presence()
         await interaction.response.edit_message()
         msg = await interaction.original_response()
-        await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=modified_playtime_embed(
-            self.user, self.game, self.result[self.offset:self.offset+self.limit],
+        await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=await modified_playtime_embed(
+            MikoMember(user=interaction.user, client=interaction.client), self.game, self.result[self.offset:self.offset+self.limit],
             self.sort, self.limit, self.updates,
             offset=self.offset, scope=self.scope,
             total=self.total, avg=self.avg),
@@ -170,8 +171,8 @@ class PlaytimeSearchPageSelector(View):
         self.button_presence()
         await interaction.response.edit_message()
         msg = await interaction.original_response()
-        await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=modified_playtime_embed(
-            self.user, self.game, self.result[self.offset:self.offset+self.limit],
+        await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=await modified_playtime_embed(
+            MikoMember(user=interaction.user, client=interaction.client), self.game, self.result[self.offset:self.offset+self.limit],
             self.sort, self.limit, self.updates,
             offset=self.offset, scope=self.scope,
             total=self.total, avg=self.avg),
@@ -187,8 +188,8 @@ class PlaytimeSearchPageSelector(View):
         self.button_presence()
         await interaction.response.edit_message()
         msg = await interaction.original_response()
-        await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=modified_playtime_embed(
-            self.user, self.game, self.result[self.offset:self.offset+self.limit],
+        await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=await modified_playtime_embed(
+            MikoMember(user=interaction.user, client=interaction.client), self.game, self.result[self.offset:self.offset+self.limit],
             self.sort, self.limit, self.updates,
             offset=self.offset, scope=self.scope,
             total=self.total, avg=self.avg),
@@ -201,8 +202,8 @@ class PlaytimeSearchPageSelector(View):
         self.button_presence()
         await interaction.response.edit_message()
         msg = await interaction.original_response()
-        await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=modified_playtime_embed(
-            self.user, self.game, self.result[self.offset:self.offset+self.limit],
+        await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=await modified_playtime_embed(
+            MikoMember(user=interaction.user, client=interaction.client), self.game, self.result[self.offset:self.offset+self.limit],
             self.sort, self.limit, self.updates,
             offset=self.offset, scope=self.scope,
             total=self.total, avg=self.avg),
@@ -220,8 +221,8 @@ class PlaytimeSearchPageSelector(View):
             self.avg = avg_playtime_result(self.result)
             self.updates = len(self.result)
             self.button_presence()
-            await orig_msg.edit(content=None, embed=modified_playtime_embed(
-                self.user, self.game, self.result[self.offset:self.offset+self.limit],
+            await orig_msg.edit(content=None, embed=await modified_playtime_embed(
+                MikoMember(user=interaction.user, client=interaction.client), self.game, self.result[self.offset:self.offset+self.limit],
                 self.sort, self.limit, self.updates,
                 offset=self.offset, scope=self.scope,
                 total=self.total, avg=self.avg),

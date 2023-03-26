@@ -29,14 +29,6 @@ class Basic(commands.Cog):
     async def on_ready(self):
         print(f'{self.client.user} has connected to Discord!')
 
-        # WIP
-        #else:
-        #    print("Connection has been restored to the Discord API, ending and restarting all playtime sessions...")
-        #    end_all_sessions(self.client)
-        #    print("Complete.")
-        #print("Scraping.. ?")
-        #scrape_sessions(self.client)
-
 
     # Generates a random number between 0 and 100 [inclusive]
     @commands.command(name='roll', aliases=['r'])

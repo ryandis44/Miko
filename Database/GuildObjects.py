@@ -3,6 +3,7 @@ import random
 import re
 import time
 import discord
+from Database.UserAttributes import Playtime
 from Music.LavalinkClient import AUDIO_SESSIONS
 from Database.database_class import AsyncDatabase
 from Leveling.LevelClass import LevelClass
@@ -599,6 +600,9 @@ class MikoMember(MikoGuild):
     # def pets(self) -> PetOwner:
     #     return PetOwner(user=self.user)
     @property
+    def playtime(self) -> Playtime:
+        return Playtime(u=self)
+    @property
     async def bot_permission_level(self):
         val = await ago.execute(
             "SELECT bot_permission_level FROM USERS WHERE "
@@ -667,6 +671,7 @@ class MikoMember(MikoGuild):
         if self.user.nick is None: return self.user.name
         elif await self.nickname_in_ctx: return self.user.nick
         return self.user.name
+    
 
     # async def __member_leave_message(self) -> None: pass
 

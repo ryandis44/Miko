@@ -10,7 +10,7 @@ from Voice.Views import VoicetimePageSelector, VoicetimeSearchPageSelector
 from Voice.embeds import voicetime_embed, voicetime_search_embed
 from Voice.track_voice import avg_voicetime_result, get_average_voice_session, get_total_voice_activity_updates, get_total_voicetime_user, get_total_voicetime_user_guild, get_voicetime_today, total_voicetime_result
 from misc.embeds import modified_playtime_embed
-from Playtime.playtime import avg_playtime_result, get_app_from_str, get_average_session, get_total_activity_updates, get_total_playtime_user, playtime_embed, total_playtime_result
+from Playtime.playtime import avg_playtime_result, get_app_from_str, playtime_embed, total_playtime_result
 from tunables import *
 from Database.database_class import Database, AsyncDatabase
 import re
@@ -75,6 +75,7 @@ class PlaytimeCog(commands.Cog):
         await interaction.response.send_message(content=f"Querying database. This may take a few seconds... {tunables('LOADING_EMOJI')}")
         orig_msg = await interaction.original_response()
 
+        u = MikoMember(user=interaction.user, client=interaction.client)
 
         # Guild MEMBER object needed, we can retrieve like this
         try:
@@ -107,13 +108,13 @@ class PlaytimeCog(commands.Cog):
 
         try:
            if not game_query and not sort_query and not playtime_query and not scope_not_user:
-               tup = get_total_activity_updates(user)
-               avg = get_average_session(user)
-               tot_playtime = get_total_playtime_user(user)
+               tup = await u.playtime.total_entries
+               avg = await u.playtime.average_session
+               tot_playtime = await u.playtime.total
                if tup > page_size: view = PlaytimePageSelector(interaction.user, user, page_size, updates=tup,
                    playtime=tot_playtime, avg_session=avg)
                else: view = None
-               await orig_msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=playtime_embed(user, page_size, updates=tup,
+               await orig_msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=await playtime_embed(u=u, limit=page_size, updates=tup,
                    playtime=tot_playtime, avg_session=avg), view=view)
                return
         except:
@@ -195,12 +196,12 @@ class PlaytimeCog(commands.Cog):
             if inverse_search:
                 if game[1:] == "": apps = []
                 else: 
-                    try: apps = get_app_from_str(game[1:])
+                    try: apps = await get_app_from_str(game[1:])
                     except:
                         await orig_msg.edit(content=tunables('GENERIC_APP_COMMAND_ERROR_MESSAGE'))
                         return
             else:
-                try: apps = get_app_from_str(game)
+                try: apps = await get_app_from_str(game)
                 except:
                     await orig_msg.edit(content=tunables('GENERIC_APP_COMMAND_ERROR_MESSAGE'))
                     return
@@ -266,7 +267,7 @@ class PlaytimeCog(commands.Cog):
                                                     query=sel_cmd, scope=[scope_not_user, scope],
                                                     result=playtime_by_game, total=search_total, avg=search_avg)
             else: view = None
-            await orig_msg.edit(content=ct, embed=modified_playtime_embed(user, game, playtime_by_game[:page_size],
+            await orig_msg.edit(content=ct, embed=await modified_playtime_embed(u, game, playtime_by_game[:page_size],
                                 sort, page_size, len(playtime_by_game), scope=[scope_not_user, scope], ptquery=playtime,
                                 total=search_total, avg=search_avg), view=view)
 

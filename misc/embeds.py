@@ -1,6 +1,7 @@
 import os
 import time
 import discord
+from Database.GuildObjects import MikoMember
 from misc.misc import sanitize_track_name, time_elapsed
 
 from Playtime.playtime import last_played
@@ -60,11 +61,11 @@ def plex_update_1():
     # embed.set_footer(text="Once downloaded, media will be automatically added to Plex.")
     return embed
 
-def modified_playtime_embed(user: discord.Member, query, playtime_by_game, sort, limit, updates, scope, offset=0, ptquery=">5m", total=0, avg=0):
+async def modified_playtime_embed(u: MikoMember, query, playtime_by_game, sort, limit, updates, scope, offset=0, ptquery=">5m", total=0, avg=0):
 
     temp = []
-    if not scope[0]: temp.append(f":pencil: Name: {user.mention}\n")
-    elif scope[1].value == "guild": temp.append(f":shield: Guild: **{user.guild}**\n")
+    if not scope[0]: temp.append(f":pencil: Name: {u.user.mention}\n")
+    elif scope[1].value == "guild": temp.append(f":shield: Guild: **{u.guild}**\n")
     elif scope[1].value == "global": temp.append(":earth_americas: Scope: **Global**\n")
     temp.append(f":mag_right: Search: `{query}`\n")
     detailed = False
@@ -98,15 +99,15 @@ def modified_playtime_embed(user: discord.Member, query, playtime_by_game, sort,
     num = 1
     for i, game in enumerate(playtime_by_game):
         if mp or sc:
-            if scope[0] and game[6] == str(user.id): temp.append(f":index_pointing_at_the_viewer: ")
+            if scope[0] and game[6] == str(u.user.id): temp.append(f":index_pointing_at_the_viewer: ")
             else: temp.append(f"`{i+1+offset}.` ")
         temp.append(f"{game[0]} ")
         if detailed:
             temp.append(f"<t:{game[5]}:R> ")
         else:
             # If not user scope, lookup queryed user
-            if scope[0]: temp.append(f"<t:{last_played(game[6], game[1])}:R> ")
-            else: temp.append(f"<t:{last_played(user.id, game[1])}:R> ")
+            if scope[0]: temp.append(f"<t:{await last_played(game[6], game[1])}:R> ")
+            else: temp.append(f"<t:{await last_played(u.user.id, game[1])}:R> ")
         temp.append(f"**{game[2]}** ")
         if sc:
             temp.append(f"`{game[5]:,} Session")
@@ -138,8 +139,8 @@ def modified_playtime_embed(user: discord.Member, query, playtime_by_game, sort,
     elif updates > 0:
         embed.set_footer(text=f"Showing {(offset + 1):,} - {updates:,} of {updates:,} results{tot_ses_str}")
     else: embed.set_footer(text="Showing 0 - 0 of 0 results")
-    if not scope[0]: embed.set_thumbnail(url=user.avatar)
-    elif scope[1].value == "guild": embed.set_thumbnail(url=user.guild.icon)
+    if not scope[0]: embed.set_thumbnail(url=await u.user_avatar)
+    elif scope[1].value == "guild": embed.set_thumbnail(url=u.guild.icon)
     return embed
 
 def song_search_results(res):

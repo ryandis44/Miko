@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from Playtime.playtime import sessions_hash_table
 from Voice.VoiceActivity import VOICE_SESSIONS
 
-from Playtime.playtime import fetch_playtime_sessions, find_type_playing, has_app_id, identify_current_application, sesh_id, start_time
+from Playtime.playtime import find_type_playing, has_app_id, identify_current_application, sesh_id, start_time
 from misc.misc import get_user_object
 from Database.GuildObjects import MikoMember
 from Polls.UI import active_polls
@@ -56,7 +56,7 @@ class Debugger(commands.Cog):
                 for i, activity in enumerate(user.activities):
                     cur_playing = find_type_playing(user)
                     if cur_playing[0] and i == cur_playing[1]:
-                        game = identify_current_application(activity, has_app_id(activity))
+                        game = await identify_current_application(activity, has_app_id(activity))
                     else:
                         game = None
                     st = start_time(activity)
