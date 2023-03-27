@@ -1,6 +1,6 @@
 import discord
-from Database.database_class import Database
-s = Database("Settings.settings.py")
+from Database.database_class import AsyncDatabase
+db = AsyncDatabase("Settings.settings.py")
 
 class Setting:
 
@@ -26,7 +26,7 @@ class Setting:
 
         if user_id is not None: scope = f"user_id='{user_id}'"
         else: scope = f"server_id='{server_id}'"
-        val = s.db_executor(
+        val = await db.execute(
             f"SELECT {self.col} FROM {self.table} WHERE "
             f"{scope}"
         )
@@ -56,7 +56,7 @@ class Setting:
 
         if user_id is not None: scope = f"user_id='{user_id}'"
         else: scope = f"server_id='{server_id}'"
-        s.db_executor(
+        await db.execute(
             f"UPDATE {self.table} SET {self.col}='{val}' WHERE "
             f"{scope}"
         )

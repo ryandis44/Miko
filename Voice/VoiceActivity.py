@@ -19,13 +19,13 @@ just as it is when an activity is new and has not yet concluded for the first ti
 '''
 
 import discord
-from Database.database_class import Database
+from Database.database_class import AsyncDatabase
 from tunables import *
 import time
 
 VOICE_SESSIONS = {}
 
-va = Database("Voice.VoiceActivity.py")
+db = AsyncDatabase("Voice.VoiceActivity.py")
 class VoiceActivity():
     
     def __init__(self, u, start_time=None):
@@ -41,6 +41,9 @@ class VoiceActivity():
         self.last_xp_award = -1
         self.last_token_award = -1
         self.active = True
+    
+    async def ainit(self) -> None:
+        pass
     
     @property
     def comparable(self) -> int:

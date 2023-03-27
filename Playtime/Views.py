@@ -3,12 +3,12 @@ import discord
 from discord.ui import View
 import typing
 from Database.GuildObjects import MikoMember
-from Database.database_class import Database
+from Database.database_class import AsyncDatabase
 from tunables import *
 from misc.embeds import modified_playtime_embed
 from Playtime.playtime import avg_playtime_result, playtime_embed, total_playtime_result
 
-ptv = Database("Playtime.Views.py")
+db = AsyncDatabase("Playtime.Views.py")
 
 class PlaytimePageSelector(View):
     
@@ -215,7 +215,7 @@ class PlaytimeSearchPageSelector(View):
         await interaction.response.edit_message(embed=None, view=None, content=f"Refreshing result. This may take a few seconds... {tunables('LOADING_EMOJI')}")
         orig_msg = await interaction.original_response()
         try:
-            self.result = ptv.db_executor(self.query)
+            self.result = await db.execute(self.query)
             self.offset = 0
             self.total = total_playtime_result(self.result)
             self.avg = avg_playtime_result(self.result)
