@@ -8,7 +8,7 @@ from Database.GuildObjects import MikoMember
 from tunables import *
 tv = Database("Voice.track_voice.py")
 
-def fetch_voicetime_sessions(client: discord.Client):
+async def fetch_voicetime_sessions(client: discord.Client):
     
     sel_cmd = "SELECT value FROM PERSISTENT_VALUES WHERE variable='GLOBAL_REBOOT_TIME_ACTIVITY'"
     end_time = tv.db_executor(sel_cmd)
@@ -27,11 +27,12 @@ def fetch_voicetime_sessions(client: discord.Client):
     val = tv.db_executor(sel_cmd)
     rst = 0
     t = int(time.time()) - tunables('THRESHOLD_RESUME_REBOOT_VOICE_ACTIVITY')
-    def restore(member: discord.Member, restore=True):
+    async def restore(member: discord.Member, restore=True):
         u = MikoMember(user=member, client=client)
         key = determine_htable_key(map=VOICE_SESSIONS, key=member.id)
-        if restore: VOICE_SESSIONS[key] = VoiceActivity(u=u, start_time=t)
-        else: VOICE_SESSIONS[key] = VoiceActivity(u=u)
+        va = VoiceActivity(u=u, start_time=t if restore else None)
+        await va.ainit()
+        VOICE_SESSIONS[key] = va
         return
     
     # Not very fast, but only way to achieve voice session restoration
@@ -59,11 +60,11 @@ def fetch_voicetime_sessions(client: discord.Client):
                 if str(val[outer][2]) == str(guild.id):
                     
                     #if val[outer][1] >= t:
-                    restore(member)
+                    await restore(member)
                     print(f"> Restored {member}'s voice session")
                     rst += 1
                 else:
-                    restore(member=member, restore=False)
+                    await restore(member=member, restore=False)
                     print(f"> {member} switched guilds during restart, created a new voice session for them")
 
                 
@@ -227,7 +228,9 @@ async def process_voice_state(u: MikoMember, bef: discord.VoiceState, cur: disco
                                  comparable=u.guild.id)
         if sesh[0] is not None: stop()
         key = determine_htable_key(map=VOICE_SESSIONS, key=u.user.id)
-        VOICE_SESSIONS[key] = VoiceActivity(u=u)
+        va = VoiceActivity(u=u)
+        await va.ainit()
+        VOICE_SESSIONS[key] = va
         await VOICE_SESSIONS[key].heartbeat()
 
     async def check_tracking():
