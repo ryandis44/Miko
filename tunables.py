@@ -23,7 +23,7 @@ def tunables(s):
 
 def tunables_init(): # Initial call cannot be async
     assign_tunables(
-        val=Database("tunables.py | INITIALIZATION").db_executor(
+        val=Database("TUNABLES INITIALIZATION").db_executor(
             "SELECT * FROM TUNABLES"
         )
     )

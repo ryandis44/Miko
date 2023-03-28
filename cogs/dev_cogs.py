@@ -4,12 +4,11 @@ from discord.ext import commands
 from discord import app_commands
 from Database.GuildObjects import MikoMember
 from tunables import *
-from Database.database_class import Database
 import os
 from dotenv import load_dotenv
 load_dotenv()
 
-dev_cmd_db = Database("app_commands.py")
+db = AsyncDatabase("app_commands.py")
 
 
 class dev_cog(commands.Cog):
@@ -72,7 +71,7 @@ class dev_cog(commands.Cog):
             "SELECT user_id FROM USERS WHERE "
             f"server_id='{interaction.guild.id}'"
         )
-        msg_totals = dev_cmd_db.db_executor(sel_cmd)
+        msg_totals = await db.execute(sel_cmd)
 
         temp.append("\n[")
         temp.append("?")
@@ -128,7 +127,7 @@ class dev_cog(commands.Cog):
 
 
 
-        db_members = dev_cmd_db.db_executor(
+        db_members = await db.execute(
             "SELECT user_id FROM USERS WHERE "
             f"server_id='{interaction.guild.id}' "
             "ORDER BY original_join_time ASC"
@@ -139,7 +138,7 @@ class dev_cog(commands.Cog):
         temp.append(f"/{interaction.guild.member_count}]")
         for i, db_member in enumerate(db_members):
             
-            dev_cmd_db.db_executor(
+            await db.execute(
                 f"UPDATE USERS SET unique_number='{i+1}' WHERE "
                 f"user_id='{db_member[0]}' AND server_id='{interaction.guild.id}'"
             )

@@ -6,7 +6,7 @@ import re
 from discord.ext import commands
 from discord import app_commands
 from Database.GuildObjects import MikoMember
-from Database.database_class import Database, ip
+from Database.database_class import ip
 from dotenv import load_dotenv
 from Music.UI import SongSelectView, PlaylistButtons, show_playlist_result, song_search_results
 from Music.PersistentPlayer import PersistentPlayer
@@ -17,7 +17,7 @@ load_dotenv()
 
 url_rx = re.compile(r'https?://(?:www\.)?.+')
 
-mp = Database("cogs.MusicCog.py")
+db = AsyncDatabase("cogs.MusicCog.py")
 
 class MusicCog(commands.Cog):
     def __init__(self, client: discord.Client):
@@ -273,12 +273,12 @@ class MusicCog(commands.Cog):
 
         if channel is None:
             upd_cmd = f"UPDATE SERVERS SET music_channel=NULL WHERE server_id='{interaction.guild.id}'"
-            mp.db_executor(upd_cmd)
+            await db.execute(upd_cmd)
             await msg.edit(content=f"Successfully removed music channel from **{interaction.guild}**")
             return
 
         upd_cmd = f"UPDATE SERVERS SET music_channel='{channel.id}' WHERE server_id='{interaction.guild.id}'"
-        mp.db_executor(upd_cmd)
+        await db.execute(upd_cmd)
         await msg.edit(content=f"Set **{interaction.guild}** music channel to {channel.mention}\nRun the command again without arguments to unset channel.")
 
     

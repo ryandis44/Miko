@@ -7,17 +7,16 @@ import typing
 from Database.GuildObjects import MikoMember
 from Playtime.Views import PlaytimePageSelector, PlaytimeSearchPageSelector
 from Voice.Views import VoicetimePageSelector, VoicetimeSearchPageSelector
-from Voice.embeds import voicetime_embed, voicetime_search_embed
-from Voice.track_voice import avg_voicetime_result, get_average_voice_session, get_total_voice_activity_updates, get_total_voicetime_user, get_total_voicetime_user_guild, get_voicetime_today, total_voicetime_result
+from Voice.embeds import voicetime_search_embed
+from Voice.track_voice import avg_voicetime_result, total_voicetime_result
 from Playtime.playtime import avg_playtime_result, total_playtime_result
 from tunables import *
-from Database.database_class import Database
 import re
 import os
 from dotenv import load_dotenv
 load_dotenv()
 
-app_cmd_db = Database("app_commands.py")
+db = AsyncDatabase("app_commands.py")
         
 
 class Slash(commands.Cog):
@@ -135,9 +134,9 @@ class Slash(commands.Cog):
 
                 # Restore and delete nick cache
                 sel_cmd = f"SELECT name FROM NICKNAME_CACHE WHERE user_id='{member.id}' ORDER BY user_id DESC LIMIT 1"
-                rst_name = app_cmd_db.db_executor(sel_cmd)
+                rst_name = await db.execute(sel_cmd)
                 del_cmd = f"DELETE FROM NICKNAME_CACHE WHERE user_id='{member.id}'"
-                app_cmd_db.db_executor(del_cmd)
+                await db.execute(del_cmd)
                 if rst_name == []: rst_name = None
 
                 try: await member.edit(nick=rst_name)
@@ -163,7 +162,7 @@ class Slash(commands.Cog):
                     "INSERT INTO NICKNAME_CACHE (user_id,name) VALUES "+
                     f"('{member.id}', '{member.nick}')"
                 )
-                app_cmd_db.db_executor(ins_cmd)
+                await db.execute(ins_cmd)
 
             await asyncio.sleep(1)
             try: await member.edit(nick=name)

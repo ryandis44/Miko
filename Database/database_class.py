@@ -177,9 +177,6 @@ class Database:
         self.db = db
         self.cur = cur
         return
-    
-    async def db_executor_thread(self, exec_cmd):
-        return await asyncio.to_thread(self.db_executor, exec_cmd)
 
     def db_executor(self, exec_cmd):
         for attempt in range(1,6):

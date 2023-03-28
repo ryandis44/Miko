@@ -8,16 +8,15 @@ from Database.GuildObjects import MikoMember
 from Playtime.Views import PlaytimePageSelector, PlaytimeSearchPageSelector
 from Voice.Views import VoicetimePageSelector, VoicetimeSearchPageSelector
 from Voice.embeds import voicetime_embed, voicetime_search_embed
-from Voice.track_voice import avg_voicetime_result, get_average_voice_session, get_total_voice_activity_updates, get_total_voicetime_user, get_total_voicetime_user_guild, get_voicetime_today, total_voicetime_result
+from Voice.track_voice import avg_voicetime_result, get_average_voice_session, get_total_voice_activity_updates, get_total_voicetime_user, get_total_voicetime_user_guild, total_voicetime_result
 from Playtime.playtime import avg_playtime_result, total_playtime_result
 from tunables import *
-from Database.database_class import Database
 import re
 import os
 from dotenv import load_dotenv
 load_dotenv()
 
-app_cmd_db = Database("VoicetimeCog.py")
+db = AsyncDatabase("VoicetimeCog.py")
         
 
 class VoicetimeCog(commands.Cog):
@@ -86,10 +85,10 @@ class VoicetimeCog(commands.Cog):
         # Begin generic voicetime display
         try:
             if guild is None and sort is None and voicetime is None and user_scope:
-                tup = get_total_voice_activity_updates(user_id=user.id)
-                avg = get_average_voice_session(user_id=user.id)
-                tot_voicetime = get_total_voicetime_user(user_id=user.id)
-                voicetime_guild = get_total_voicetime_user_guild(user_id=user.id, server_id=interaction.guild.id)
+                tup = await get_total_voice_activity_updates(user_id=user.id)
+                avg = await get_average_voice_session(user_id=user.id)
+                tot_voicetime = await get_total_voicetime_user(user_id=user.id)
+                voicetime_guild = await get_total_voicetime_user_guild(user_id=user.id, server_id=interaction.guild.id)
                 if tup > page_size: view = VoicetimePageSelector(client=self.client, user=user, author=interaction.user, page_size=page_size, updates=tup,
                                                                  voicetime=tot_voicetime, avg_session=avg, guild=interaction.guild, voicetime_guild=voicetime_guild)
                 else: view = None
@@ -206,7 +205,7 @@ class VoicetimeCog(commands.Cog):
                     guild_sel_cmd = (
                         f"SELECT server_id FROM SERVERS WHERE cached_name LIKE '{'%' + guild + '%'}' LIMIT 10"
                     )
-                    guilds = app_cmd_db.db_executor(guild_sel_cmd)
+                    guilds = await db.execute(guild_sel_cmd)
 
                 if guilds == []:
                     await orig_msg.edit(content=f"Could not find any guilds matching: `{guild}`")
@@ -266,7 +265,7 @@ class VoicetimeCog(commands.Cog):
         ####
 
         try:
-            search_results = app_cmd_db.db_executor(''.join(sel_cmd))
+            search_results = await db.execute(''.join(sel_cmd))
 
             if search_results == []:
                 msg = []

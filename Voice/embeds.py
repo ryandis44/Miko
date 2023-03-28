@@ -19,9 +19,9 @@ async def voicetime_embed(
                 avg_session="`None`",
                 voicetime_guild=0) -> discord.Embed:
     num = 0
-    recent_activity = get_recent_voice_activity(user=user, page_size=page_size, offset=offset)
+    recent_activity = await get_recent_voice_activity(user=user, page_size=page_size, offset=offset)
     current: VoiceActivity = locate_htable_obj(map=VOICE_SESSIONS, key=user.id)[0]
-    voicetime_today = get_voicetime_today(user_id=user.id)
+    voicetime_today = await get_voicetime_today(user_id=user.id)
     current_time = int(time.time())
     
 
@@ -154,7 +154,7 @@ async def voicetime_search_embed(
         # chat in a given guild
         if mp or sc:
             temp.append(
-                f"<t:{last_voiced_server(user_id=(int(item[5]) if len(item) == 6 else user.id), server_id=item[1])}:R> "
+                f"<t:{await last_voiced_server(user_id=(int(item[5]) if len(item) == 6 else user.id), server_id=item[1])}:R> "
                 )
         else:
             temp.append(f"<t:{item[4]}:R> ")

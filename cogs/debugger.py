@@ -2,7 +2,7 @@ import asyncio
 import uuid
 import discord
 from discord.ext import commands
-from Database.database_class import Database
+from Database.database_class import AsyncDatabase
 from tunables import tunables
 from discord.ext.commands import Context
 import os
@@ -17,7 +17,7 @@ from Polls.UI import active_polls
 from Music.LavalinkClient import AUDIO_SESSIONS
 load_dotenv()
 
-dbg = Database("cogs.debugger.py")
+db = AsyncDatabase("cogs.debugger.py")
 
 class Debugger(commands.Cog):
     def __init__(self, client):
@@ -136,7 +136,7 @@ class Debugger(commands.Cog):
                 while True: # Make sure we do not have duplicate application id
                     aid = uuid.uuid4().hex
                     sel_check_cmd = f"SELECT * FROM APPLICATIONS WHERE app_id='{aid}'"
-                    res = dbg.db_executor(sel_check_cmd)
+                    res = await db.execute(sel_check_cmd)
                     if res == []: break
                 
                 await ctx.channel.send(f"{aid} {res}")
