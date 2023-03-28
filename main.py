@@ -1,7 +1,7 @@
 # Miko Bot main file
 from Database.database_class import connect_pool
-from tunables import fetch_tunables, tunables, GLOBAL_EMBED_COLOR
-fetch_tunables()
+from tunables import tunables_init, tunables, GLOBAL_EMBED_COLOR, tunables_refresh
+tunables_init()
 
 
 import time
@@ -268,7 +268,7 @@ async def on_message(message: discord.Message):
     if message.content.lower().startswith(f"{os.getenv('CMD_PREFIX1')}rt") and await mm.user.bot_permission_level >= 5:
         await message.channel.send("Fetching tunables from database...")
         db_class.refresh_tunables()
-        fetch_tunables()
+        await tunables_refresh()
         await message.channel.send("Tunables refreshed.")
 
     await mm.handle_leveling()

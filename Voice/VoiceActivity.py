@@ -37,7 +37,7 @@ class VoiceActivity():
             self.__start_time = start_time
             self.__resume_threshold = self.__start_time - tunables('THRESHOLD_RESUME_REBOOT_VOICE_ACTIVITY')
         self.__guild: discord.Guild = u.guild
-        self.__new_voice_entry()
+        # self.__new_voice_entry()
         self.last_xp_award = -1
         self.last_token_award = -1
         self.active = True
@@ -65,9 +65,9 @@ class VoiceActivity():
     def member(self) -> discord.Member:
         return self.__member
     
-    def end(self, current_time=None): await self.__close_voice_entry(current_time)
+    async def end(self, current_time=None): await self.__close_voice_entry(current_time)
     
-    def __new_voice_entry(self, attempt=0):
+    async def __new_voice_entry(self, attempt=0):
         sel_cmd = (
             "SELECT end_time,start_time FROM VOICE_HISTORY WHERE "
             f"user_id={self.__member.id} AND end_time is not NULL "
@@ -111,7 +111,7 @@ class VoiceActivity():
         )
         val = await db.execute(sel_cmd)
         if val == [] and not attempt >= 5:
-            self.__new_voice_entry(attempt + 1) # Only try 5 times
+            await self.__new_voice_entry(attempt + 1) # Only try 5 times
         elif attempt >= 5: await self.end() # No entry found after 5 attempts, abort tracking this entry entirely
         return
 

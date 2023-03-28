@@ -1,8 +1,8 @@
 from discord import Color
 from discord import ButtonStyle
-from Database.database_class import Database
+from Database.database_class import Database, AsyncDatabase
 from utils.HashTable import HashTable
-gc = Database("tunables.py")
+db = AsyncDatabase("tunables.py")
 
 GENERIC_CONFIRM_STYLE=ButtonStyle.green
 GENERIC_DECLINE_STYLE=ButtonStyle.red
@@ -21,9 +21,17 @@ def tunables(s):
         print(f"TUNABLES ERROR: Could not find '{s}' | {e}")
         return None
 
-def fetch_tunables():
+def tunables_init(): # Initial call cannot be async
+    assign_tunables(
+        val=Database("tunables.py | INITIALIZATION").db_executor(
+            "SELECT * FROM TUNABLES"
+        )
+    )
 
-    val = gc.db_executor(exec_cmd="SELECT * FROM TUNABLES")
+async def tunables_refresh():
+    assign_tunables(await db.execute("SELECT * FROM TUNABLES"))
+
+def assign_tunables(val):
     global TUNABLES
     for tunable in val:
         if tunable[1] == "TRUE": TUNABLES[tunable[0]] = True

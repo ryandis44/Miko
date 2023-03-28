@@ -267,7 +267,7 @@ class PlaytimeCog(commands.Cog):
                                                     query=sel_cmd, scope=[scope_not_user, scope],
                                                     result=playtime_by_game, total=search_total, avg=search_avg)
             else: view = None
-            await orig_msg.edit(content=ct, embed=await modified_playtime_embed(u, game, playtime_by_game[:page_size],
+            await orig_msg.edit(content=ct, embed=await modified_playtime_embed(interaction, game, playtime_by_game[:page_size],
                                 sort, page_size, len(playtime_by_game), scope=[scope_not_user, scope], ptquery=playtime,
                                 total=search_total, avg=search_avg), view=view)
 
