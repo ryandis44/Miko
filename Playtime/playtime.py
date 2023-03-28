@@ -10,6 +10,9 @@ from misc.misc import time_elapsed, today
 from tunables import *
 
 
+# import tracemalloc
+# tracemalloc.start()
+
 # For every active session, end session when bot terminates
 
 sessions_hash_table = HashTable(10000)
