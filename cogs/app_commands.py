@@ -5,8 +5,6 @@ from discord.ext import commands
 from discord import app_commands
 import typing
 from Database.GuildObjects import MikoMember
-from Playtime.Views import PlaytimePageSelector, PlaytimeSearchPageSelector
-from Voice.Views import VoicetimePageSelector, VoicetimeSearchPageSelector
 from Voice.embeds import voicetime_search_embed
 from Voice.track_voice import avg_voicetime_result, total_voicetime_result
 from Playtime.playtime import avg_playtime_result, total_playtime_result

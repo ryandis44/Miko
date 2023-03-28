@@ -10,9 +10,6 @@ from misc.misc import time_elapsed, today
 from tunables import *
 
 
-# import tracemalloc
-# tracemalloc.start()
-
 # For every active session, end session when bot terminates
 
 sessions_hash_table = HashTable(10000)
@@ -141,8 +138,11 @@ async def get_app_from_str(input):
 # Doing so allows tracking individual games, regardless
 # of the device it is being played on.
 async def blacklisted_application_ids():
+    print("Checking blacklisted App IDs")
     sel_cmd = "SELECT value FROM TUNABLES WHERE variable='BLACKLISTED_APPLICATION_IDS'"
-    return await db.execute(sel_cmd).split()
+    val = await db.execute(sel_cmd)
+    print(val)
+    return val.split()
 
 async def identify_current_application(app, has_id):
     tr_name = translate_application_name(app.name)
@@ -150,7 +150,8 @@ async def identify_current_application(app, has_id):
     info = [None, -1]
 
     try: # Treat a blacklisted application id as one that does not have a discord id
-        if has_id and str(app.application_id) in await blacklisted_application_ids(): has_id = False
+        print(tunables('BLACKLISTED_APPLICATION_IDS').split())
+        if has_id and str(app.application_id) in tunables('BLACKLISTED_APPLICATION_IDS').split(): has_id = False
     except: pass
 
     if has_id:

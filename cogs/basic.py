@@ -164,7 +164,9 @@ class Basic(commands.Cog):
         except: user = ctx.author
 
 
-        await u.ainit()
+        print(await db.execute("SELECT * FROM APPLICATIONS WHERE has_discord_id='FALSE'"))
+        print("\n\n\n\n")
+        print(b.db_executor("SELECT * FROM APPLICATIONS WHERE has_discord_id='FALSE'"))
 
 
         # await ctx.channel.send(f"{playtimeContentMessage()}")

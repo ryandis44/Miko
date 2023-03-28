@@ -59,7 +59,7 @@ class PlaytimePageSelector(View):
         self.button_presence()
         await interaction.response.edit_message()
         msg = await interaction.original_response()
-        await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=playtime_embed(self.user, self.limit, updates=self.updates,
+        await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=await playtime_embed(MikoMember(user=self.user, client=interaction.client), self.limit, updates=self.updates,
             offset=self.offset, playtime=self.playtime, avg_session=self.avg), view=self)
 
     @discord.ui.button(style=discord.ButtonStyle.gray, emoji=tunables('GENERIC_PREV_BUTTON'), custom_id="back", disabled=True)
@@ -72,7 +72,7 @@ class PlaytimePageSelector(View):
         self.button_presence()
         await interaction.response.edit_message()
         msg = await interaction.original_response()
-        await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=playtime_embed(self.user, self.limit, updates=self.updates,
+        await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=await playtime_embed(MikoMember(user=self.user, client=interaction.client), self.limit, updates=self.updates,
             offset=self.offset, playtime=self.playtime, avg_session=self.avg), view=self)
     
     @discord.ui.button(style=discord.ButtonStyle.gray, emoji=tunables('GENERIC_NEXT_BUTTON'), custom_id="next")
@@ -85,7 +85,7 @@ class PlaytimePageSelector(View):
         self.button_presence()
         await interaction.response.edit_message()
         msg = await interaction.original_response()
-        await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=playtime_embed(self.user, self.limit, updates=self.updates,
+        await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=await playtime_embed(MikoMember(user=self.user, client=interaction.client), self.limit, updates=self.updates,
             offset=self.offset, playtime=self.playtime, avg_session=self.avg), view=self)
     
     @discord.ui.button(style=discord.ButtonStyle.gray, emoji=tunables('GENERIC_LAST_BUTTON'), custom_id="end")
@@ -94,7 +94,7 @@ class PlaytimePageSelector(View):
         self.button_presence()
         await interaction.response.edit_message()
         msg = await interaction.original_response()
-        await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=playtime_embed(self.user, self.limit, updates=self.updates,
+        await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=await playtime_embed(MikoMember(user=self.user, client=interaction.client), self.limit, updates=self.updates,
             offset=self.offset, playtime=self.playtime, avg_session=self.avg), view=self)
     
     # Only the user that ran the command to press buttons
@@ -155,7 +155,7 @@ class PlaytimeSearchPageSelector(View):
         await interaction.response.edit_message()
         msg = await interaction.original_response()
         await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=await modified_playtime_embed(
-            MikoMember(user=interaction.user, client=interaction.client), self.game, self.result[self.offset:self.offset+self.limit],
+            MikoMember(user=self.user, client=interaction.client), self.game, self.result[self.offset:self.offset+self.limit],
             self.sort, self.limit, self.updates,
             offset=self.offset, scope=self.scope,
             total=self.total, avg=self.avg),
@@ -172,7 +172,7 @@ class PlaytimeSearchPageSelector(View):
         await interaction.response.edit_message()
         msg = await interaction.original_response()
         await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=await modified_playtime_embed(
-            MikoMember(user=interaction.user, client=interaction.client), self.game, self.result[self.offset:self.offset+self.limit],
+            MikoMember(user=self.user, client=interaction.client), self.game, self.result[self.offset:self.offset+self.limit],
             self.sort, self.limit, self.updates,
             offset=self.offset, scope=self.scope,
             total=self.total, avg=self.avg),
@@ -189,7 +189,7 @@ class PlaytimeSearchPageSelector(View):
         await interaction.response.edit_message()
         msg = await interaction.original_response()
         await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=await modified_playtime_embed(
-            MikoMember(user=interaction.user, client=interaction.client), self.game, self.result[self.offset:self.offset+self.limit],
+            MikoMember(user=self.user, client=interaction.client), self.game, self.result[self.offset:self.offset+self.limit],
             self.sort, self.limit, self.updates,
             offset=self.offset, scope=self.scope,
             total=self.total, avg=self.avg),
@@ -203,7 +203,7 @@ class PlaytimeSearchPageSelector(View):
         await interaction.response.edit_message()
         msg = await interaction.original_response()
         await msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=await modified_playtime_embed(
-            MikoMember(user=interaction.user, client=interaction.client), self.game, self.result[self.offset:self.offset+self.limit],
+            MikoMember(user=self.user, client=interaction.client), self.game, self.result[self.offset:self.offset+self.limit],
             self.sort, self.limit, self.updates,
             offset=self.offset, scope=self.scope,
             total=self.total, avg=self.avg),
@@ -222,7 +222,7 @@ class PlaytimeSearchPageSelector(View):
             self.updates = len(self.result)
             self.button_presence()
             await orig_msg.edit(content=None, embed=await modified_playtime_embed(
-                MikoMember(user=interaction.user, client=interaction.client), self.game, self.result[self.offset:self.offset+self.limit],
+                MikoMember(user=self.user, client=interaction.client), self.game, self.result[self.offset:self.offset+self.limit],
                 self.sort, self.limit, self.updates,
                 offset=self.offset, scope=self.scope,
                 total=self.total, avg=self.avg),

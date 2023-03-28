@@ -3,6 +3,8 @@ from Database.database_class import connect_pool
 from tunables import tunables_init, tunables, GLOBAL_EMBED_COLOR, tunables_refresh
 tunables_init()
 
+import tracemalloc
+tracemalloc.start()
 
 import time
 import sys

@@ -62,8 +62,8 @@ class AsyncDatabase:
     def __init__(self, file):
         self.file = file
 
-    async def execute(self, exec_cmd: str):
-        # print(exec_cmd)
+    async def execute(self, exec_cmd: str, p=False):
+        if p: print(exec_cmd)
         global pool
         for attempt in range(1,6):
             try:

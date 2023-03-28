@@ -75,14 +75,14 @@ class PlaytimeCog(commands.Cog):
         await interaction.response.send_message(content=f"Querying database. This may take a few seconds... {tunables('LOADING_EMOJI')}")
         orig_msg = await interaction.original_response()
 
-        u = MikoMember(user=interaction.user, client=interaction.client)
-
         # Guild MEMBER object needed, we can retrieve like this
         try:
             if scope.value != 'user': scope_not_user = True
             else: scope_not_user = False
         except: scope_not_user = False
-        if user is None or scope_not_user: user = interaction.guild.get_member(interaction.user.id)
+        if user is None or scope_not_user: user = interaction.user
+
+        u = MikoMember(user=user, client=interaction.client)
         #else:
         #    user_temp = interaction.guild.get_member(user.id)
         #    if user_temp is not None: user = user_temp
@@ -223,7 +223,6 @@ class PlaytimeCog(commands.Cog):
         del part3
         ####
 
-
         # Handle sort query
         part4 = []
         if sort_query and sort.value != 'ls':
@@ -246,6 +245,7 @@ class PlaytimeCog(commands.Cog):
         
         sel_cmd.append(query_limit)
 
+
         try:
             playtime_by_game = await app_cmd_db.execute(''.join(sel_cmd))
 
@@ -267,7 +267,7 @@ class PlaytimeCog(commands.Cog):
                                                     query=sel_cmd, scope=[scope_not_user, scope],
                                                     result=playtime_by_game, total=search_total, avg=search_avg)
             else: view = None
-            await orig_msg.edit(content=ct, embed=await modified_playtime_embed(interaction, game, playtime_by_game[:page_size],
+            await orig_msg.edit(content=ct, embed=await modified_playtime_embed(u, game, playtime_by_game[:page_size],
                                 sort, page_size, len(playtime_by_game), scope=[scope_not_user, scope], ptquery=playtime,
                                 total=search_total, avg=search_avg), view=view)
 
