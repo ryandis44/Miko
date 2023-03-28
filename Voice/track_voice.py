@@ -213,12 +213,12 @@ async def process_voice_state(u: MikoMember, bef: discord.VoiceState, cur: disco
     able to briefly allow for "duplicate" hash entries, allowing us to handle
     when discord sends updates out of order ('join' before 'left').
     '''
-    def stop():
+    async def stop():
         sesh = locate_htable_obj(map=VOICE_SESSIONS,
                                  key=u.user.id,
                                  comparable=u.guild.id)
         if sesh[0] is not None:
-            sesh[0].end()
+            await sesh[0].end()
             del VOICE_SESSIONS[sesh[1]]
            
     async def start():
@@ -226,7 +226,7 @@ async def process_voice_state(u: MikoMember, bef: discord.VoiceState, cur: disco
         sesh = locate_htable_obj(map=VOICE_SESSIONS,
                                  key=u.user.id,
                                  comparable=u.guild.id)
-        if sesh[0] is not None: stop()
+        if sesh[0] is not None: await stop()
         key = determine_htable_key(map=VOICE_SESSIONS, key=u.user.id)
         va = VoiceActivity(u=u)
         await va.ainit()
@@ -246,7 +246,7 @@ async def process_voice_state(u: MikoMember, bef: discord.VoiceState, cur: disco
     
     '''If member leaves all voice channels or goes to the afk channel, stop tracking'''
     if (bef.channel is not None and bef.channel != u.guild.afk_channel) and (cur.channel is None or cur.channel == cur.channel.guild.afk_channel):
-        stop()
+        await stop()
         return
     
     '''

@@ -43,7 +43,7 @@ class VoiceActivity():
         self.active = True
     
     async def ainit(self) -> None:
-        pass
+        await self.__new_voice_entry()
     
     @property
     def comparable(self) -> int:
@@ -65,7 +65,7 @@ class VoiceActivity():
     def member(self) -> discord.Member:
         return self.__member
     
-    def end(self, current_time=None): self.__close_voice_entry(current_time)
+    def end(self, current_time=None): await self.__close_voice_entry(current_time)
     
     def __new_voice_entry(self, attempt=0):
         sel_cmd = (
@@ -76,7 +76,7 @@ class VoiceActivity():
             "ORDER BY end_time DESC "
             "LIMIT 1"
         )
-        val = va.db_executor(sel_cmd)
+        val = await db.execute(sel_cmd)
         
         # If no voice activity was found
         if val == []:
@@ -84,7 +84,7 @@ class VoiceActivity():
                 "INSERT INTO VOICE_HISTORY (server_id,user_id,start_time) VALUES "
                 f"('{self.__guild.id}', '{self.__member.id}', '{self.__start_time}')"
             )
-            va.db_executor(ins_cmd)
+            await db.execute(ins_cmd)
         
         
         # If end time is less than our resume
@@ -98,7 +98,7 @@ class VoiceActivity():
                 f"AND server_id='{self.__guild.id}' "
                 f"AND start_time='{self.__start_time}'"
             )
-            va.db_executor(upd_cmd)
+            await db.execute(upd_cmd)
             
         
         # Verify a database entry has been made, else __end_session
@@ -109,20 +109,20 @@ class VoiceActivity():
             f"AND start_time='{self.__start_time}' "
             "LIMIT 1"
         )
-        val = va.db_executor(sel_cmd)
+        val = await db.execute(sel_cmd)
         if val == [] and not attempt >= 5:
             self.__new_voice_entry(attempt + 1) # Only try 5 times
-        elif attempt >= 5: self.end() # No entry found after 5 attempts, abort tracking this entry entirely
+        elif attempt >= 5: await self.end() # No entry found after 5 attempts, abort tracking this entry entirely
         return
 
-    def __close_voice_entry(self, current_time):
+    async def __close_voice_entry(self, current_time):
         if current_time is None: current_time = int(time.time())
         upd_cmd = (
             f"UPDATE VOICE_HISTORY SET end_time='{current_time}' "
             f"WHERE user_id='{self.__member.id}' AND start_time='{self.__start_time}' "
             f"AND end_time is NULL AND server_id='{self.__guild.id}'"
         )
-        va.db_executor(upd_cmd)
+        await db.execute(upd_cmd)
         self.__end_session()
     
     
