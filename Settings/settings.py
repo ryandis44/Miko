@@ -38,8 +38,8 @@ class Setting:
         if val == "FALSE": return False
         return True
     
-    def value_str(self, user_id=None, server_id=None, invert=False):
-        val = self.value(user_id=user_id, server_id=server_id)
+    async def value_str(self, user_id=None, server_id=None, invert=False):
+        val = await self.value(user_id=user_id, server_id=server_id)
         if (val and not invert) or (not val and invert):
             return (
                 "```diff\n"
@@ -60,7 +60,7 @@ class Setting:
     # BANDAID ### FIX ASAP
     async def toggle(self, user_id=None, server_id=None) -> bool:
         val = None
-        if self.value(user_id=user_id, server_id=server_id): val = "FALSE"
+        if await self.value(user_id=user_id, server_id=server_id): val = "FALSE"
         else: val = "TRUE"
 
         if user_id is not None: scope = f"user_id='{user_id}'"

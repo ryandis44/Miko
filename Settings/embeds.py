@@ -37,8 +37,8 @@ async def settings_list(u: MikoMember, settings: list) -> discord.Embed:
         temp.append(f"{setting.emoji} ")
         temp.append(f"`{setting.name}`: ")
         temp.append(f"*{setting.desc}*")
-        if server: temp.append(f"{setting.value_str(server_id=u.guild.id)}")
-        else: temp.append(f"{setting.value_str(user_id=u.user.id)}")
+        if server: temp.append(f"{await setting.value_str(server_id=u.guild.id)}")
+        else: temp.append(f"{await setting.value_str(user_id=u.user.id)}")
         temp.append("\n")
 
 
@@ -60,16 +60,16 @@ async def setting_embed(u: MikoMember, s: Setting) -> discord.Embed:
     temp.append(f"`{s.name}`: ")
     temp.append(f"*{s.desc}*")
     if s.table == "SERVERS":
-        temp.append(f"{s.value_str(server_id=u.guild.id)}")
+        temp.append(f"{await s.value_str(server_id=u.guild.id)}")
     elif s.table == "USER_SETTINGS":
-        temp.append(f"{s.value_str(user_id=u.user.id)}")
+        temp.append(f"{await s.value_str(user_id=u.user.id)}")
     temp.append("\n\n")
 
     temp.append("Press **Confirm** to set this setting to:")
     if s.table == "SERVERS":
-        temp.append(f"{s.value_str(server_id=u.guild.id, invert=True)}")
+        temp.append(f"{await s.value_str(server_id=u.guild.id, invert=True)}")
     elif s.table == "USER_SETTINGS":
-        temp.append(f"{s.value_str(user_id=u.user.id, invert=True)}")
+        temp.append(f"{await s.value_str(user_id=u.user.id, invert=True)}")
 
 
     embed = discord.Embed (
@@ -83,14 +83,14 @@ async def setting_embed(u: MikoMember, s: Setting) -> discord.Embed:
     )
     return embed
 
-def setting_toggled(u: MikoMember, s: Setting) -> discord.Embed:
+async def setting_toggled(u: MikoMember, s: Setting) -> discord.Embed:
 
     temp = []
     temp.append(f"**{s.name}** is now")
     if s.table == "SERVERS":
-        temp.append(f"{s.value_str(server_id=u.guild.id)}")
+        temp.append(f"{await s.value_str(server_id=u.guild.id)}")
     elif s.table == "USER_SETTINGS":
-        temp.append(f"{s.value_str(user_id=u.user.id)}")
+        temp.append(f"{await s.value_str(user_id=u.user.id)}")
 
     embed = discord.Embed (
         title = "Success!",

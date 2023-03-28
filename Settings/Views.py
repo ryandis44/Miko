@@ -217,13 +217,13 @@ class ToggleSettingView(discord.ui.View):
 
 
         if self.s[self.i].table == "SERVERS":
-            self.s[self.i].toggle(server_id=self.original_interaction.guild.id)
+            await self.s[self.i].toggle(server_id=self.original_interaction.guild.id)
             # status = self.s[self.i].value_str(server_id=self.original_interaction.guild.id)
         elif self.s[self.i].table == "USER_SETTINGS":
-            self.s[self.i].toggle(user_id=self.original_interaction.user.id)
+            await self.s[self.i].toggle(user_id=self.original_interaction.user.id)
             # status = self.s[self.i].value_str(user_id=self.original_interaction.user.id)
 
-        embed1 = setting_toggled(u=self.u, s=self.s[self.i])
+        embed1 = await setting_toggled(u=self.u, s=self.s[self.i])
         embed2 = settings_initial(interaction=self.original_interaction)
         view = SettingsScopeView(original_interaction=self.original_interaction)
         await msg.edit(
