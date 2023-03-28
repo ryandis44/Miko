@@ -1,7 +1,6 @@
 import os
 import time
 import discord
-from Database.GuildObjects import MikoMember
 from misc.misc import sanitize_track_name, time_elapsed
 
 from Playtime.playtime import last_played
@@ -61,7 +60,7 @@ def plex_update_1():
     # embed.set_footer(text="Once downloaded, media will be automatically added to Plex.")
     return embed
 
-async def modified_playtime_embed(u: MikoMember, query, playtime_by_game, sort, limit, updates, scope, offset=0, ptquery=">5m", total=0, avg=0):
+async def modified_playtime_embed(u, query, playtime_by_game, sort, limit, updates, scope, offset=0, ptquery=">5m", total=0, avg=0):
 
     temp = []
     if not scope[0]: temp.append(f":pencil: Name: {u.user.mention}\n")

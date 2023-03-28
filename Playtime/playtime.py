@@ -2,7 +2,6 @@ import time
 import discord
 import uuid
 from discord.utils import get
-from Database.GuildObjects import MikoMember
 from Playtime.GameActivity import GameActivity
 from utils.HashTable import HashTable
 from Database.database import if_not_list_create_list
@@ -367,7 +366,7 @@ async def last_played(user_id, app_id):
     sel_cmd =f"SELECT end_time FROM PLAY_HISTORY WHERE user_id={user_id} AND app_id='{app_id}' AND end_time!=-1 ORDER BY end_time DESC LIMIT 1"
     return await db.execute(sel_cmd)
     
-async def playtime_embed(u: MikoMember, limit, updates, playtime=[], avg_session="None", offset=0):
+async def playtime_embed(u, limit, updates, playtime=[], avg_session="None", offset=0):
     current_time = int(time.time())
     playtime_today = await u.playtime.playtime_today
     recent_activity = await u.playtime.recent(limit=limit, offset=offset)

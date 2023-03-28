@@ -22,7 +22,12 @@ class Setting:
     
     def __str__(self): return self.name
 
-    def value(self, user_id=None, server_id=None) -> bool:
+
+
+
+
+    # BANDAID ### FIX ASAP
+    async def value(self, user_id=None, server_id=None) -> bool:
 
         if user_id is not None: scope = f"user_id='{user_id}'"
         else: scope = f"server_id='{server_id}'"
@@ -49,7 +54,11 @@ class Setting:
                 "```"
             )
     
-    def toggle(self, user_id=None, server_id=None) -> bool:
+    
+    
+    
+    # BANDAID ### FIX ASAP
+    async def toggle(self, user_id=None, server_id=None) -> bool:
         val = None
         if self.value(user_id=user_id, server_id=server_id): val = "FALSE"
         else: val = "TRUE"
