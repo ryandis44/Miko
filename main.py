@@ -294,6 +294,7 @@ async def on_message(message: discord.Message):
             reply_message = parse_inventory(embed_dict['description'], message)
             await message.reply(reply_message)
 
+        print("fk karuta")
 
         # React with pepe clown emoji to any karuta commands sent in non-karuta channels
         # and deletes messages in karuta channels matched in 'del_karuta_commands'
@@ -301,9 +302,8 @@ async def on_message(message: discord.Message):
             client.get_channel(890644443575771166), #0 > karuta-mute-me
             client.get_channel(963928489248063539) #1 > baruta-kots
         ]
-        karuta_commands = db_class.get_karuta_commands()
         del_karuta_commands = ['kv']
-        for command in karuta_commands:
+        for command in tunables('KARUTA_COMMANDS').split():
             reg_ex = re.escape(command) + r" (.*)"
             if re.match(reg_ex, message.content.lower()) or command == message.content.lower():
                 if message.channel not in karuta_channels:
