@@ -185,7 +185,7 @@ class PersistentPlayer():
 
     async def __update_embed(self):
         if self.stopping: return
-        self.__embed()
+        await self.__embed()
         await self.__process_embed()
     
     async def __process_embed(self):
