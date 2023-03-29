@@ -35,7 +35,7 @@ class BookView(discord.ui.View):
             temp.append(
                 "The YMCA Green Book for swim tests.\n"
                 "This book can be accessed any time in this server "
-                "using </book:1082021544831754301>.\n"
+                f"using {tunables('SLASH_COMMAND_SUGGEST_BOOK')}.\n"
                 ""
                 "Use the buttons below to search, add, or modify entries "
                 "in the green book.\n\n"
