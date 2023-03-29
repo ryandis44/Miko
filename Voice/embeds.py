@@ -170,7 +170,7 @@ async def voicetime_search_embed(
         temp.append("\n")
 
         num += 1
-
+    
     embed = discord.Embed (
         title = "Voicetime Search Results",
         color = GLOBAL_EMBED_COLOR,
@@ -178,12 +178,14 @@ async def voicetime_search_embed(
     )
     total_sessions = 0
     tot_ses_str = ""
-    if sc:
-        for count in search_results:
-            total_sessions += count[5]
-        if total_sessions > 1: tot_ses_str = f". {total_sessions:,} sessions on this page."
-        else: tot_ses_str = f". {total_sessions:,} session on this page."
-
+    try: # lazy temporary fix for session count
+        if sc:
+            print(count)
+            for count in search_results:
+                total_sessions += count[5]
+            if total_sessions > 1: tot_ses_str = f". {total_sessions:,} sessions on this page."
+            else: tot_ses_str = f". {total_sessions:,} session on this page."
+    except: pass
 
     if num > page_size:
         embed.set_footer(text=f"Showing {(offset + 1):,} - {(offset + page_size):,} of {results:,} results{tot_ses_str}")

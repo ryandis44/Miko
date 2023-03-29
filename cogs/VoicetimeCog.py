@@ -260,11 +260,11 @@ class VoicetimeCog(commands.Cog):
         sel_cmd.append(''.join(part4))
         del part4
 
-        sel_cmd.append(query_limit)
+        sel_cmd.append(query_limit.value if type(query_limit) != str else query_limit)
         ####
 
         try:
-            search_results = await db.execute(''.join(sel_cmd))
+            search_results = await db.execute(exec_cmd=''.join(sel_cmd), p=True)
 
             if search_results == []:
                 msg = []
@@ -303,8 +303,6 @@ class VoicetimeCog(commands.Cog):
             # Populate guild var with guild object if we only
             # found one guild result
             #if len(guilds) == 1: guild = self.client.get_guild(int(guilds[0]))
-            
-            # print(search_results)
 
             await orig_msg.edit(
                 content=ct,
@@ -324,7 +322,9 @@ class VoicetimeCog(commands.Cog):
                 view=view
             )
             return
-        except: await orig_msg.edit(content=tunables('GENERIC_APP_COMMAND_ERROR_MESSAGE'))
+        except Exception as e:
+            print(e)
+            await orig_msg.edit(content=tunables('GENERIC_APP_COMMAND_ERROR_MESSAGE'))
         # End voicetime query
         # End voicetime command
 
