@@ -62,8 +62,7 @@ class LevelClass:
         return int(lv)
     
     async def determine_xp_gained_msg(self) -> None:
-        # if await self.msgs % tunables('THRESHOLD_MESSAGES_FOR_XP') != 0: return
-        if await self.msgs % 2 != 0: return
+        if await self.msgs % tunables('THRESHOLD_MESSAGES_FOR_XP') != 0: return
         await self.add_xp_msg(tunables('XP_GAINED_FROM_MESSAGES'))
     
     async def determine_xp_gained_voice(self, sesh: VoiceActivity) -> None:

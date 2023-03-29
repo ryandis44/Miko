@@ -905,6 +905,7 @@ class MikoMessage():
         await self.user.daily_msg_increment_user()
     
     async def handle_leveling(self) -> None:
+        if self.user.client.user.id != 1017998983886545068: return
         if not self.message.author.bot and (await self.channel.profile).feature_enabled('LEVELING'):
             lc = self.user.leveling
             await lc.determine_xp_gained_msg()
