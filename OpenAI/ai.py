@@ -92,7 +92,8 @@ class MikoGPT:
             return
     
         try:
-            await asyncio.to_thread(self.__openai_interaction)
+            p = await self.u.profile
+            await asyncio.to_thread(self.__openai_interaction, p)
 
             if (len(self.response['data']) >= 750 or self.response['type'] == "IMAGE") and \
                 len(self.response['data']) <= 3999:

@@ -294,7 +294,6 @@ async def on_message(message: discord.Message):
             reply_message = parse_inventory(embed_dict['description'], message)
             await message.reply(reply_message)
 
-        print("fk karuta")
 
         # React with pepe clown emoji to any karuta commands sent in non-karuta channels
         # and deletes messages in karuta channels matched in 'del_karuta_commands'
