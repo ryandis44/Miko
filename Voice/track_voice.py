@@ -23,7 +23,8 @@ async def fetch_voicetime_sessions(client: discord.Client):
         "SELECT user_id, start_time, server_id FROM VOICE_HISTORY "
         f"WHERE end_time={end_time}"
     )
-    val = await db.execute(sel_cmd)
+    val = list(await db.execute(sel_cmd))
+    
     rst = 0
     t = int(time.time()) - tunables('THRESHOLD_RESUME_REBOOT_VOICE_ACTIVITY')
     async def restore(member: discord.Member, restore=True):
@@ -55,11 +56,11 @@ async def fetch_voicetime_sessions(client: discord.Client):
                         break
 
 
-                # If the current app id is equal to the playtime database entry, continue
+                # If the current guild id is equal to the database entry, continue
                 if str(val[outer][2]) == str(guild.id):
                     
                     #if val[outer][1] >= t:
-                    await restore(member)
+                    await restore(member=member)
                     print(f"> Restored {member}'s voice session")
                     rst += 1
                 else:
@@ -73,6 +74,8 @@ async def fetch_voicetime_sessions(client: discord.Client):
         print(f"Restored {rst} voice sessions.")
         print("Voice session restoration complete.")
     else: print("No voice sessions were restored.")
+    
+    print("Restore complete")
     return
 
 # Responsible for calculating total voicetime in a search result

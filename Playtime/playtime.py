@@ -46,7 +46,7 @@ async def fetch_playtime_sessions(client):
         "SELECT user_id, session_id, app_id, start_time FROM PLAY_HISTORY "+
         f"WHERE end_time={end_time}"
     )
-    val = await db.execute(sel_cmd)
+    val = list(await db.execute(sel_cmd))
     rst = 0
     t = int(time.time()) - tunables('THRESHOLD_RESUME_REBOOT_GAME_ACTIVITY')
     
@@ -137,12 +137,7 @@ async def get_app_from_str(input):
 # Used to block tracking console-based application IDs.
 # Doing so allows tracking individual games, regardless
 # of the device it is being played on.
-async def blacklisted_application_ids():
-    print("Checking blacklisted App IDs")
-    sel_cmd = "SELECT value FROM TUNABLES WHERE variable='BLACKLISTED_APPLICATION_IDS'"
-    val = await db.execute(sel_cmd)
-    print(val)
-    return val.split()
+# tunables('BLACKLISTED_APPLICATION_IDS)
 
 async def identify_current_application(app, has_id):
     tr_name = translate_application_name(app.name)
@@ -150,12 +145,11 @@ async def identify_current_application(app, has_id):
     info = [None, -1]
 
     try: # Treat a blacklisted application id as one that does not have a discord id
-        print(tunables('BLACKLISTED_APPLICATION_IDS').split())
         if has_id and str(app.application_id) in tunables('BLACKLISTED_APPLICATION_IDS').split(): has_id = False
     except: pass
 
     if has_id:
-        sel_cmd = f"SELECT * FROM APPLICATIONS WHERE app_id={app.application_id}"
+        sel_cmd = f"SELECT * FROM APPLICATIONS WHERE app_id='{app.application_id}'"
         val = await db.execute(sel_cmd)
         if not db.exists(len(val)):
             print(f"New application \"{tr_name}\" found! Saving in database with discord application ID '{app.application_id}'")

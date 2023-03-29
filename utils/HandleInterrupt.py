@@ -19,7 +19,7 @@ def interrupt() -> None:
     print("\n[1/2] Ending active playtime sessions...")
     sc = 0
     for pair in sessions_hash_table.get_all:
-        pair[0][1].close_activity_entry(True, current_time=current_time)
+        pair[0][1].close_activity_entry_synchronous(True, current_time=current_time)
         sc += 1
         print(f"> Ended {pair[0][1].get_user}'s playtime session.")
     print(f"[1/2] Ended {sc} playtime sessions.")
@@ -27,7 +27,7 @@ def interrupt() -> None:
     print("\n[2/2] Ending active voice sessions...")
     vsc = 0
     for key, sesh in VOICE_SESSIONS.items():
-        sesh.end(current_time)
+        sesh.close_voice_entry_synchronous(current_time)
         vsc += 1
         print(f"> Ended {sesh.member}'s voice session.")
     print(f"[2/2] Ended {vsc} voice sessions.")

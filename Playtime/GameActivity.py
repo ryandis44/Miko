@@ -44,12 +44,11 @@ from tunables import *
 
 # ga = Database("GameActivity.py")
 db = AsyncDatabase("Playtime.GameActivity.py")
+sdb = Database("Playtime.GameActivity.py")
 
 class GameActivity:
     def __init__(self, user, app_id, i, st=None) -> None:
-        global ga
         self.i = i
-        self.ga = ga
         self.user: discord.Member = user
         self.app_id = app_id
         self.resume_time = None
@@ -232,6 +231,26 @@ class GameActivity:
         if self.session_id is not None: upd_cmd.append(f"AND session_id='{self.session_id}' ")
         upd_cmd.append("ORDER BY start_time DESC LIMIT 1")
         await db.execute(''.join(upd_cmd))
+
+        self.__end_session()
+        return
+
+
+    # Bandaid function for synchronous shutdown
+    def close_activity_entry_synchronous(self, keep_sid=False, current_time=None):
+        if current_time is None: current_time = int(time.time())
+        
+        # Unlike 1.0, if a class is made then a database entry has also been made.
+        upd_cmd = []
+        if keep_sid: sid = ""
+        else: sid = "session_id=NULL, "
+        upd_cmd.append(
+            f"UPDATE PLAY_HISTORY SET {sid}end_time='{current_time}' WHERE "+
+            f"user_id='{self.user.id}' AND app_id='{self.app_id}' AND end_time='-1' AND start_time='{self.start_time}' "
+        )
+        if self.session_id is not None: upd_cmd.append(f"AND session_id='{self.session_id}' ")
+        upd_cmd.append("ORDER BY start_time DESC LIMIT 1")
+        sdb.db_executor(''.join(upd_cmd))
 
         self.__end_session()
         return

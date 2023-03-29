@@ -19,13 +19,14 @@ just as it is when an activity is new and has not yet concluded for the first ti
 '''
 
 import discord
-from Database.database_class import AsyncDatabase
+from Database.database_class import AsyncDatabase, Database
 from tunables import *
 import time
 
 VOICE_SESSIONS = {}
 
 db = AsyncDatabase("Voice.VoiceActivity.py")
+sdb = Database("Voice.VoiceActivity.py")
 class VoiceActivity():
     
     def __init__(self, u, start_time=None):
@@ -37,10 +38,11 @@ class VoiceActivity():
             self.__start_time = start_time
             self.__resume_threshold = self.__start_time - tunables('THRESHOLD_RESUME_REBOOT_VOICE_ACTIVITY')
         self.__guild: discord.Guild = u.guild
-        # self.__new_voice_entry()
         self.last_xp_award = -1
         self.last_token_award = -1
         self.active = True
+    
+    def __str__(self) -> str: return f"{self.__member} VoiceActivity Object"
     
     async def ainit(self) -> None:
         await self.__new_voice_entry()
@@ -123,6 +125,17 @@ class VoiceActivity():
             f"AND end_time is NULL AND server_id='{self.__guild.id}'"
         )
         await db.execute(upd_cmd)
+        self.__end_session()
+    
+    # Bandaid function
+    def close_voice_entry_synchronous(self, current_time) -> None:
+        if current_time is None: current_time = int(time.time())
+        upd_cmd = (
+            f"UPDATE VOICE_HISTORY SET end_time='{current_time}' "
+            f"WHERE user_id='{self.__member.id}' AND start_time='{self.__start_time}' "
+            f"AND end_time is NULL AND server_id='{self.__guild.id}'"
+        )
+        sdb.db_executor(upd_cmd)
         self.__end_session()
     
     
