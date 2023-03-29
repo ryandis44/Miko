@@ -210,7 +210,7 @@ class PollView(discord.ui.View):
         self.terminate()
         responses = self.responses.get_all
         res_msg: discord.Message = await self.original_interaction.channel.send(
-            embed=results_embed(responses=responses, author=self.author, ans=self.ans, name=self.name),
+            embed=await results_embed(responses=responses, author=self.author, ans=self.ans, name=self.name),
             content=self.author.user.mention if mention else None
         )
         
