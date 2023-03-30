@@ -821,7 +821,7 @@ class MikoMember(MikoGuild):
     async def manage_channel(self, channel: discord.TextChannel) -> bool:
         manage_channels = channel.permissions_for(self.user).manage_channels
         if manage_channels: return True
-        if self.bot_permission_level >= 5: return True
+        if await self.bot_permission_level >= 5: return True
         return False
     
     async def daily_msg_increment_user(self) -> None:

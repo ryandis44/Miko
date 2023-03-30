@@ -57,7 +57,7 @@ class Setting:
             
         val = await db.execute(
             f"SELECT {self.col} FROM {self.table} WHERE "
-            f"{scope}"
+            f"{scope} LIMIT 1"
         )
         if val == "FALSE": return False
         elif val == "TRUE": return True
@@ -71,6 +71,7 @@ class Setting:
         else:
             val = val.upper()
             if val == "DISABLED": state = "- DISABLED -"
+            else: state = f"+ {val} +"
         
         return (
             "```diff\n"

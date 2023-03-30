@@ -4,7 +4,7 @@ from Settings.settings import Setting, MikoMember
 
 def all_channel_settings(u) -> list:
     return [
-        ChatGPT(u)
+        ChatGPT(u),
     ]
     
     
@@ -17,5 +17,25 @@ class ChatGPT(Setting):
             desc = "Choose to enable ChatGPT Integration and what mode to use",
             emoji = "🎮",
             table = "CHANNELS",
-            col = "chatgpt_mode"
+            col = "chatgpt_mode",
+            options=[
+                discord.SelectOption(
+                    label="Enabled: Normal Mode",
+                    description="Enable normal ChatGPT responses in this channel",
+                    value="NORMAL",
+                    emoji="🌐"
+                ),
+                discord.SelectOption(
+                    label="Enabled: Sarcastic Mode",
+                    description="Enable sarcastic ChatGPT responses in this channel",
+                    value="SARCASTIC",
+                    emoji="🤡"
+                ),
+                discord.SelectOption(
+                    label="Disabled",
+                    description="Disable ChatGPT in this channel",
+                    value="DISABLED",
+                    emoji="❌"
+                )
+            ]
         )
