@@ -1,5 +1,5 @@
 import discord
-from Database.database_class import AsyncDatabase
+from tunables import *
 db = AsyncDatabase("Settings.settings.py")
 
 class Setting:
@@ -10,7 +10,7 @@ class Setting:
         emoji: str,
         table: str,
         col: str,
-        toggleable: bool = True
+        options: list = None
     ) -> None:
 
         self.name = name
@@ -18,11 +18,32 @@ class Setting:
         self.emoji = emoji
         self.table = table
         self.col = col
-        self.toggleable = toggleable
+        self.modifiable = tunables(f'SETTING_MODIFYABLE_{col.upper()}')
+        
+        if options is not None: self.options = options
+        else:
+            match self.table:
+                case 'CHANNELS': ctx = "in this channel."
+                case 'SERVERS': ctx = "in this guild."
+                case _: ctx = "for yourself."
+            
+            self.options = [
+                discord.SelectOption(
+                    label=f"Enable {self.name}",
+                    description=f"Select to enable {self.name} {ctx}",
+                    value="TRUE",
+                    emoji="✔"
+                ),
+                discord.SelectOption(
+                    label=f"Disable {self.name}",
+                    description=f"Select to disable {self.name} {ctx}",
+                    value="FALSE",
+                    emoji="❌"
+                )
+            ]
     
-    def __str__(self): return self.name
-
-
+    
+    def __str__(self): return f"{self.name} Settings Object"
 
 
 
@@ -44,13 +65,13 @@ class Setting:
             return (
                 "```diff\n"
                 "+ ENABLED +\n"
-                f"{'' if self.toggleable else '- Toggling this setting is currently disabled. -'}"
+                f"{'' if self.modifiable else '- Changing this setting is currently disabled. -'}"
                 "```"
             )
         else: return (
                 "```diff\n"
                 "- DISABLED -\n"
-                f"{'' if self.toggleable else '- Toggling this setting is currently disabled. -'}"
+                f"{'' if self.modifiable else '- Changing this setting is currently disabled. -'}"
                 "```"
             )
     

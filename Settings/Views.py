@@ -8,6 +8,16 @@ from tunables import tunables
 sv = Database("Settings.Views.py")
 
 
+
+class SettingsView(discord.ui.View):
+    def __init__(self) -> None:
+        super().__init__(timeout=tunables('GLOBAL_VIEW_TIMEOUT'))
+
+
+
+
+
+
 class SettingsScopeView(discord.ui.View):
     
     def __init__(self, original_interaction: discord.Interaction):

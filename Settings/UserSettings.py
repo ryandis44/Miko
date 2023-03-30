@@ -16,8 +16,7 @@ class TrackPlaytime(Setting):
             desc = "Track your playtime (only works when status set to ONLINE and your activity status is enabled for this guild)",
             emoji = "🎮",
             table = "USER_SETTINGS",
-            col = "track_playtime",
-            toggleable = True
+            col = "track_playtime"
         )
 
 # class PublicPlaytime(Setting):
@@ -40,8 +39,7 @@ class TrackVoicetime(Setting):
             desc = "Track your voicetime per guild Miko is in.",
             emoji = "🔈",
             table = "USER_SETTINGS",
-            col = "track_voicetime",
-            toggleable = True
+            col = "track_voicetime"
         )
 
 # class PublicVoicetime(Setting):
