@@ -149,11 +149,13 @@ async def embed(choice=None, channel=None):
 @client.event
 async def on_guild_join(guild: discord.Guild):
     g = MikoGuild(guild=guild, client=client)
+    await g.ainit()
 
 @client.event
 async def on_member_join(member: discord.Member):
     if not running: return
     u = MikoMember(user=member, client=client)
+    await u.ainit()
             
 @client.event
 async def on_raw_message_delete(payload: discord.RawMessageDeleteEvent):
@@ -165,13 +167,14 @@ async def on_raw_message_delete(payload: discord.RawMessageDeleteEvent):
 @client.event
 async def on_raw_member_remove(payload: discord.RawMemberRemoveEvent):
     if payload.user.id == client.user.id:
-        g = MikoGuild(guild=payload.user.guild, client=client, check_exists=False)
+        g = MikoGuild(guild=payload.user.guild, client=client)
         await g.handle_leave_guild()
         return
 
     if not running: return
     if payload.user.pending: return
     g = MikoGuild(guild=None, client=client, guild_id=payload.guild_id)
+    await g.ainit()
 
     
     temp = []
@@ -205,6 +208,7 @@ async def on_raw_member_remove(payload: discord.RawMemberRemoveEvent):
 async def on_member_update(before: discord.Member, cur: discord.Member):
     if not running: return
     u = MikoMember(user=cur, client=client)
+    await u.ainit()
     await asyncio.sleep(1)
     if u.greeting_task is not None:
         if not u.greeting_task.done():
@@ -220,6 +224,7 @@ async def on_member_update(before: discord.Member, cur: discord.Member):
 async def on_guild_update(before: discord.Guild, after: discord.Guild):
     if not running: return
     g = MikoGuild(guild=after, client=client)
+    await g.ainit()
     if before.icon != after.icon:
         await regen_guild_emoji(client=client, guild=after)
 
@@ -228,6 +233,7 @@ async def on_guild_update(before: discord.Guild, after: discord.Guild):
 async def on_presence_update(before: discord.Member, cur: discord.Member):
     if not running: return
     u = MikoMember(user=cur, client=client)
+    await u.ainit()
     if (await u.profile).feature_enabled('TRACK_PLAYTIME') != 1: return
 
     await u.increment_statistic('PRESENCE_UPDATES')
@@ -239,6 +245,7 @@ async def on_presence_update(before: discord.Member, cur: discord.Member):
 @client.event
 async def on_voice_state_update(member: discord.Member, bef: discord.VoiceState, cur: discord.VoiceState):
     u = MikoMember(user=member, client=client)
+    await u.ainit()
     
     # if bot is removed from voice channel, cleanup and delete voice_client object
     # this prevents the bot from thinking it is still in vc after being
