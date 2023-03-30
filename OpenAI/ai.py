@@ -72,9 +72,13 @@ class MikoGPT:
                     
                     refs.reverse()
                     
+                    
+                    match self.mode:
+                        case "SARCASTIC": role = tunables('OPENAI_RESPONSE_ROLE_SARCASTIC')
+                        case _: role = tunables('OPENAI_RESPONSE_ROLE_DEFAULT')
                     self.context = []
                     self.context.append(
-                        {"role": "system", "content": tunables('OPENAI_RESPONSE_ROLE_DEFAULT')}
+                        {"role": "system", "content": role}
                     )
                     for m in refs:
                         if m.content == "" or re.match(r"<@\d{15,30}>", m.content):
