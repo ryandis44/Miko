@@ -2,22 +2,23 @@ import discord
 from Settings.settings import Setting, MikoMember
 
 
-def all_channel_settings(u) -> list:
+def all_channel_settings(u, p) -> list:
     return [
-        ChatGPT(u),
+        ChatGPT(u, p),
     ]
     
     
 class ChatGPT(Setting):
 
-    def __init__(self, u):
+    def __init__(self, u, p):
         super().__init__(
             u=u,
+            p=p,
             name = "ChatGPT Integration",
             desc = "Choose to enable ChatGPT Integration and what mode to use",
             emoji = "🎮",
             table = "CHANNELS",
-            col = "chatgpt_mode",
+            col = "chatgpt",
             options=[
                 discord.SelectOption(
                     label="Enabled: Normal Mode",

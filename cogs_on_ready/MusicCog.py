@@ -287,11 +287,7 @@ class MusicCog(commands.Cog):
         u = MikoMember(user=interaction.user, client=interaction.client)
         await u.ainit()
 
-        if not tunables('COMMAND_ENABLED_PLAY'):
-            await interaction.response.send_message(content=tunables('COMMAND_DISABLED_MESSAGE'), ephemeral=True)
-            return False
-
-        if not (await u.profile).cmd_enabled('PLAY'):
+        if (await u.profile).cmd_enabled('PLAY') != 1:
             await interaction.response.send_message(content=tunables('MUSIC_BOT_NO_PRIVLEDGES'), ephemeral=True)
             return False
         

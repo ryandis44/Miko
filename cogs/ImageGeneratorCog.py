@@ -34,12 +34,8 @@ class ImageGeneratorCog(commands.Cog):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         u = MikoMember(user=interaction.user, client=interaction.client)
         await u.ainit()
-        if not (await u.profile).cmd_enabled('IMAGE_GENERATION'):
+        if (await u.profile).cmd_enabled('IMAGE_GENERATION') != 1:
             await interaction.response.send_message(content=tunables('GENERIC_BOT_DISABLED_MESSAGE'), ephemeral=True)
-            return False
-        
-        if not tunables('COMMAND_ENABLED_IMAGE_GENERATION'):
-            await interaction.response.send_message(content=tunables('COMMAND_DISABLED_MESSAGE'), ephemeral=True)
             return False
 
         await interaction.response.send_message(content=tunables('LOADING_EMOJI'), silent=True)

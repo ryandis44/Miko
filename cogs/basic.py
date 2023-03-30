@@ -36,7 +36,7 @@ class Basic(commands.Cog):
     async def roll(self, ctx: Context):
         
         u = MikoMember(user=ctx.author, client=self.client)
-        if not (await u.profile).cmd_enabled('ROLL'): return
+        if (await u.profile).cmd_enabled('ROLL') != 1: return
         await u.increment_statistic('ROLL')
         
         user = ctx.message.author
@@ -68,7 +68,7 @@ class Basic(commands.Cog):
     async def eightball(self, ctx: Context, *args):
         
         u = MikoMember(user=ctx.author, client=self.client)
-        if not (await u.profile).cmd_enabled('EIGHT_BALL'): return
+        if (await u.profile).cmd_enabled('EIGHT_BALL') != 1: return
         await u.increment_statistic('EIGHT_BALL')
 
         user = ctx.message.author
@@ -84,7 +84,7 @@ class Basic(commands.Cog):
     async def flip(self, ctx: Context):
         
         u = MikoMember(user=ctx.author, client=self.client)
-        if not (await u.profile).cmd_enabled('COIN_FLIP'): return
+        if (await u.profile).cmd_enabled('COIN_FLIP') != 1: return
         await u.increment_statistic('COIN_FLIP')
         
         user = ctx.message.author
@@ -97,7 +97,7 @@ class Basic(commands.Cog):
     @commands.guild_only()
     async def holiday(self, ctx: Context):
         g = MikoGuild(guild=ctx.guild, client=self.client)
-        if not (await g.profile).cmd_enabled('ROLE_ASSIGNMENT'):
+        if (await g.profile).cmd_enabled('ROLE_ASSIGNMENT') != 1:
             return
         await ctx.send(embed=get_holiday(ctx, "EMBED"))
 
@@ -129,7 +129,7 @@ class Basic(commands.Cog):
     @commands.guild_only()
     async def info(self, ctx: Context, *args):
         u = MikoMember(user=ctx.author, client=self.client)
-        if not (await u.profile).cmd_enabled('USER_INFO'): return
+        if (await u.profile).cmd_enabled('USER_INFO') != 1: return
         elif await u.status == "SCRAPING":
             await ctx.channel.send("That command is disabled while I am gathering guild info. Try again later.")
             return
@@ -155,7 +155,7 @@ class Basic(commands.Cog):
     async def playtime(self, ctx: Context):
         
         u = MikoMember(user=ctx.author, client=self.client)
-        if not (await u.profile).cmd_enabled('PLAYTIME'): return
+        if (await u.profile).cmd_enabled('PLAYTIME') != 1: return
         
         await ctx.channel.send("This command is depreciated. Please use `/playtime` instead.")
 
@@ -163,10 +163,9 @@ class Basic(commands.Cog):
         try: user = ctx.message.mentions[0]
         except: user = ctx.author
 
-
-        print(await db.execute("SELECT * FROM APPLICATIONS WHERE has_discord_id='FALSE'"))
-        print("\n\n\n\n")
-        print(b.db_executor("SELECT * FROM APPLICATIONS WHERE has_discord_id='FALSE'"))
+        await ctx.send(
+            content=f"{(await u.profile).cmd_enabled('PLAYTIME')}"
+        )
 
 
         # await ctx.channel.send(f"{playtimeContentMessage()}")
@@ -311,7 +310,7 @@ class Basic(commands.Cog):
     async def top(self, ctx: Context):
         
         u = MikoMember(user=ctx.author, client=self.client)
-        if not (await u.profile).cmd_enabled('TOP_USERS_BY_MESSAGES'): return
+        if (await u.profile).cmd_enabled('TOP_USERS_BY_MESSAGES') != 1: return
         await u.increment_statistic('TOP_USERS_BY_MESSAGES')
         
         await ctx.send(embed=await top_users_embed_server(MikoGuild(guild=ctx.guild, client=self.client)))
@@ -320,7 +319,7 @@ class Basic(commands.Cog):
     async def ctop(self, ctx: Context):
         
         u = MikoMember(user=ctx.author, client=self.client)
-        if not (await u.profile).cmd_enabled('TOP_CHANNELS_BY_MESSAGES'): return
+        if (await u.profile).cmd_enabled('TOP_CHANNELS_BY_MESSAGES') != 1: return
         await u.increment_statistic('TOP_CHANNELS_BY_MESSAGES')
         
         await ctx.channel.send("This command is disabled for now.")

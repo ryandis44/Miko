@@ -66,7 +66,7 @@ class SettingsView(discord.ui.View):
                         content=tunables('SETTINGS_UI_NO_PERMISSION_GUILD'), ephemeral=True
                     )
                     return
-                self.scope['data'] = all_guild_settings(u=self.u)
+                self.scope['data'] = all_guild_settings(u=self.u, p=await self.u.profile)
                 self.scope['len'] = len(self.scope['data'])
             
             case 'CHANNELS':
@@ -75,11 +75,11 @@ class SettingsView(discord.ui.View):
                         content=tunables('SETTINGS_UI_NO_PERMISSION_CHANNEL'), ephemeral=True
                     )
                     return
-                self.scope['data'] = all_channel_settings(u=self.u)
+                self.scope['data'] = all_channel_settings(u=self.u, p=await self.u.profile)
                 self.scope['len'] = len(self.scope['data'])
             
             case _:
-                self.scope['data'] = all_user_settings(u=self.u)
+                self.scope['data'] = all_user_settings(u=self.u, p=await self.u.profile)
                 self.scope['len'] = len(self.scope['data'])
 
     async def settings_list_page(self, interaction: discord.Interaction, initial=False) -> None:
@@ -231,11 +231,12 @@ class ChooseState(discord.ui.Select):
     def __init__(self, setting: Setting) -> None:
         self.s = setting
         super().__init__(
-            placeholder="Select a setting",
+            placeholder="Select an option",
             max_values=1,
             min_values=1,
             options=setting.options,
-            row=1
+            row=1,
+            disabled=not setting.modifiable['val']
         )
     async def callback(self, interaction: discord.Integration) -> None:
         val = self.values[0]

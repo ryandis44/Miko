@@ -228,7 +228,7 @@ async def on_guild_update(before: discord.Guild, after: discord.Guild):
 async def on_presence_update(before: discord.Member, cur: discord.Member):
     if not running: return
     u = MikoMember(user=cur, client=client)
-    if not (await u.profile).feature_enabled('TRACK_PLAYTIME'): return
+    if (await u.profile).feature_enabled('TRACK_PLAYTIME') != 1: return
 
     await u.increment_statistic('PRESENCE_UPDATES')
     if cur.bot: return
@@ -249,7 +249,7 @@ async def on_voice_state_update(member: discord.Member, bef: discord.VoiceState,
         if sesh is not None:
             await sesh.stop()
     
-    if not (await u.profile).feature_enabled('TRACK_VOICETIME'): return
+    if (await u.profile).feature_enabled('TRACK_VOICETIME') != 1: return
     if not running: return
     await u.increment_statistic('VOICE_STATE_UPDATES')
     if member.bot: return # do not track bots
@@ -261,7 +261,7 @@ async def on_message(message: discord.Message):
     if not running: return
     mm = MikoMessage(message=message, client=client)
     await mm.ainit()
-    if not (await mm.channel.profile).feature_enabled('MESSAGE_HANDLING'):
+    if (await mm.channel.profile).feature_enabled('MESSAGE_HANDLING') != 1:
         await client.process_commands(message)
         return
     else: await client.process_commands(message)
@@ -283,7 +283,7 @@ async def on_message(message: discord.Message):
     await mm.handle_react_all()
 
 
-    if (await mm.channel.profile).feature_enabled('KARUTA_EXTRAS'):
+    if (await mm.channel.profile).feature_enabled('KARUTA_EXTRAS') == 1:
         karuta_id = 646937666251915264 #Karuta bot ID
         # Analyze embed from karuta bot, retrieve inventory items from embed, and calculate values
         # for trades according to hard coded bot IDs
@@ -332,13 +332,12 @@ async def on_message(message: discord.Message):
         (message.reference is not None and message.reference.resolved is not None and \
             message.reference.resolved.author.id == client.user.id):
         
-        if (await mm.channel.profile).feature_enabled('REPLY_TO_MENTION_OPENAI') or\
-            (await mm.channel.profile).feature_enabled('REPLY_TO_MENTION_OPENAI_SARCASTIC'):
+        if (await mm.channel.profile).feature_enabled('CHATGPT') == 1:
 
             # Send help menu if only @ ing Miko
             if len(message.content.split()) <= 1 and message.content == f"<@{str(client.user.id)}>":
                 await message.reply(
-                    content="Please use </help:1064277864863772683> for help.",
+                    content=f"Please use {tunables('SLASH_COMMAND_SUGGEST_HELP')} for help.",
                     silent=True
                 )
                 return
@@ -347,9 +346,9 @@ async def on_message(message: discord.Message):
             await gpt.respond(message=message)
         
         # Basic response
-        elif (await mm.channel.profile).feature_enabled('REPLY_TO_MENTION'):
+        elif (await mm.channel.profile).feature_enabled('REPLY_TO_MENTION') == 1:
             await message.reply(
-                content="Please use </help:1064277864863772683> for help.",
+                content=f"Please use {tunables('SLASH_COMMAND_SUGGEST_HELP')} for help.",
                 silent=True
             )
 

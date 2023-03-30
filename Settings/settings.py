@@ -1,5 +1,5 @@
 import discord
-from Database.GuildObjects import MikoMember
+from Database.GuildObjects import MikoMember, GuildProfile
 from tunables import *
 db = AsyncDatabase("Settings.settings.py")
 
@@ -7,6 +7,7 @@ class Setting:
 
     def __init__(self,
         u: MikoMember,
+        p: GuildProfile,
         name: str,
         desc: str,
         emoji: str,
@@ -21,7 +22,14 @@ class Setting:
         self.emoji = emoji
         self.table = table
         self.col = col
-        self.modifiable = tunables(f'SETTING_MODIFIABLE_{col.upper()}')
+        self.modifiable = p.feature_enabled(f'{col.upper()}')
+        self.modifiable = {
+            'val': True if self.modifiable == 1 else False,
+            'reason': \
+                "- Not enabled in this guild. -"\
+                    if self.modifiable == 0 else \
+                        "- Temporarily disabled in all guilds. -"
+        }
         
         if options is not None: self.options = options
         else:
@@ -73,10 +81,12 @@ class Setting:
             if val == "DISABLED": state = "- DISABLED -"
             else: state = f"+ {val} +"
         
+        if not self.modifiable['val']: state = "- DISABLED -"
+        
         return (
             "```diff\n"
             f"{state}\n"
-            f"{'' if self.modifiable else '- Changing this setting is currently disabled. -'}"
+            f"{'' if self.modifiable['val'] else self.modifiable['reason']}"
             "```"
         )
     

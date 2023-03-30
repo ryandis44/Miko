@@ -54,7 +54,7 @@ class PlexCog(commands.Cog):
     async def interaction_check(self, interaction: discord.Interaction):
         u = MikoMember(user=interaction.user, client=interaction.client)
         await u.ainit()
-        if not (await u.profile).cmd_enabled('PLEX_CALENDAR'):
+        if (await u.profile).cmd_enabled('PLEX_CALENDAR') != 1:
             await interaction.response.send_message("This command can only be run in **The Boys Hangout** guild.\nhttps://discord.gg/the-boys", ephemeral=True)
             return False
 

@@ -13,7 +13,7 @@ class AniSearch(commands.Cog):
   @commands.command(name='animesearch', aliases=['as'])
   async def animesearch(self, ctx: commands.Context, *args):
     u = MikoMember(user=ctx.author, client=self.client)
-    if not (await u.profile).cmd_enabled('ANIME_SEARCH'): return
+    if (await u.profile).cmd_enabled('ANIME_SEARCH') != 1: return
     await u.increment_statistic('ANIME_SEARCH')
     if len(args) == 0:
       await ctx.send('Please enter a search query.')

@@ -4,7 +4,9 @@ import openai
 import discord
 import re
 from tunables import tunables, GLOBAL_EMBED_COLOR
-from Database.GuildObjects import MikoMember
+from Database.GuildObjects import MikoMember, GuildProfile, AsyncDatabase
+
+db = AsyncDatabase('OpenAI.ai.py')
 
 openai.api_key = tunables('OPENAI_API_KEY')
 
@@ -32,6 +34,16 @@ class MikoGPT:
     
     
     async def respond(self, message: discord.Message=None, interaction: discord.Interaction=None) -> None:
+        
+        self.mode = await db.execute(
+            "SELECT chatgpt FROM CHANNELS WHERE "
+            f"channel_id='{message.channel.id}'"
+        )
+        if self.mode == "DISABLED":
+            await message.reply(
+                content=tunables('OPENAI_NOT_ENABLED_IN_CHANNEL')
+            )
+            return
     
         if message is not None:
             msg = await message.reply(content=tunables('LOADING_EMOJI'), mention_author=False, silent=True)
@@ -163,19 +175,14 @@ class MikoGPT:
                 self.prompt[0] = self.prompt[0][2:]
             self.response['type'] = "IMAGE"
     
-    def __openai_interaction(self, p) -> None:
+    def __openai_interaction(self, p: GuildProfile) -> None:
         prompt = ' '.join(self.prompt)
 
         if self.response['type'] != "IMAGE":
             
-            role = tunables('OPENAI_RESPONSE_ROLE_DEFAULT')
-            match self.response['type']:
-                case 'SERIOUS' | 'IMAGE':
-                    role = tunables('OPENAI_RESPONSE_ROLE_DEFAULT')
-                
-                case _:
-                    if p.feature_enabled('REPLY_TO_MENTION_OPENAI_SARCASTIC'):
-                        role = tunables('OPENAI_RESPONSE_ROLE_SARCASTIC')
+            match self.mode:
+                case "SARCASTIC": role = tunables('OPENAI_RESPONSE_ROLE_SARCASTIC')
+                case _: role = tunables('OPENAI_RESPONSE_ROLE_DEFAULT')
             
             if self.context is None:
                 messages = [
@@ -188,8 +195,6 @@ class MikoGPT:
                 )
                 messages = self.context
             
-            # for m in messages:
-            #     print(m)
             
             resp = openai.ChatCompletion.create(
                     model="gpt-3.5-turbo",

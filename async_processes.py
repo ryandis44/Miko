@@ -45,7 +45,7 @@ async def voice_heartbeat(): # For leveling and tokens. The boys hangout only
     for key, session in VOICE_SESSIONS.items():
         session: VoiceActivity = session
         u = MikoMember(user=session.member, client=client)
-        if not (await u.profile).feature_enabled('VOICE_HEARTBEAT'): return
+        if (await u.profile).feature_enabled('VOICE_HEARTBEAT') != 1: return
         if client.user.id == 1017998983886545068:
             await u.leveling.determine_xp_gained_voice(sesh=session)
         # u.tokens.determine_tokens_gained_voice(sesh=session, voicetime=u.user_voicetime)

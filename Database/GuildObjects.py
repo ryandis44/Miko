@@ -617,7 +617,7 @@ class MikoMember(MikoGuild):
             "SELECT big_emojis FROM USER_SETTINGS WHERE "
             f"user_id='{self.user.id}'"
         )
-        if not (await self.profile).feature_enabled('BIG_EMOJIS'): return False
+        if (await self.profile).feature_enabled('BIG_EMOJIS') != 1: return False
         if val == "FALSE" or not await self.guild_do_big_emojis: return False
         return True
     @property
@@ -912,7 +912,7 @@ class MikoMessage():
     
     async def handle_leveling(self) -> None:
         if self.user.client.user.id != 1017998983886545068: return
-        if not self.message.author.bot and (await self.channel.profile).feature_enabled('LEVELING'):
+        if not self.message.author.bot and (await self.channel.profile).feature_enabled('LEVELING') == 1:
             lc = self.user.leveling
             await lc.determine_xp_gained_msg()
             # tc = mm.user.tokens
@@ -975,7 +975,7 @@ class MikoMessage():
         return False
     
     async def handle_bruh_react(self) -> None:
-        if not (await self.channel.profile).feature_enabled('BRUH_REACT') or self.user.client.user.id != 1017998983886545068: return
+        if (await self.channel.profile).feature_enabled('BRUH_REACT') != 1 or self.user.client.user.id != 1017998983886545068: return
         for word in tunables('BRUH_REACT_WORDS').split():
             racist_regex =  rf".*\b{word}\b.*"
             if re.match(racist_regex, self.message.content.lower()) or word == self.message.content.lower():
@@ -991,7 +991,7 @@ class MikoMessage():
                 break
     
     async def handle_instagram_reel_links(self) -> bool:
-        if not (await self.channel.profile).feature_enabled('DELETE_INSTAGRAM_REEL_LINKS'): return False
+        if (await self.channel.profile).feature_enabled('DELETE_INSTAGRAM_REEL_LINKS') != 1: return False
         ig_regex = r".*\binstagram.com\/reel\b.*"
         if re.match(ig_regex, self.message.content.lower()):
             await self.message.delete()

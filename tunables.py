@@ -53,8 +53,8 @@ class GuildProfile():
     def __init__(self, profile: str):
         self.params = str(tunables(f'GUILD_PROFILE_{profile}')).split(',')
         self.profile = profile
-        self.vals = HashTable(1_000)
-        # self.vals = {}
+        # self.vals = HashTable(1_000)
+        self.v = {}
         
         self.__commands = {'all_enabled': False, 'inverse': False}
         self.__features = {'all_enabled': False, 'inverse': False}
@@ -94,26 +94,32 @@ class GuildProfile():
 
             option = str(option[1]).split(";")
             for cmd in option:
-                self.vals.set_val(
-                    key=f"{prefix}_{cmd.upper()}",
-                    val=not inverse
-                )
+                self.v[f'{prefix}_{cmd.upper()}'] = not inverse
             
     
-    def cmd_enabled(self, cmd: str) -> bool:
-        if self.__commands['all_enabled']:
-            if self.__commands['inverse']: return False
-            return True
-        
-        val = self.vals.get_val(f"C_{cmd}")
-        if val is None: val = self.__commands['inverse']
-        return val
+    # For the following two functions, return values mean:
+    # - 0: Guild profile does not have command enabled
+    # - 1: Guild profile and tunables have command enabled
+    # - 2: Tunables does not have command enabled
     
-    def feature_enabled(self, f: str) -> bool:
-        if self.__features['all_enabled']:
-            if self.__features['inverse']: return False
-            return True
+    def cmd_enabled(self, cmd: str) -> int:
+        if not tunables(f'COMMAND_ENABLED_{cmd.upper()}'): return 2
+        if self.__commands['all_enabled']:
+            if self.__commands['inverse']: return 0
+            return 1
         
-        val = self.vals.get_val(f"F_{f}")
+        try: val = self.v[f"C_{cmd}"]
+        except: val = None
+        if val is None: val = self.__commands['inverse']
+        return 1 if val else 0
+    
+    def feature_enabled(self, f: str) -> int:
+        if not tunables(f'FEATURE_ENABLED_{f.upper()}'): return 2
+        if self.__features['all_enabled']:
+            if self.__features['inverse']: return 0
+            return 1
+        
+        try: val = self.v[f"F_{f}"]
+        except: val = None
         if val is None: val = self.__features['inverse']
-        return val
+        return 1 if val else 0
