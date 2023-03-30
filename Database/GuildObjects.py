@@ -671,6 +671,13 @@ class MikoMember(MikoGuild):
         if self.user.nick is None: return self.user.name
         elif await self.nickname_in_ctx: return self.user.nick
         return self.user.name
+    @property
+    async def manage_guild(self):
+        perms = self.user.guild_permissions
+        if perms.administrator: return True
+        if perms.manage_guild: return True
+        if await self.bot_permission_level >= 5: return True
+        return False
     
 
     # async def __member_leave_message(self) -> None: pass
@@ -811,11 +818,10 @@ class MikoMember(MikoGuild):
         )
         return True
     
-    async def manage_guild(self):
-        perms = self.user.guild_permissions
-        if perms.administrator: return True
-        if perms.manage_guild: return True
-        if await self.bot_permission_level >= 5: return True
+    async def manage_channel(self, channel: discord.TextChannel) -> bool:
+        manage_channels = channel.permissions_for(self.user).manage_channels
+        if manage_channels: return True
+        if self.bot_permission_level >= 5: return True
         return False
     
     async def daily_msg_increment_user(self) -> None:
