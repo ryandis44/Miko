@@ -947,6 +947,7 @@ class MikoMessage():
             or self.channel.client.user.id != 1017998983886545068: return False
         try: l = tunables('UGLY_ASS_STICKERS').split(' ')
         except: l = [f'{tunables("UGLY_ASS_STICKERS")}']
+        if self.message.stickers == []: return False
         if str(self.message.stickers[0].id) in l:
             await self.message.delete()
             try:
