@@ -943,7 +943,8 @@ class MikoMessage():
                         await u.del_rename_hell()
 
     async def ugly_ass_sticker_removal(self) -> bool:
-        if (await self.channel.profile).feature_enabled('UGLY_ASS_STICKER_REMOVAL') != 1: return False
+        if (await self.channel.profile).feature_enabled('UGLY_ASS_STICKER_REMOVAL') != 1\
+            or self.channel.client.user.id != 1017998983886545068: return False
         try: l = tunables('UGLY_ASS_STICKERS').split(' ')
         except: l = [f'{tunables("UGLY_ASS_STICKERS")}']
         if str(self.message.stickers[0].id) in l:
