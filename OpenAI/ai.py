@@ -35,7 +35,7 @@ class MikoGPT:
     
     async def respond(self, message: discord.Message=None, interaction: discord.Interaction=None) -> None:
         
-        self.mode = await db.execute(
+        self.mode: str = await db.execute(
             "SELECT chatgpt FROM CHANNELS WHERE "
             f"channel_id='{message.channel.id}'"
         )
@@ -184,9 +184,7 @@ class MikoGPT:
 
         if self.response['type'] != "IMAGE":
             
-            match self.mode:
-                case "SARCASTIC": role = tunables('OPENAI_RESPONSE_ROLE_SARCASTIC')
-                case _: role = tunables('OPENAI_RESPONSE_ROLE_DEFAULT')
+            role = tunables(f'OPENAI_RESPONSE_ROLE_{self.mode.upper()}')
             
             if self.context is None:
                 messages = [
