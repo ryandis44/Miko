@@ -38,7 +38,7 @@ class Debugger(commands.Cog):
                 f"Please provide something to debug: `{os.getenv('CMD_PREFIX1')}d <category> (user)`\n"
                 "Categories: `a` (activity), `gl` (guild list), "
                 "`as` (active playtime sessions), `av` (active voice sessions), `po` (active polls) "
-                "`music` (active music sessions), `tasks` (all active asyncio tasks)"
+                "`music` (active music sessions), `tasks` (all active asyncio tasks), `st` (sticker id in replied msg)"
             )
             return
         
@@ -176,6 +176,21 @@ class Debugger(commands.Cog):
                 seshs = AUDIO_SESSIONS.items()
                 print(f"DEBUG REQUESTED 'music': {asyncio.all_tasks()}")
                 await ctx.channel.send(content=f"{asyncio.all_tasks()}")
+            
+            case 'st':
+
+                if ctx.message.reference is None:
+                    await ctx.send(content="Please reply to a message to get sticker id")
+                    return
+
+                if ctx.message.reference.resolved.stickers == []:
+                    await ctx.send(content="No sticker found")
+                    return
+
+                rmsg = ctx.message.reference.resolved
+                await ctx.send(
+                    content=f"Sticker ID: {rmsg.stickers[0].id}"
+                )
 
 
 

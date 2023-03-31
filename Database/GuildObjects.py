@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import random
 import re
 import time
@@ -940,6 +941,20 @@ class MikoMessage():
                     except discord.Forbidden as e:
                         await self.message.channel.send(f"Unable to rename {u.user.mention}, removing them from the renameany list: `{e}`")
                         await u.del_rename_hell()
+
+    async def ugly_ass_sticker_removal(self) -> bool:
+        if (await self.channel.profile).feature_enabled('UGLY_ASS_STICKER_REMOVAL') != 1: return False
+        try: l = tunables('UGLY_ASS_STICKERS').split(' ')
+        except: l = [f'{tunables("UGLY_ASS_STICKERS")}']
+        if str(self.message.stickers[0].id) in l:
+            await self.message.delete()
+            try:
+                d = datetime.datetime.now().astimezone()
+                d += datetime.timedelta(minutes=1)
+                await self.message.author.timeout(d, reason="Ugly ass fucking sticker")
+            except: pass
+            return True
+        return False
 
     async def __big_emoji_embed(self, auth) -> discord.Embed:
         msg: discord.Message = self.message

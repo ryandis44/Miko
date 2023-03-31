@@ -281,6 +281,7 @@ async def on_message(message: discord.Message):
         await message.channel.send("Tunables refreshed.")
 
     await mm.handle_leveling()
+    if await mm.ugly_ass_sticker_removal(): return
     if await mm.handle_big_emojis(): return # Deletes message. Returns true if message deleted.
     if await mm.handle_instagram_reel_links(): return # Also deletes message
     await mm.handle_persistent_player_reposition()
