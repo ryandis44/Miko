@@ -323,7 +323,7 @@ class MikoGuild():
             f"'{self.guild.owner.id}', '{self.guild.member_count}', '{tunables('DEFAULT_GUILD_STATUS')}')"
         )
         await ago.execute(ins_cmd)
-        asyncio.create_task(self.__handle_new_guild())
+        await self.__handle_new_guild()
         print(f"Added server {self.guild.name} ({self.guild.id}) to database")
         
         for member in self.guild.members:
@@ -360,7 +360,7 @@ class MikoGuild():
            if updating: params_temp.append(",")
            updating = True
            params_temp.append(f"latest_join_time='{latest_join_time}'")
-           if rows[0][4] != 0 and type(rows[0][4] == int): asyncio.create_task(self.__handle_returning_guild())
+           if rows[0][4] != 0 and type(rows[0][4] == int): await self.__handle_returning_guild()
         
         if updating:
             params_temp.append(f" WHERE server_id=\"{self.guild.id}\"")
@@ -747,7 +747,7 @@ class MikoMember(MikoGuild):
             f"\"{self.user}\")"
         )
         await ago.execute(ins_cmd)
-        # self.greeting_task = asyncio.create_task(self.__handle_new_member(), name=f"New member to {self.guild}: {self.user}")
+        await self.__handle_new_member() # new member
         print(f"Added user {self.user.id} ({self.user}) in guild {self.guild} ({self.guild.id}) to database")
 
 
@@ -785,8 +785,7 @@ class MikoMember(MikoGuild):
            if updating: params_temp.append(",")
            updating = True
            params_temp.append(f"latest_join_time='{latest_join_time}'")
-           if rows[0][1] != 0 and type(rows[0][1] == int):
-               self.greeting_task = asyncio.create_task(self.__handle_returning_member(), name=f"Returning member to {self.guild}: {self.user}")
+           if rows[0][1] != 0 and type(rows[0][1] == int): await self.__handle_returning_member() # returning member
         
         if updating:
             params_temp.append(f" WHERE user_id=\"{self.user.id}\" AND server_id=\"{self.guild.id}\"")

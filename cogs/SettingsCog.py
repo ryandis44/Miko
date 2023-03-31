@@ -2,7 +2,7 @@ import asyncio
 import discord
 from discord.ext import commands
 from discord import app_commands
-from Database.GuildObjects import MikoMember
+from Database.GuildObjects import MikoTextChannel
 from Settings.Views import SettingsView
 from Settings.embeds import settings_initial
 from tunables import *
@@ -36,6 +36,7 @@ class SettingsCog(commands.Cog):
         await SettingsView(original_interaction=interaction).ainit()
 
     async def interaction_check(self, interaction: discord.Interaction):
+        await MikoTextChannel(channel=interaction.channel, client=interaction.client).ainit()
         await interaction.response.send_message(content=tunables('LOADING_EMOJI'), ephemeral=True)
         return True
 
