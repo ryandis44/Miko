@@ -22,15 +22,33 @@ class ChatGPT(Setting):
             options=[
                 discord.SelectOption(
                     label="Enabled: Normal Mode",
-                    description="Enable normal ChatGPT responses in this channel",
+                    description="Normal ChatGPT responses. Will answer questions.",
                     value="NORMAL",
                     emoji="🌐"
                 ),
                 discord.SelectOption(
                     label="Enabled: Sarcastic Mode",
-                    description="Enable sarcastic ChatGPT responses in this channel",
+                    description="Sarcastic responses. May go on a tangent or might get offended.",
                     value="SARCASTIC",
                     emoji="🤡"
+                ),
+                discord.SelectOption(
+                    label="Enabled: Asshole Mode",
+                    description="Short and sweet sarcastic asshole responses.",
+                    value="ASSHOLE",
+                    emoji="😡"
+                ),
+                discord.SelectOption(
+                    label="Enabled: UwU/lolcat Mode",
+                    description="Lolcat and uwu speak. I don't think it even knows how to answer questions.",
+                    value="UWU",
+                    emoji="🐱"
+                ),
+                discord.SelectOption(
+                    label="Enabled: Unfiltered Mode",
+                    description="Unfiltered and profane responses. Will not answer questions. At all.",
+                    value="UNFILTERED",
+                    emoji="⚠"
                 ),
                 discord.SelectOption(
                     label="Disabled",

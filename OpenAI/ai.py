@@ -73,9 +73,8 @@ class MikoGPT:
                     refs.reverse()
                     
                     
-                    match self.mode:
-                        case "SARCASTIC": role = tunables('OPENAI_RESPONSE_ROLE_SARCASTIC')
-                        case _: role = tunables('OPENAI_RESPONSE_ROLE_DEFAULT')
+                    
+                    role = tunables(f'OPENAI_RESPONSE_ROLE_{self.mode.upper()}')
                     self.context = []
                     self.context.append(
                         {"role": "system", "content": role}
