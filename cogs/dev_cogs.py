@@ -20,6 +20,10 @@ class dev_cog(commands.Cog):
     async def on_ready(self):
         self.tree = app_commands.CommandTree(self.client)
 
+    @group.command(name="tunables", description=f"{os.getenv('APP_CMD_PREFIX')}None")
+    @app_commands.guild_only
+    async def set_level_roles(self, interaction: discord.Interaction):
+        await TunablesView(original_interaction=interaction).ainit()
 
     @group.command(name="set_level_roles", description=f"{os.getenv('APP_CMD_PREFIX')}Give all members their leveling role")
     @app_commands.guild_only
@@ -159,7 +163,7 @@ class dev_cog(commands.Cog):
         u = MikoMember(user=interaction.user, client=interaction.client)
         await u.ainit()
         if await u.bot_permission_level >= 5:
-            await interaction.response.send_message("Executing dev command...")
+            await interaction.response.send_message("Executing dev command...", ephemeral=True)
             await u.increment_statistic('DEV_CMDS_USED')
             return True
         
@@ -170,3 +174,45 @@ class dev_cog(commands.Cog):
 
 async def setup(client: commands.Bot):
     await client.add_cog(dev_cog(client))
+
+
+
+class TunablesView(discord.ui.View):
+    def __init__(self, original_interaction: discord.Interaction) -> None:
+        super().__init__(timeout=tunables('GLOBAL_VIEW_TIMEOUT'))
+        self.original_interaction = original_interaction
+        self.query = None
+        self.offset = 0
+
+    async def ainit(self) -> None:
+        self.u = MikoMember(user=self.original_interaction.user, client=self.original_interaction.client)
+        self.message = await self.original_interaction.original_response()
+        await self.main_response()
+
+    async def on_timeout(self) -> None:
+        try: await self.message.delete()
+        except: pass
+    
+    async def main_response(self) -> None:
+        temp = []
+        temp.append(
+            "Search: "
+            f"`{'(all)' if self.query is None else self.query}`"
+            "\n\n"
+        )
+        
+        for group in [all_tunable_keys()[0:5]]:
+            for key in group:
+                temp.append(
+                    f"`{key}`\n"
+                    "```\n"
+                    f"{tunables(key)}"
+                    "\n```\n"
+                )
+        
+        embed = discord.Embed(color=GLOBAL_EMBED_COLOR, description=''.join(temp))
+        embed.set_author(icon_url=self.u.client.user.avatar, name=f"{self.u.client.user.name} Tunables Editor")
+        
+        self.clear_items()
+        # self.add_item()
+        await self.message.edit(content=None, view=self, embed=embed)

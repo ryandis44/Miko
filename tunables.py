@@ -21,6 +21,13 @@ def tunables(s):
         print(f"TUNABLES ERROR: Could not find '{s}' | {e}")
         return None
 
+def all_tunable_keys() -> list: return [*TUNABLES]
+
+def set_tunable(k, v) -> None:
+    TUNABLES[k] = v
+    configure_tunables()
+    
+
 def tunables_init(): # Initial call cannot be async
     assign_tunables(
         val=Database("TUNABLES INITIALIZATION").db_executor(
@@ -39,7 +46,9 @@ def assign_tunables(val):
         elif tunable[1] not in ["TRUE", "FALSE"]:
             if tunable[1] is not None and tunable[1].isdigit(): TUNABLES[tunable[0]] = int(tunable[1])
             else: TUNABLES[tunable[0]] = tunable[1]
-    
+    configure_tunables()
+
+def configure_tunables() -> None:
     for key, val in TUNABLES.items():
         if 'GUILD_PROFILE_' in key:
             TUNABLES[key] = GuildProfile(profile=str(key)[14:])
@@ -53,7 +62,6 @@ class GuildProfile():
     def __init__(self, profile: str):
         self.params = str(tunables(f'GUILD_PROFILE_{profile}')).split(',')
         self.profile = profile
-        # self.vals = HashTable(1_000)
         self.v = {}
         
         self.__commands = {'all_enabled': False, 'inverse': False}
@@ -61,7 +69,7 @@ class GuildProfile():
         self.__handle_params()
 
     def __str__(self):
-        return f"{self.profile} GuildProfile Object"
+        return self.params
     
     def __handle_params(self) -> None:
         for option in self.params:
