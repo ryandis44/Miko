@@ -45,7 +45,7 @@ class ChatGPT(Setting):
                     emoji="🐱"
                 ),
                 discord.SelectOption(
-                    label="Enabled: Relentless Mode",
+                    label="Enabled: Unfiltered Mode",
                     description="Unfiltered and profane responses. Will not answer questions. At all.",
                     value="UNFILTERED",
                     emoji="⚠"

@@ -149,6 +149,17 @@ class SettingsView(discord.ui.View):
             name=f"{await self.u.username if self.scope['type'] == 'USER_SETTINGS' else self.u.guild.name} Settings"
         )
         
+        # For setting default selected item to
+        # item that is set by user
+        for option in s.options:
+            val = await s.value(self.channel_id)
+            if type(val) == bool:
+                if val: val = "TRUE"
+                else: val = "FALSE"
+            if option.value == val:
+                option.default = True
+            else: option.default = False
+        
         self.clear_items()
         self.add_item(ChooseState(setting=s))
         self.add_item(BackToHome())
@@ -169,11 +180,11 @@ class SettingsView(discord.ui.View):
             await interaction.response.send_message(content=msg, ephemeral=True)
             return
     
-        await interaction.response.edit_message()
         await s.set_state(state=choice, channel_id=self.channel_id)
     
         self.clear_items()
         await self.setting_page(s=s)
+        await interaction.response.edit_message()
     
     
 

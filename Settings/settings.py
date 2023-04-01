@@ -57,7 +57,7 @@ class Setting:
     def __str__(self): return f"{self.name} Settings Object"
 
 
-    async def value(self, channel_id):
+    async def value(self, channel_id=None):
         match self.table:
             case 'CHANNELS': scope = f"channel_id='{channel_id}'"
             case 'SERVERS': scope = f"server_id='{self.u.guild.id}'"
