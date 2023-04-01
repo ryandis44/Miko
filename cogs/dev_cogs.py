@@ -181,33 +181,41 @@ class TunablesView(discord.ui.View):
     def __init__(self, original_interaction: discord.Interaction) -> None:
         super().__init__(timeout=tunables('GLOBAL_VIEW_TIMEOUT'))
         self.original_interaction = original_interaction
-        self.query = None
         self.offset = 0
-        self.val = all_tunable_keys()
-        self.val_len = len(self.val)
 
     async def ainit(self) -> None:
         self.u = MikoMember(user=self.original_interaction.user, client=self.original_interaction.client)
         self.message = await self.original_interaction.original_response()
-        await self.main_response()
+        await self.main_response(refresh=True)
+    
+    async def __db(self, query=None) -> None:
+        if query is None: w = ""
+        else: w = f"WHERE variable LIKE '%{query}%' "
+        self.val = await db.execute(
+            "SELECT * FROM TUNABLES "
+            f"{w}"
+            "ORDER BY variable ASC"
+        )
+        self.val_len = len(self.val)
 
     async def on_timeout(self) -> None:
         try: await self.message.delete()
         except: pass
     
-    async def main_response(self) -> None:
+    async def main_response(self, query=None, refresh=False) -> None:
+        if refresh: await self.__db(query=query)
         temp = []
         temp.append(
             "Search: "
-            f"`{'(all)' if self.query is None else self.query}`"
+            f"`{'(all)' if query is None else query}`"
             "\n\n"
         )
         
         for i, key in enumerate(self.val[self.offset:self.offset+tunables('SETTINGS_UI_MAX_SETTINGS_LISTABLE')]):
             temp.append(
-                f"`{i+1+self.offset}.` `{key}`\n"
+                f"`{i+1+self.offset}.` `{key[0]}`\n"
                 "```\n"
-                f"{tunables(key)}"
+                f"{key[1]}"
                 "\n```\n"
             )
         
@@ -233,21 +241,13 @@ class Dropdown(discord.ui.Select):
         self.tun = tun
 
         options = []
-        # options.append(
-        #     discord.SelectOption(
-        #         label="Test",
-        #         description=None,
-        #         value=0,
-        #         emoji=None
-        #     )
-        # )
 
-        for t in tun:
+        for i, t in enumerate(tun):
             options.append(
                 discord.SelectOption(
-                    label=t,
+                    label=t[0],
                     description=None,
-                    value=t,
+                    value=i,
                     emoji=None
                 )
             )
@@ -263,9 +263,36 @@ class Dropdown(discord.ui.Select):
         )
     
     async def callback(self, interaction: discord.Interaction):
-        await interaction.response.edit_message()
-        v = self.values[0]
-        print(tunables(v))
+        v = int(self.values[0])
+        m = TunableModal()
+        m.keyy.default = self.tun[v][0]
+        m.vall.default = self.tun[v][1]
+        await interaction.response.send_modal(m)
+    
+class TunableModal(discord.ui.Modal):
+    def __init__(self):
+        super().__init__(title="Tunable Entry", custom_id="entry_modal")
+
+    keyy = discord.ui.TextInput(
+            label="Key",
+            placeholder="COMMAND_DISABLED_TUNABLES",
+            min_length=1,
+            max_length=100,
+            default=None
+        )
+    
+    vall = discord.ui.TextInput(
+            label="Value",
+            placeholder="TRUE",
+            min_length=1,
+            max_length=4000,
+            default=None,
+            style=discord.TextStyle.paragraph
+        )
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        pass
+    
+    
 
 # class SearchButton(discord.ui.Button):
 #     def __init__(self):
