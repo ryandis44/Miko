@@ -280,7 +280,7 @@ class PrevButton(discord.ui.Button):
         )
     async def callback(self, interaction: discord.Interaction) -> None:
         if self.view.offset <= tunables('SETTINGS_UI_MAX_SETTINGS_LISTABLE'): self.view.offset = 0
-        elif self.offset > self.offset - tunables('SETTINGS_UI_MAX_SETTINGS_LISTABLE'): \
+        elif self.view.offset > self.view.offset - tunables('SETTINGS_UI_MAX_SETTINGS_LISTABLE'): \
             self.view.offset -= tunables('SETTINGS_UI_MAX_SETTINGS_LISTABLE')
         else: return
         await self.view.settings_list_page(interaction)

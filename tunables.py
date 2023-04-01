@@ -31,12 +31,16 @@ def set_tunable(k, v) -> None:
 def tunables_init(): # Initial call cannot be async
     assign_tunables(
         val=Database("TUNABLES INITIALIZATION").db_executor(
-            "SELECT * FROM TUNABLES"
+            "SELECT * FROM TUNABLES "
+            "ORDER BY variable ASC"
         )
     )
 
 async def tunables_refresh():
-    assign_tunables(await db.execute("SELECT * FROM TUNABLES"))
+    assign_tunables(await db.execute(
+        "SELECT * FROM TUNABLES "
+        "ORDER BY variable ASC"
+    ))
 
 def assign_tunables(val):
     global TUNABLES

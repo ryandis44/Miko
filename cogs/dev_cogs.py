@@ -183,6 +183,8 @@ class TunablesView(discord.ui.View):
         self.original_interaction = original_interaction
         self.query = None
         self.offset = 0
+        self.val = all_tunable_keys()
+        self.val_len = len(self.val)
 
     async def ainit(self) -> None:
         self.u = MikoMember(user=self.original_interaction.user, client=self.original_interaction.client)
@@ -201,18 +203,134 @@ class TunablesView(discord.ui.View):
             "\n\n"
         )
         
-        for group in [all_tunable_keys()[0:5]]:
-            for key in group:
-                temp.append(
-                    f"`{key}`\n"
-                    "```\n"
-                    f"{tunables(key)}"
-                    "\n```\n"
-                )
+        for i, key in enumerate(self.val[self.offset:self.offset+tunables('SETTINGS_UI_MAX_SETTINGS_LISTABLE')]):
+            temp.append(
+                f"`{i+1+self.offset}.` `{key}`\n"
+                "```\n"
+                f"{tunables(key)}"
+                "\n```\n"
+            )
         
         embed = discord.Embed(color=GLOBAL_EMBED_COLOR, description=''.join(temp))
         embed.set_author(icon_url=self.u.client.user.avatar, name=f"{self.u.client.user.name} Tunables Editor")
         
         self.clear_items()
-        # self.add_item()
+        self.add_item(Dropdown(tun=self.val[self.offset:self.offset+tunables('SETTINGS_UI_MAX_SETTINGS_LISTABLE')]))
+        # self.add_item(SearchButton())
+        if self.val_len > tunables('SETTINGS_UI_MAX_SETTINGS_LISTABLE'):
+            self.add_item(PrevButton(disabled=not self.offset > 0))
+            self.add_item(NextButton(
+                disabled=not (self.val_len > self.offset + tunables('SETTINGS_UI_MAX_SETTINGS_LISTABLE') and \
+                    self.val_len > tunables('SETTINGS_UI_MAX_SETTINGS_LISTABLE'))
+            ))
+        
         await self.message.edit(content=None, view=self, embed=embed)
+
+
+class Dropdown(discord.ui.Select):
+    def __init__(self, tun: list):
+        print(tun)
+        self.tun = tun
+
+        options = []
+        # options.append(
+        #     discord.SelectOption(
+        #         label="Test",
+        #         description=None,
+        #         value=0,
+        #         emoji=None
+        #     )
+        # )
+
+        for t in tun:
+            options.append(
+                discord.SelectOption(
+                    label=t,
+                    description=None,
+                    value=t,
+                    emoji=None
+                )
+            )
+
+        super().__init__(
+            placeholder="Select a tunable",
+            min_values=1,
+            max_values=1,
+            options=options,
+            row=1,
+            custom_id="select_entry",
+            disabled=False
+        )
+    
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.edit_message()
+        v = self.values[0]
+        print(tunables(v))
+
+# class SearchButton(discord.ui.Button):
+#     def __init__(self):
+#         super().__init__(
+#             style=discord.ButtonStyle.gray,
+#             label=None,
+#             emoji="🔎",
+#             custom_id="search_button",
+#             row=2
+#         )
+    
+#     async def callback(self, interaction: discord.Interaction) -> None:
+#         await interaction.response.send_modal(self.SearchModal(bview=self))
+
+#     class SearchModal(discord.ui.Modal):
+
+#         def __init__(self, bview):
+#             super().__init__(title="Search Tunables", custom_id="search_modal")
+#             self.bview = bview
+
+#         tun = discord.ui.TextInput(
+#                 label="Search (LIKE ):",
+#                 placeholder="BIG_EMOJIS_ENABLED",
+#                 min_length=1,
+#                 max_length=50
+#             )
+#         async def on_submit(self, interaction: discord.Interaction) -> None:
+#             await interaction.response.edit_message()
+#             await self.bview.view.
+
+# Responsible for handling moving back a page
+class PrevButton(discord.ui.Button):
+    def __init__(self, disabled: bool=False) -> None:
+        super().__init__(
+            style=discord.ButtonStyle.gray,
+            label=None,
+            emoji=tunables('GENERIC_PREV_BUTTON'),
+            custom_id="prev_button",
+            row=2,
+            disabled=disabled
+        )
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if self.view.offset <= tunables('SETTINGS_UI_MAX_SETTINGS_LISTABLE'): self.view.offset = 0
+        elif self.view.offset > self.view.offset - tunables('SETTINGS_UI_MAX_SETTINGS_LISTABLE'): \
+            self.view.offset -= tunables('SETTINGS_UI_MAX_SETTINGS_LISTABLE')
+        else: return
+        await interaction.response.edit_message()
+        await self.view.main_response()
+
+# Responsible for handling moving forward a page
+class NextButton(discord.ui.Button):
+    def __init__(self, disabled: bool=False) -> None:
+        super().__init__(
+            style=discord.ButtonStyle.gray,
+            label=None,
+            emoji=tunables('GENERIC_NEXT_BUTTON'),
+            custom_id="next_button",
+            row=2,
+            disabled=disabled
+        )
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if self.view.val_len > self.view.offset + (tunables('SETTINGS_UI_MAX_SETTINGS_LISTABLE') * 2): \
+            self.view.offset += tunables('SETTINGS_UI_MAX_SETTINGS_LISTABLE')
+        elif self.view.val_len <= self.view.offset + (tunables('SETTINGS_UI_MAX_SETTINGS_LISTABLE') * 2): \
+            self.view.offset = self.view.val_len - tunables('SETTINGS_UI_MAX_SETTINGS_LISTABLE')
+        else: return
+        await interaction.response.edit_message()
+        await self.view.main_response()
