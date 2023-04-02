@@ -1,5 +1,4 @@
-import discord
-from Settings.settings import Setting, MikoMember
+from Settings.settings import Setting, tunables
 
 
 def all_channel_settings(u, p) -> list:
@@ -19,42 +18,5 @@ class ChatGPT(Setting):
             emoji = "🌐",
             table = "CHANNELS",
             col = "chatgpt",
-            options=[
-                discord.SelectOption(
-                    label="Enabled: Normal",
-                    description="Normal ChatGPT responses. Will answer questions.",
-                    value="NORMAL",
-                    emoji="🌐"
-                ),
-                discord.SelectOption(
-                    label="Enabled: Sarcastic",
-                    description="Sarcastic responses. May go on a tangent or get offended.",
-                    value="SARCASTIC",
-                    emoji="🤡"
-                ),
-                discord.SelectOption(
-                    label="Enabled: Asshole",
-                    description="Short and sweet sarcastic asshole responses.",
-                    value="ASSHOLE",
-                    emoji="😡"
-                ),
-                discord.SelectOption(
-                    label="Enabled: UwU/lolcat",
-                    description="Lolcat and uwu speak with emojis. A lot. SOOO CUWTE UWU.",
-                    value="UWU",
-                    emoji="🐱"
-                ),
-                discord.SelectOption(
-                    label="Enabled: Relentless",
-                    description="Unfiltered and profane responses. Does not give a f*ck.",
-                    value="RELENTLESS",
-                    emoji="⚠"
-                ),
-                discord.SelectOption(
-                    label="Disabled",
-                    description="Disable ChatGPT in this channel",
-                    value="DISABLED",
-                    emoji="❌"
-                )
-            ]
+            options=tunables('OPENAI_PERSONALITIES')
         )

@@ -74,7 +74,7 @@ class MikoGPT:
                     
                     
                     
-                    role = tunables(f'OPENAI_RESPONSE_ROLE_{self.mode.upper()}')
+                    role = tunables(f'OPENAI_PERSONALITY_{self.mode.upper()}')
                     self.context = []
                     self.context.append(
                         {"role": "system", "content": role}
@@ -183,7 +183,7 @@ class MikoGPT:
 
         if self.response['type'] != "IMAGE":
             
-            role = tunables(f'OPENAI_RESPONSE_ROLE_{self.mode.upper()}')
+            role = tunables(f'OPENAI_PERSONALITY_{self.mode.upper()}')
             
             if self.context is None:
                 messages = [

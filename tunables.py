@@ -1,5 +1,6 @@
 from discord import Color
-from discord import ButtonStyle
+from discord import ButtonStyle, SelectOption
+from json import loads
 from Database.database_class import Database, AsyncDatabase
 from utils.HashTable import HashTable
 db = AsyncDatabase("tunables.py")
@@ -50,10 +51,31 @@ def assign_tunables(val):
     configure_tunables()
 
 def configure_tunables() -> None:
+    try: TUNABLES['OPENAI_PERSONALITIES']
+    except: TUNABLES['OPENAI_PERSONALITIES'] = []
+    temp = []
     for key, val in TUNABLES.items():
         if 'GUILD_PROFILE_' in key:
             TUNABLES[key] = GuildProfile(profile=str(key)[14:])
-
+        
+        if 'OPENAI_PERSONALITY_' in key:
+            d = loads(val)
+            temp.append(d)
+            
+    
+    def srt(d) -> int:
+        return d['position']
+    temp.sort(key=srt)
+    for d in temp:
+        TUNABLES['OPENAI_PERSONALITIES'].append(
+            SelectOption(
+                label=d['label'],
+                description=d['description'],
+                value=d['value'],
+                emoji=d['emoji']
+            )
+        )
+        TUNABLES[f"OPENAI_PERSONALITY_{d['value']}"] = d['prompt']
 
 
 
