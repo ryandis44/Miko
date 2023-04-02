@@ -113,7 +113,7 @@ class MikoGuild():
             "SELECT big_emojis FROM SERVERS WHERE "
             f"server_id='{self.guild.id}'"
         )
-        if val == "FALSE" or not tunables('BIG_EMOJIS_ENABLED'): return False
+        if val == "FALSE" or (await self.profile).feature_enabled('BIG_EMOJIS') != 1: return False
         return True
     @property
     async def profile(self) -> GuildProfile:

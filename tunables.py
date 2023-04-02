@@ -23,11 +23,6 @@ def tunables(s):
 
 def all_tunable_keys() -> list: return [*TUNABLES]
 
-def set_tunable(k, v) -> None:
-    TUNABLES[k] = v
-    configure_tunables()
-    
-
 def tunables_init(): # Initial call cannot be async
     assign_tunables(
         val=Database("TUNABLES INITIALIZATION").db_executor(
@@ -35,6 +30,8 @@ def tunables_init(): # Initial call cannot be async
             "ORDER BY variable ASC"
         )
     )
+
+def del_tunable(k) -> None: del TUNABLES[k]
 
 async def tunables_refresh():
     assign_tunables(await db.execute(

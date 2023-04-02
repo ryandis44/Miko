@@ -164,7 +164,7 @@ class Basic(commands.Cog):
         except: user = ctx.author
 
         await ctx.send(
-            content=f"{(await u.profile).cmd_enabled('PLAYTIME')}"
+            content=f"{tunables('AAA_TEST')}"
         )
 
 
