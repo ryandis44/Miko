@@ -1,10 +1,13 @@
 # Miko Bot main file
 from Database.database_class import connect_pool
-from tunables import fetch_tunables, tunables, GLOBAL_EMBED_COLOR
-fetch_tunables()
+from tunables import tunables_init, tunables, GLOBAL_EMBED_COLOR, tunables_refresh
+tunables_init()
 
+import tracemalloc
+tracemalloc.start()
 
 import time
+import sys
 from OpenAI.ai import MikoGPT
 import asyncio
 import os
@@ -12,7 +15,6 @@ import discord
 import re
 import random
 import signal
-import sys
 from Plex.embeds import info_anime, info_dubbed, info_quality, info_subbed, plex_update_2_28_23, plex_update_2_3
 from misc.embeds import plex_requests_embed
 from dpyConsole import Console
@@ -147,11 +149,13 @@ async def embed(choice=None, channel=None):
 @client.event
 async def on_guild_join(guild: discord.Guild):
     g = MikoGuild(guild=guild, client=client)
+    await g.ainit()
 
 @client.event
 async def on_member_join(member: discord.Member):
     if not running: return
     u = MikoMember(user=member, client=client)
+    await u.ainit()
             
 @client.event
 async def on_raw_message_delete(payload: discord.RawMessageDeleteEvent):
@@ -163,18 +167,19 @@ async def on_raw_message_delete(payload: discord.RawMessageDeleteEvent):
 @client.event
 async def on_raw_member_remove(payload: discord.RawMemberRemoveEvent):
     if payload.user.id == client.user.id:
-        g = MikoGuild(guild=payload.user.guild, client=client, check_exists=False)
+        g = MikoGuild(guild=payload.user.guild, client=client)
         await g.handle_leave_guild()
         return
 
     if not running: return
     if payload.user.pending: return
     g = MikoGuild(guild=None, client=client, guild_id=payload.guild_id)
+    await g.ainit()
 
     
     temp = []
     temp.append(f"<@{payload.user.id}>『`{payload.user}`』left")
-    match g.status:
+    match await g.status:
 
         case "THEBOYS":
             if client.user.id != 1017998983886545068: return
@@ -203,6 +208,7 @@ async def on_raw_member_remove(payload: discord.RawMemberRemoveEvent):
 async def on_member_update(before: discord.Member, cur: discord.Member):
     if not running: return
     u = MikoMember(user=cur, client=client)
+    await u.ainit()
     await asyncio.sleep(1)
     if u.greeting_task is not None:
         if not u.greeting_task.done():
@@ -210,7 +216,7 @@ async def on_member_update(before: discord.Member, cur: discord.Member):
             await u.greeting_task
             print(f"**Greeting task status: {'COMPLETE' if u.greeting_task.done() else 'INCOMPLETE'}**\n")
 
-    username_hist(cur)
+    await username_hist(cur)
 
 
 # Responsible for keeping guild emojis up-to-date
@@ -218,6 +224,7 @@ async def on_member_update(before: discord.Member, cur: discord.Member):
 async def on_guild_update(before: discord.Guild, after: discord.Guild):
     if not running: return
     g = MikoGuild(guild=after, client=client)
+    await g.ainit()
     if before.icon != after.icon:
         await regen_guild_emoji(client=client, guild=after)
 
@@ -226,17 +233,19 @@ async def on_guild_update(before: discord.Guild, after: discord.Guild):
 async def on_presence_update(before: discord.Member, cur: discord.Member):
     if not running: return
     u = MikoMember(user=cur, client=client)
-    if not u.profile.feature_enabled('TRACK_PLAYTIME'): return
+    await u.ainit()
+    if (await u.profile).feature_enabled('TRACK_PLAYTIME') != 1: return
 
-    u.increment_statistic('PRESENCE_UPDATES')
+    await u.increment_statistic('PRESENCE_UPDATES')
     if cur.bot: return
-    determine_activity(before, cur, u)
+    await determine_activity(before, cur, u)
 
 
 # Voicetime
 @client.event
 async def on_voice_state_update(member: discord.Member, bef: discord.VoiceState, cur: discord.VoiceState):
     u = MikoMember(user=member, client=client)
+    await u.ainit()
     
     # if bot is removed from voice channel, cleanup and delete voice_client object
     # this prevents the bot from thinking it is still in vc after being
@@ -247,9 +256,9 @@ async def on_voice_state_update(member: discord.Member, bef: discord.VoiceState,
         if sesh is not None:
             await sesh.stop()
     
-    if not u.profile.feature_enabled('TRACK_VOICETIME'): return
+    if (await u.profile).feature_enabled('TRACK_VOICETIME') != 1: return
     if not running: return
-    u.increment_statistic('VOICE_STATE_UPDATES')
+    await u.increment_statistic('VOICE_STATE_UPDATES')
     if member.bot: return # do not track bots
     await process_voice_state(u=u, bef=bef, cur=cur)
 
@@ -258,19 +267,21 @@ async def on_voice_state_update(member: discord.Member, bef: discord.VoiceState,
 async def on_message(message: discord.Message):
     if not running: return
     mm = MikoMessage(message=message, client=client)
-    if not mm.channel.profile.feature_enabled('MESSAGE_HANDLING'):
+    await mm.ainit()
+    if (await mm.channel.profile).feature_enabled('MESSAGE_HANDLING') != 1:
         await client.process_commands(message)
         return
     else: await client.process_commands(message)
 
     
-    if message.content.lower().startswith(f"{os.getenv('CMD_PREFIX1')}rt") and mm.user.bot_permission_level >= 5:
+    if message.content.lower().startswith(f"{os.getenv('CMD_PREFIX1')}rt") and await mm.user.bot_permission_level >= 5:
         await message.channel.send("Fetching tunables from database...")
         db_class.refresh_tunables()
-        fetch_tunables()
+        await tunables_refresh()
         await message.channel.send("Tunables refreshed.")
 
     await mm.handle_leveling()
+    if await mm.ugly_ass_sticker_removal(): return
     if await mm.handle_big_emojis(): return # Deletes message. Returns true if message deleted.
     if await mm.handle_instagram_reel_links(): return # Also deletes message
     await mm.handle_persistent_player_reposition()
@@ -280,7 +291,7 @@ async def on_message(message: discord.Message):
     await mm.handle_react_all()
 
 
-    if mm.channel.profile.feature_enabled('KARUTA_EXTRAS'):
+    if (await mm.channel.profile).feature_enabled('KARUTA_EXTRAS') == 1:
         karuta_id = 646937666251915264 #Karuta bot ID
         # Analyze embed from karuta bot, retrieve inventory items from embed, and calculate values
         # for trades according to hard coded bot IDs
@@ -298,9 +309,8 @@ async def on_message(message: discord.Message):
             client.get_channel(890644443575771166), #0 > karuta-mute-me
             client.get_channel(963928489248063539) #1 > baruta-kots
         ]
-        karuta_commands = db_class.get_karuta_commands()
         del_karuta_commands = ['kv']
-        for command in karuta_commands:
+        for command in tunables('KARUTA_COMMANDS').split():
             reg_ex = re.escape(command) + r" (.*)"
             if re.match(reg_ex, message.content.lower()) or command == message.content.lower():
                 if message.channel not in karuta_channels:
@@ -330,13 +340,12 @@ async def on_message(message: discord.Message):
         (message.reference is not None and message.reference.resolved is not None and \
             message.reference.resolved.author.id == client.user.id):
         
-        if mm.channel.profile.feature_enabled('REPLY_TO_MENTION_OPENAI') or\
-            mm.channel.profile.feature_enabled('REPLY_TO_MENTION_OPENAI_SARCASTIC'):
+        if (await mm.channel.profile).feature_enabled('CHATGPT') == 1:
 
             # Send help menu if only @ ing Miko
             if len(message.content.split()) <= 1 and message.content == f"<@{str(client.user.id)}>":
                 await message.reply(
-                    content="Please use </help:1064277864863772683> for help.",
+                    content=f"Please use {tunables('SLASH_COMMAND_SUGGEST_HELP')} for help.",
                     silent=True
                 )
                 return
@@ -345,9 +354,9 @@ async def on_message(message: discord.Message):
             await gpt.respond(message=message)
         
         # Basic response
-        elif mm.channel.profile.feature_enabled('REPLY_TO_MENTION'):
+        elif (await mm.channel.profile).feature_enabled('REPLY_TO_MENTION') == 1:
             await message.reply(
-                content="Please use </help:1064277864863772683> for help.",
+                content=f"Please use {tunables('SLASH_COMMAND_SUGGEST_HELP')} for help.",
                 silent=True
             )
 
@@ -371,7 +380,7 @@ async def load_extensions_console():
 
 async def main():
     print('bot online')
-    asyncio.create_task(connect_pool())
+    await connect_pool()
     asyncio.create_task(heartbeat())
     async with client:
         await load_extensions()
@@ -391,9 +400,9 @@ async def on_ready():
     if initial:
         initial = False
         print("\nAttempting to restore playtime sessions...")
-        fetch_playtime_sessions(client=client)
+        await fetch_playtime_sessions(client=client)
         print("\nAttempting to restore voicetime sessions...")
-        fetch_voicetime_sessions(client=client)
+        await fetch_voicetime_sessions(client=client)
         print("\n")
         nullify_restore_time()
 

@@ -39,7 +39,8 @@ class PollCog(commands.Cog):
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         u = MikoMember(user=interaction.user, client=interaction.client)
-        if not u.profile.cmd_enabled('POLL'):
+        await u.ainit()
+        if (await u.profile).cmd_enabled('POLL') != 1:
             await interaction.response.send_message(content=tunables('GENERIC_BOT_DISABLED_MESSAGE'), ephemeral=True)
             return False
         

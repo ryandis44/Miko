@@ -38,17 +38,17 @@ the activity must "go through" in order to be resumed. Here is the logic:
 
 import time
 import discord
-from Database.database_class import Database
+from Database.database_class import AsyncDatabase, Database
 from tunables import *
 
 
-ga = Database("GameActivity.py")
+# ga = Database("GameActivity.py")
+db = AsyncDatabase("Playtime.GameActivity.py")
+sdb = Database("Playtime.GameActivity.py")
 
 class GameActivity:
     def __init__(self, user, app_id, i, st=None) -> None:
-        global ga
         self.i = i
-        self.ga = ga
         self.user: discord.Member = user
         self.app_id = app_id
         self.resume_time = None
@@ -62,7 +62,9 @@ class GameActivity:
             self.restored = True
             self.__resume_time = int(time.time()) - tunables('THRESHOLD_RESUME_REBOOT_GAME_ACTIVITY')
         self.act_name = self.__activity_name()
-        self.__new_activity_entry(1)
+    
+    async def ainit(self) -> None:
+        await self.__new_activity_entry()
 
     @property
     def get_id(self) -> int:
@@ -93,13 +95,13 @@ class GameActivity:
         if self.resume_time is None: return False
         else: return True
     @property
-    def is_listed(self) -> bool:
+    async def is_listed(self) -> bool:
         sel_cmd = f"SELECT counts_towards_playtime FROM APPLICATIONS WHERE app_id='{self.app_id}'"
-        val = ga.db_executor(sel_cmd)
+        val = await db.execute(sel_cmd)
         if val == "FALSE": return False
         return True
     @property
-    def emoji(self):
+    async def emoji(self):
         first = True
         sel_cmd = []
         sel_cmd.append(f"SELECT emoji FROM APPLICATIONS WHERE")
@@ -117,7 +119,7 @@ class GameActivity:
         
         sel_cmd.append(f"AND emoji!=':video_game:' LIMIT 1")
 
-        emoji = ga.db_executor(''.join(sel_cmd))
+        emoji = await db.execute(''.join(sel_cmd))
         if emoji is None: return ":question:"
         elif emoji == []: return ":video_game:"
         return emoji 
@@ -136,7 +138,7 @@ class GameActivity:
 
     # Object gets created when activity is started,
     # so update database accordingly
-    def __new_activity_entry(self, attempt):
+    async def __new_activity_entry(self, attempt=1):
         
         # Verify there is not already an entry. If there is, "reactivate" it
         sel_cmd = []
@@ -149,7 +151,7 @@ class GameActivity:
         else: sel_cmd.append(f"AND session_id='{self.session_id}' ")
         sel_cmd.append("LIMIT 1")
         
-        val = self.ga.db_executor(''.join(sel_cmd))
+        val = await db.execute(''.join(sel_cmd))
         if val != []: self.resume_time = val[0][2]
         if val == []:
             ins_cmd = []
@@ -159,7 +161,7 @@ class GameActivity:
             ins_cmd.append(f" VALUES ('{self.user.id}', '{self.app_id}', '{self.start_time}'")
             if self.session_id is not None: ins_cmd.append(f", '{self.session_id}')")
             else: ins_cmd.append(")")
-            self.ga.db_executor(''.join(ins_cmd))
+            await db.execute(''.join(ins_cmd))
             
         # If start time is the same, resume
         #
@@ -172,7 +174,7 @@ class GameActivity:
             upd_cmd = []
             upd_cmd.append(f"UPDATE PLAY_HISTORY SET end_time='-1' WHERE user_id='{self.user.id}' AND app_id='{self.app_id}' AND start_time='{self.start_time}'")
             if self.session_id is not None: upd_cmd.append(f" AND session_id='{self.session_id}'")
-            self.ga.db_executor(''.join(upd_cmd))
+            await db.execute(''.join(upd_cmd))
         
         # Resume if ended 10m>= ago
         # If the row has an end time that ended less than 5m ago
@@ -188,7 +190,7 @@ class GameActivity:
             upd_cmd.append(f"UPDATE PLAY_HISTORY SET end_time='-1', resume_time='{self.resume_time}'")
             if self.session_id is not None: upd_cmd.append(f", session_id='{self.session_id}'")
             upd_cmd.append(f" WHERE user_id='{self.user.id}' AND app_id='{self.app_id}' AND start_time='{self.start_time}'")
-            self.ga.db_executor(''.join(upd_cmd))
+            await db.execute(''.join(upd_cmd))
         
         # Resume if resume_time is equal to start time
         # If our resume time equals the start time of the current activity
@@ -204,18 +206,18 @@ class GameActivity:
             upd_cmd = []
             upd_cmd.append(f"UPDATE PLAY_HISTORY SET end_time='-1' WHERE user_id='{self.user.id}' AND app_id='{self.app_id}' AND start_time='{self.start_time}'")
             if self.session_id is not None: upd_cmd.append(f" AND session_id='{self.session_id}'")
-            self.ga.db_executor(''.join(upd_cmd))
+            await db.execute(''.join(upd_cmd))
 
 
         # Verify a database entry has been made. If not, recurse and try again.
-        val = self.ga.db_executor(''.join(sel_cmd))
+        val = await db.execute(''.join(sel_cmd))
         if val == [] and not attempt >= 5 and self.resume_time is None:
-            self.__new_activity_entry(attempt + 1) # Only try 5 times
+            await self.__new_activity_entry(attempt + 1) # Only try 5 times
         elif attempt >= 5: self.__end_session() # Cannot create database entry, abort tracking this activity entirely
 
 
     # Close activity entry in database and delete object
-    def close_activity_entry(self, keep_sid=False, current_time=None):
+    async def close_activity_entry(self, keep_sid=False, current_time=None):
         if current_time is None: current_time = int(time.time())
         
         # Unlike 1.0, if a class is made then a database entry has also been made.
@@ -228,12 +230,32 @@ class GameActivity:
         )
         if self.session_id is not None: upd_cmd.append(f"AND session_id='{self.session_id}' ")
         upd_cmd.append("ORDER BY start_time DESC LIMIT 1")
-        self.ga.db_executor(''.join(upd_cmd))
+        await db.execute(''.join(upd_cmd))
 
         self.__end_session()
         return
 
-    def update_session_id(self):
+
+    # Bandaid function for synchronous shutdown
+    def close_activity_entry_synchronous(self, keep_sid=False, current_time=None):
+        if current_time is None: current_time = int(time.time())
+        
+        # Unlike 1.0, if a class is made then a database entry has also been made.
+        upd_cmd = []
+        if keep_sid: sid = ""
+        else: sid = "session_id=NULL, "
+        upd_cmd.append(
+            f"UPDATE PLAY_HISTORY SET {sid}end_time='{current_time}' WHERE "+
+            f"user_id='{self.user.id}' AND app_id='{self.app_id}' AND end_time='-1' AND start_time='{self.start_time}' "
+        )
+        if self.session_id is not None: upd_cmd.append(f"AND session_id='{self.session_id}' ")
+        upd_cmd.append("ORDER BY start_time DESC LIMIT 1")
+        sdb.db_executor(''.join(upd_cmd))
+
+        self.__end_session()
+        return
+
+    async def update_session_id(self):
         sid = self.sesh_id()
         if sid is not None and sid != self.session_id:
             self.session_id = sid
@@ -242,7 +264,7 @@ class GameActivity:
                 f"user_id='{self.user.id}' AND app_id='{self.app_id}' AND end_time='-1' AND start_time='{self.start_time}' "+
                 "ORDER BY start_time DESC LIMIT 1"
             )
-            self.ga.db_executor(upd_cmd)
+            await db.execute(upd_cmd)
 
     def __end_session(self):
         del self # Delete class object

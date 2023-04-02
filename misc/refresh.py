@@ -1,6 +1,5 @@
 import threading
 import time
-from Database.database import get_all_bots, get_karuta_commands, get_react_to_words
 from tunables import *
 
 class RefreshThread(threading.Thread):
@@ -12,9 +11,6 @@ class RefreshThread(threading.Thread):
     def __init__(self, client, *args, **kwargs):
         super(RefreshThread, self).__init__(*args, **kwargs)
         self._stop = threading.Event()
-        self._bruh_react_words = get_react_to_words()
-        self._karuta_commands = get_karuta_commands()
-        self._bots = get_all_bots()
         self.client = client
  
     # function using _stop function
@@ -34,9 +30,8 @@ class RefreshThread(threading.Thread):
         return self._bots
     
     def refresh_tunables(self, auto=False):
+        pass
         # print("Refreshing")
-        self._bruh_react_words = get_react_to_words()
-        self._karuta_commands = get_karuta_commands()
         #if not auto: #Come back to this
         #    print("Not auto")
         #    fetch_constants()

@@ -2,8 +2,8 @@ import asyncio
 import discord
 from discord.ext import commands
 from discord import app_commands
-from Database.GuildObjects import MikoMember
-from Settings.Views import SettingsScopeView
+from Database.GuildObjects import MikoTextChannel
+from Settings.Views import SettingsView
 from Settings.embeds import settings_initial
 from tunables import *
 from Database.database_class import Database
@@ -23,25 +23,22 @@ class SettingsCog(commands.Cog):
         self.tree = app_commands.CommandTree(self.client)
 
 
-    @app_commands.command(name="settings", description=f"{os.getenv('APP_CMD_PREFIX')}Modify Miko for yourself or this guild (if you have permission)")
+    @app_commands.command(name="settings", description=f"{os.getenv('APP_CMD_PREFIX')}Modify Miko settings for yourself or this guild (if you have permission)")
     @app_commands.guild_only
     async def settings(self, interaction: discord.Interaction):
 
-        msg = await interaction.original_response()
-        await msg.edit(
-            content=None,
-            embed=settings_initial(interaction),
-            view=SettingsScopeView(original_interaction=interaction)
-        )
+        await SettingsView(original_interaction=interaction).ainit()
 
+    @app_commands.command(name="msettings", description=f"{os.getenv('APP_CMD_PREFIX')}Modify Miko settings for yourself or this guild (if you have permission)")
+    @app_commands.guild_only
+    async def msettings(self, interaction: discord.Interaction):
 
+        await SettingsView(original_interaction=interaction).ainit()
 
     async def interaction_check(self, interaction: discord.Interaction):
-        # u = MikoMember(user=interaction.user, client=interaction.client)
-        await interaction.response.send_message("Opening settings menu...", ephemeral=True)
+        await MikoTextChannel(channel=interaction.channel, client=interaction.client).ainit()
+        await interaction.response.send_message(content=tunables('LOADING_EMOJI'), ephemeral=True)
         return True
-
-
 
 async def setup(client: commands.Bot):
     await client.add_cog(SettingsCog(client))

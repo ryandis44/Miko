@@ -1,17 +1,19 @@
 import discord
 from Settings.settings import Setting
 
-def all_guild_settings() -> list:
+def all_guild_settings(u, p) -> list:
     return [
-        BigEmojisGuild(),
-        NickInCtx(),
+        BigEmojisGuild(u, p),
+        NickInCtx(u, p),
     ]
 
 class BigEmojisGuild(Setting):
 
-    def __init__(self):
+    def __init__(self, u, p):
         super().__init__(
-            name = "Big Emojis",
+            u=u,
+            p=p,
+            name = "Guild Big Emojis",
             desc = "Enlarge custom emojis for a better viewing experience (only works on non-default emojis)",
             emoji = "😂",
             table = "SERVERS",
@@ -20,9 +22,11 @@ class BigEmojisGuild(Setting):
 
 class NickInCtx(Setting):
 
-    def __init__(self):
+    def __init__(self, u, p):
         super().__init__(
-            name = "Nicknames in Context",
+            u=u,
+            p=p,
+            name = "Guild Nicknames in Context",
             desc = "Whether or not to use nicknames when referencing users in embeds",
             emoji = "✏",
             table = "SERVERS",

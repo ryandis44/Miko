@@ -44,8 +44,6 @@ async def connect_pool():
                     loop=asyncio.get_event_loop(),
                     autocommit=True
             )
-            # conn = await pool.acquire()
-            # cursor = await conn.cursor()
             print("Database pool connected via Cloudflare!\n")
         except:
             print(f"\n##### FAILED TO CONNECT TO DATABASE! #####\n{e}\n")
@@ -62,25 +60,20 @@ async def check_pool():
 class AsyncDatabase:
 
     def __init__(self, file):
-        global pool
         self.file = file
-        self.pool = pool
 
-    def __update_vars(self):
+    async def execute(self, exec_cmd: str, p=False):
+        if p: print(exec_cmd)
         global pool
-        self.pool = pool
-
-    async def execute(self, exec_cmd: str):
         for attempt in range(1,6):
             try:
-                async with self.pool.acquire() as conn:
+                async with pool.acquire() as conn:
                     cursor = await conn.cursor()
                     await cursor.execute(exec_cmd)
             except Exception as e:
                 if attempt < 5:
                     if os.getenv('DATABASE_DEBUG') != "1": await asyncio.sleep(5)
                     await check_pool()
-                    self.__update_vars()
                     continue
                 else:
                     print(f"\nASYNC DATABASE ERROR! [{self.file}] Could not execute: \"{exec_cmd}\"\n{e}")
@@ -185,9 +178,6 @@ class Database:
         self.db = db
         self.cur = cur
         return
-    
-    async def db_executor_thread(self, exec_cmd):
-        return await asyncio.to_thread(self.db_executor, exec_cmd)
 
     def db_executor(self, exec_cmd):
         for attempt in range(1,6):

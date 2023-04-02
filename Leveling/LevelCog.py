@@ -1,14 +1,12 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from Database.database import get_server_status
 from Leveling.embeds import leveling_stats
 from tunables import *
 import os
 from Database.GuildObjects import MikoMember
-from Database.database_class import Database
+from Database.database_class import AsyncDatabase
 
-lv = Database("LevelCog.py")
 
 class LevelCog(commands.Cog):
     def __init__(self, client):
@@ -25,12 +23,13 @@ class LevelCog(commands.Cog):
 
         if user is None: user = interaction.user
         u = MikoMember(user=user, client=interaction.client)
-        await interaction.response.send_message(content=None, embed=leveling_stats(u))
+        await interaction.response.send_message(content=None, embed=await leveling_stats(u))
 
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         u = MikoMember(user=interaction.user, client=interaction.client)
-        if not u.profile.cmd_enabled('LEVELING'):
+        await u.ainit()
+        if (await u.profile).cmd_enabled('LEVELING') != 1:
             await interaction.response.send_message(content=tunables('GENERIC_BOT_DISABLED_MESSAGE'), ephemeral=True)
             return False
         return True

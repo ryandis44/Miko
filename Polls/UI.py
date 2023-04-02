@@ -145,13 +145,14 @@ class PollDuration(discord.ui.Select):
             description=f"{''.join(temp)}"
         )
         embed.set_author(
-                name=f"{u.username} Created a Poll",
-                icon_url=u.user_avatar
+                name=f"{await u.username} Created a Poll",
+                icon_url=await u.user_avatar
             )
         embed.set_footer(text="0 Responses Recorded. Polls are anonymous.")
 
         msg = await interaction.channel.send(content=f"{u.user.mention} created a poll")
         view = PollView(interaction=interaction, ans=ans, name=self.modal.name, author=u, expiration=expiration, embed=embed, temp=temp, original_message=msg)
+        await u.increment_statistic('POLLS_CREATED')
         active_polls.set_val(key=f"{msg.id}", val=view)
         await msg.edit(embed=embed, view=view, content=None)
         await view.timer()
@@ -176,7 +177,6 @@ class PollView(discord.ui.View):
         self.author_guild_avatar = author.user.guild_avatar
         self.responses = HashTable(10_000)
         self.running = True
-        self.author.increment_statistic('POLLS_CREATED')
         super().__init__(timeout=86401)
         self.add_item(Poll(ans=ans, responses=self.responses, poll=self))
         self.add_item(PollEnd(author=author, poll=self))
@@ -210,7 +210,7 @@ class PollView(discord.ui.View):
         self.terminate()
         responses = self.responses.get_all
         res_msg: discord.Message = await self.original_interaction.channel.send(
-            embed=results_embed(responses=responses, author=self.author, ans=self.ans, name=self.name),
+            embed=await results_embed(responses=responses, author=self.author, ans=self.ans, name=self.name),
             content=self.author.user.mention if mention else None
         )
         
@@ -256,11 +256,11 @@ class PollEnd(discord.ui.Button):
 
         if interaction.user.id == self.author.user.id: 
             resp = 'their'
-            self.author.increment_statistic('POLLS_ENDED')
+            await self.author.increment_statistic('POLLS_ENDED')
         else:
             resp = f'{self.author.user.mention}\'s'
             u = MikoMember(user=interaction.user, client=interaction.client)
-            u.increment_statistic('POLLS_ENDED')
+            await u.increment_statistic('POLLS_ENDED')
         await interaction.response.send_message(content=f"{interaction.user.mention} ended {resp} poll early")
         await self.poll.end(mention=False)
 
@@ -272,7 +272,7 @@ class PollOngoingResults(discord.ui.Button):
         self.name = name
         super().__init__(style=discord.ButtonStyle.gray, emoji=None, label="View Current Results", custom_id="poll:ongoing_results", disabled=False, row=2)
     async def callback(self, interaction: discord.Interaction):
-        await interaction.response.send_message(embed=ongoing_results(author=self.author, responses=self.responses, ans=self.ans, name=self.name), ephemeral=True)
+        await interaction.response.send_message(embed=await ongoing_results(author=self.author, responses=self.responses, ans=self.ans, name=self.name), ephemeral=True)
         msg = await interaction.original_response()
         await asyncio.sleep(30)
         await msg.delete()
@@ -368,7 +368,7 @@ class Poll(discord.ui.Select):
         await msg.delete()
 
 
-def results_embed(responses: list, author: discord.Member, ans: list, name) -> discord.Embed:
+async def results_embed(responses: list, author: discord.Member, ans: list, name) -> discord.Embed:
 
         temp = []
         temp.append("\n")
@@ -399,14 +399,14 @@ def results_embed(responses: list, author: discord.Member, ans: list, name) -> d
             description=f"{''.join(temp)}"
         )
         embed.set_author(
-                name=f"{author.username}'s Poll Results",
-                icon_url=author.user_avatar
+                name=f"{await author.username}'s Poll Results",
+                icon_url=await author.user_avatar
             )
         
         return embed
 
 
-def ongoing_results(author: MikoMember, responses: HashTable, ans: list, name: str) -> discord.Embed:
+async def ongoing_results(author: MikoMember, responses: HashTable, ans: list, name: str) -> discord.Embed:
 
 
         # poll: PollView = active_polls.get_val(key=f"{author.id}{interaction.guild.id}")
@@ -437,8 +437,8 @@ def ongoing_results(author: MikoMember, responses: HashTable, ans: list, name: s
             description=f"{''.join(temp)}"
         )
         embed.set_author(
-                name=f"{author.username}'s Ongoing Poll Results",
-                icon_url=author.user_avatar
+                name=f"{await author.username}'s Ongoing Poll Results",
+                icon_url=await author.user_avatar
             )
         
         return embed

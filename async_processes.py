@@ -5,12 +5,12 @@ from Plex.background import end_of_week_int
 from Plex.embeds import plex_multi_embed, plex_upcoming
 from Voice.VoiceActivity import VoiceActivity, VOICE_SESSIONS
 from Database.GuildObjects import MikoMember
-from Database.database_class import Database
+from Database.database_class import AsyncDatabase
 from Polls.UI import active_polls
 import aiohttp
 
 from tunables import tunables
-ap = Database("async_processes.py")
+db = AsyncDatabase("async_processes.py")
 
 client: discord.Client = None
 def set_async_client(c):
@@ -45,24 +45,24 @@ async def voice_heartbeat(): # For leveling and tokens. The boys hangout only
     for key, session in VOICE_SESSIONS.items():
         session: VoiceActivity = session
         u = MikoMember(user=session.member, client=client)
-        if not u.profile.feature_enabled('VOICE_HEARTBEAT'): return
+        if (await u.profile).feature_enabled('VOICE_HEARTBEAT') != 1: return
         if client.user.id == 1017998983886545068:
             await u.leveling.determine_xp_gained_voice(sesh=session)
         # u.tokens.determine_tokens_gained_voice(sesh=session, voicetime=u.user_voicetime)
 
 async def check_notify():
     if client.user.id != 1017998983886545068: return
-    notify_time = ap.db_executor(
+    notify_time = await db.execute(
         "SELECT value FROM PERSISTENT_VALUES WHERE variable='PLEX_UPCOMING_NOTIFY'"
     )
 
     if notify_time is None or int(time.time()) >= notify_time:
-        ap.db_executor(
+        await db.execute(
             f"UPDATE PERSISTENT_VALUES SET value='{end_of_week_int()}' "
             f"WHERE variable='PLEX_UPCOMING_NOTIFY'"
         )
 
-        url = ap.db_executor(
+        url = await db.execute(
             "SELECT value_str FROM PERSISTENT_VALUES WHERE variable='PLEX_WEBHOOK_URL'"
         )
         embeds = plex_multi_embed()

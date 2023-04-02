@@ -4,7 +4,7 @@ import discord
 import os
 from discord.ext import commands
 from discord import app_commands
-from Database.database import get_server_status
+from Database.GuildObjects import MikoMember
 from utils.HashTable import HashTable
 
 voice_sessions = HashTable(10000)
@@ -27,7 +27,9 @@ class AudioPlayerrr(commands.Cog):
     )
     async def play_sound(self, interaction: discord.Interaction, *, search: str):
         global voice_sessions
-        if str(get_server_status(interaction.guild.id)) == "inactive":
+        
+        u = MikoMember(user=interaction.user, client=interaction.client)
+        if await u.status == "inactive":
             await interaction.response.send_message("This bot has been disabled in this guild.", ephemeral=True)
             return
 

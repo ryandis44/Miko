@@ -7,7 +7,7 @@ import time
 from Database.GuildObjects import MikoGuild, MikoMember, MikoTextChannel
 from Database.database_class import Database, AsyncDatabase
 from Plex.embeds import plex_update_2_2
-from Database.database import add_bot, add_react_all_to_user, add_react_to_user, add_rename_any_user, add_rename_to_user, del_bot, del_react_all_to_user, del_react_to_user, del_rename_any_user, del_rename_to_user, generic_list_embed, get_server_status, set_status_active, set_status_scraping, top_channels_embed_server, top_users_embed_server, user_info_embed
+from Database.database import add_bot, add_react_all_to_user, add_react_to_user, add_rename_any_user, del_bot, del_react_all_to_user, del_react_to_user, del_rename_any_user, generic_list_embed, top_channels_embed_server, top_users_embed_server, user_info_embed
 from misc.holiday_roles import get_holiday
 from misc.misc import time_elapsed, translate_mention
 import os
@@ -29,14 +29,6 @@ class Basic(commands.Cog):
     async def on_ready(self):
         print(f'{self.client.user} has connected to Discord!')
 
-        # WIP
-        #else:
-        #    print("Connection has been restored to the Discord API, ending and restarting all playtime sessions...")
-        #    end_all_sessions(self.client)
-        #    print("Complete.")
-        #print("Scraping.. ?")
-        #scrape_sessions(self.client)
-
 
     # Generates a random number between 0 and 100 [inclusive]
     @commands.command(name='roll', aliases=['r'])
@@ -44,8 +36,8 @@ class Basic(commands.Cog):
     async def roll(self, ctx: Context):
         
         u = MikoMember(user=ctx.author, client=self.client)
-        if not u.profile.cmd_enabled('ROLL'): return
-        u.increment_statistic('ROLL')
+        if (await u.profile).cmd_enabled('ROLL') != 1: return
+        await u.increment_statistic('ROLL')
         
         user = ctx.message.author
         roll = random.randint(0, 100)
@@ -76,8 +68,8 @@ class Basic(commands.Cog):
     async def eightball(self, ctx: Context, *args):
         
         u = MikoMember(user=ctx.author, client=self.client)
-        if not u.profile.cmd_enabled('EIGHT_BALL'): return
-        u.increment_statistic('EIGHT_BALL')
+        if (await u.profile).cmd_enabled('EIGHT_BALL') != 1: return
+        await u.increment_statistic('EIGHT_BALL')
 
         user = ctx.message.author
         if len(args) == 0:
@@ -92,8 +84,8 @@ class Basic(commands.Cog):
     async def flip(self, ctx: Context):
         
         u = MikoMember(user=ctx.author, client=self.client)
-        if not u.profile.cmd_enabled('COIN_FLIP'): return
-        u.increment_statistic('COIN_FLIP')
+        if (await u.profile).cmd_enabled('COIN_FLIP') != 1: return
+        await u.increment_statistic('COIN_FLIP')
         
         user = ctx.message.author
         coin = ['Heads', 'Tails']
@@ -105,7 +97,7 @@ class Basic(commands.Cog):
     @commands.guild_only()
     async def holiday(self, ctx: Context):
         g = MikoGuild(guild=ctx.guild, client=self.client)
-        if not g.profile.cmd_enabled('ROLE_ASSIGNMENT'):
+        if (await g.profile).cmd_enabled('ROLE_ASSIGNMENT') != 1:
             return
         await ctx.send(embed=get_holiday(ctx, "EMBED"))
 
@@ -137,11 +129,11 @@ class Basic(commands.Cog):
     @commands.guild_only()
     async def info(self, ctx: Context, *args):
         u = MikoMember(user=ctx.author, client=self.client)
-        if not u.profile.cmd_enabled('USER_INFO'): return
-        elif u.status == "SCRAPING":
+        if (await u.profile).cmd_enabled('USER_INFO') != 1: return
+        elif await u.status == "SCRAPING":
             await ctx.channel.send("That command is disabled while I am gathering guild info. Try again later.")
             return
-        u.increment_statistic('USER_INFO')
+        await u.increment_statistic('USER_INFO')
 
         if len(args) == 0:
             referenced_user = ctx.author
@@ -155,7 +147,7 @@ class Basic(commands.Cog):
             await ctx.channel.send(content=tunables('USER_NOT_FOUND'))
             return
 
-        await ctx.send(embed=user_info_embed(MikoMember(user=referenced_user, client=self.client, guild_id=ctx.guild.id)))
+        await ctx.send(embed=await user_info_embed(MikoMember(user=referenced_user, client=self.client, guild_id=ctx.guild.id)))
 
 
     @commands.command(name='playtime', aliases=['pt'])
@@ -163,7 +155,7 @@ class Basic(commands.Cog):
     async def playtime(self, ctx: Context):
         
         u = MikoMember(user=ctx.author, client=self.client)
-        if not u.profile.cmd_enabled('PLAYTIME'): return
+        if (await u.profile).cmd_enabled('PLAYTIME') != 1: return
         
         await ctx.channel.send("This command is depreciated. Please use `/playtime` instead.")
 
@@ -171,9 +163,8 @@ class Basic(commands.Cog):
         try: user = ctx.message.mentions[0]
         except: user = ctx.author
 
-
-        await ctx.channel.send(
-            content=str(await ab.execute(f"SELECT * FROM SERVERS WHERE server_id='{ctx.guild.id}'"))
+        await ctx.send(
+            content=f"{tunables('AAA_TEST')}"
         )
 
 
@@ -206,7 +197,7 @@ class Basic(commands.Cog):
         #     ),
         #     allowed_mentions=discord.AllowedMentions(users=False)
         # )
-        # await ctx.channel.send(f"{u.profile} {u.profile.cmd_enabled('PLAYTIME')}")
+        # await ctx.channel.send(f"{u.profile} {(await u.profile).cmd_enabled('PLAYTIME')}")
         # await ctx.channel.send(f"{(7150 % tunables('THRESHOLD_VOICETIME_FOR_TOKEN')) >= tunables('THRESHOLD_VOICETIME_FOR_TOKEN') - 30} ({tunables('THRESHOLD_VOICETIME_FOR_TOKEN')}) | {u.user_voicetime}")
         #await ctx.channel.send(
         #    f"{u.user_messages} {u.user_messages_today} {u.considered_bot} "
@@ -319,17 +310,17 @@ class Basic(commands.Cog):
     async def top(self, ctx: Context):
         
         u = MikoMember(user=ctx.author, client=self.client)
-        if not u.profile.cmd_enabled('TOP_USERS_BY_MESSAGES'): return
-        u.increment_statistic('TOP_USERS_BY_MESSAGES')
+        if (await u.profile).cmd_enabled('TOP_USERS_BY_MESSAGES') != 1: return
+        await u.increment_statistic('TOP_USERS_BY_MESSAGES')
         
-        await ctx.send(embed=top_users_embed_server(MikoGuild(guild=ctx.guild, client=self.client)))
+        await ctx.send(embed=await top_users_embed_server(MikoGuild(guild=ctx.guild, client=self.client)))
 
     @commands.command(name='channelstop', aliases=['ct'])
     async def ctop(self, ctx: Context):
         
         u = MikoMember(user=ctx.author, client=self.client)
-        if not u.profile.cmd_enabled('TOP_CHANNELS_BY_MESSAGES'): return
-        u.increment_statistic('TOP_CHANNELS_BY_MESSAGES')
+        if (await u.profile).cmd_enabled('TOP_CHANNELS_BY_MESSAGES') != 1: return
+        await u.increment_statistic('TOP_CHANNELS_BY_MESSAGES')
         
         await ctx.channel.send("This command is disabled for now.")
         # if str(get_server_status(ctx.guild.id)) in ["inactive", "silent"]:
@@ -346,7 +337,7 @@ class Basic(commands.Cog):
         #    await ctx.channel.send(tunables('NO_PERM'))
         #    return
         u = MikoMember(user=ctx.author, client=self.client)
-        if u.bot_permission_level <= 4:
+        if await u.bot_permission_level <= 4:
             return
         #await ctx.channel.send("<@&1001733271459221564>", embed=plex_requests_embed()) # Plex role
         msg = "<@&1001733271459221564>"
@@ -360,7 +351,7 @@ class Basic(commands.Cog):
     async def fun(self, ctx: Context, *args):
         # Guild owners have full access to modify, as this is server based
         u = MikoMember(user=ctx.author, client=self.client)
-        if u.bot_permission_level <= 3 and ctx.author.id != ctx.guild.owner.id:
+        if await u.bot_permission_level <= 3 and ctx.author.id != ctx.guild.owner.id:
             return
         
         if args == (): args = ["None"]
@@ -374,17 +365,17 @@ class Basic(commands.Cog):
 
                     match args[1].lower():
                         case "add":
-                            if add_react_to_user(translate_mention(args[2]), ctx.guild):
+                            if await add_react_to_user(translate_mention(args[2]), ctx.guild):
                                 await ctx.channel.send(f'<:green_plus:998447990035464233>  User {args[2]} added to reaction list.')
                             else:
                                 await ctx.channel.send(f':exclamation: User {args[2]} is already on the reaction list.')
                         case "del":
-                            if del_react_to_user(translate_mention(args[2]), ctx.guild):
+                            if await del_react_to_user(translate_mention(args[2]), ctx.guild):
                                 await ctx.channel.send(f'<:red_minus:998447601739386981>  User {args[2]} removed from reaction list.')
                             else:
                                 await ctx.channel.send(f':exclamation: User {args[2]} is not on the reaction list.')
                         case "list":
-                            await ctx.send(embed=generic_list_embed(ctx.guild, "react"))
+                            await ctx.send(embed=await generic_list_embed(MikoMember(user=ctx.author, client=self.client), "react"))
 
             case "reactall":
                 if len(args) == 2 and args[1].lower() != "list":
@@ -393,17 +384,17 @@ class Basic(commands.Cog):
 
                     match args[1].lower():
                         case "add":
-                            if add_react_all_to_user(translate_mention(args[2]), ctx.guild):
+                            if await add_react_all_to_user(translate_mention(args[2]), ctx.guild):
                                 await ctx.channel.send(f'<:green_plus:998447990035464233>  User {args[2]} added to reaction list.')
                             else:
                                 await ctx.channel.send(f':exclamation: User {args[2]} is already on the reaction list.')
                         case "del":
-                            if del_react_all_to_user(translate_mention(args[2]), ctx.guild):
+                            if await del_react_all_to_user(translate_mention(args[2]), ctx.guild):
                                 await ctx.channel.send(f'<:red_minus:998447601739386981>  User {args[2]} removed from reaction list.')
                             else:
                                 await ctx.channel.send(f':exclamation: User {args[2]} is not on the reaction list.')
                         case "list":
-                            await ctx.send(embed=generic_list_embed(ctx.guild, "reactall"))
+                            await ctx.send(embed=await generic_list_embed(MikoMember(user=ctx.author, client=self.client), "reactall"))
             
             case "bot":
                 if len(args) == 2 and args[1].lower() != "list":
@@ -412,17 +403,17 @@ class Basic(commands.Cog):
 
                     match args[1].lower():
                         case "add":
-                            if add_bot(translate_mention(args[2]), ctx.guild):
+                            if await add_bot(translate_mention(args[2]), ctx.guild):
                                 await ctx.channel.send(f'<:green_plus:998447990035464233> Bot {args[2]} added to bot list.')
                             else:
                                 await ctx.channel.send(f':exclamation: Bot {args[2]} is already on the bot list.')
                         case "del":
-                            if del_bot(translate_mention(args[2]), ctx.guild):
+                            if await del_bot(translate_mention(args[2]), ctx.guild):
                                 await ctx.channel.send(f'<:red_minus:998447601739386981> Bot {args[2]} removed from bot list.')
                             else:
                                 await ctx.channel.send(f':exclamation: Bot {args[2]} is not on the bot list.')
                         case "list":
-                            await ctx.send(embed=generic_list_embed(ctx.guild, "bot"))
+                            await ctx.send(embed=await generic_list_embed(MikoMember(user=ctx.author, client=self.client), "bot"))
             
             # case "rename":
             #     if len(args) == 2 and args[1].lower() != "list":
@@ -450,17 +441,17 @@ class Basic(commands.Cog):
 
                     match args[1].lower():
                         case "add":
-                            if add_rename_any_user(translate_mention(args[2]), ctx.guild):
+                            if await add_rename_any_user(translate_mention(args[2]), ctx.guild):
                                 await ctx.channel.send(f'<:green_plus:998447990035464233>  User {translate_mention(args[2])} added to renameany list.')
                             else:
                                 await ctx.channel.send(f':exclamation: User {translate_mention(args[2])} is already on the renameany list.')
                         case "del":
-                            if del_rename_any_user(translate_mention(args[2]), ctx.guild):
+                            if await del_rename_any_user(translate_mention(args[2]), ctx.guild):
                                 await ctx.channel.send(f'<:red_minus:998447601739386981>  User {translate_mention(args[2])} removed from renameany list.')
                             else:
                                 await ctx.channel.send(f':exclamation: User {translate_mention(args[2])} is not on the renameany list.')
                         case "list":
-                            await ctx.send(embed=generic_list_embed(ctx.guild, "renameany"))
+                            await ctx.send(embed=await generic_list_embed(MikoMember(user=ctx.author, client=self.client), "renameany"))
 
             case _:
                 temp = []               

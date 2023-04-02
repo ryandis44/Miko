@@ -1,24 +1,21 @@
 import asyncio
 from curses.ascii import isdigit
+import random
 import discord
 from discord.ext import commands
 from discord import app_commands
 import typing
 from Database.GuildObjects import MikoMember
-from Playtime.Views import PlaytimePageSelector, PlaytimeSearchPageSelector
-from Voice.Views import VoicetimePageSelector, VoicetimeSearchPageSelector
-from Voice.embeds import voicetime_embed, voicetime_search_embed
-from Voice.track_voice import avg_voicetime_result, get_average_voice_session, get_total_voice_activity_updates, get_total_voicetime_user, get_total_voicetime_user_guild, get_voicetime_today, total_voicetime_result
-from misc.embeds import modified_playtime_embed
-from Playtime.playtime import avg_playtime_result, get_app_from_str, get_average_session, get_total_activity_updates, get_total_playtime_user, playtime_embed, total_playtime_result
+from Voice.embeds import voicetime_search_embed
+from Voice.track_voice import avg_voicetime_result, total_voicetime_result
+from Playtime.playtime import avg_playtime_result, total_playtime_result
 from tunables import *
-from Database.database_class import Database
 import re
 import os
 from dotenv import load_dotenv
 load_dotenv()
 
-app_cmd_db = Database("app_commands.py")
+db = AsyncDatabase("app_commands.py")
         
 
 class Slash(commands.Cog):
@@ -36,7 +33,7 @@ class Slash(commands.Cog):
     async def sync(
       self, ctx: commands.Context, guilds: commands.Greedy[discord.Object], spec: typing.Optional[typing.Literal["~", "*", "^", "G"]] = None) -> None:
         u = MikoMember(user=ctx.author, client=self.client)
-        if u.bot_permission_level <= 4: return
+        if await u.bot_permission_level <= 4: return
         if spec is not None: await ctx.channel.send("Attempting to sync commands...")
         if not guilds:
             if spec == "~":
@@ -117,7 +114,7 @@ class Slash(commands.Cog):
                   name: typing.Optional[str] = None):
         
         u = MikoMember(user=interaction.user, client=interaction.client)
-        if u.bot_permission_level <= 3 and interaction.guild.owner.id != interaction.user.id:
+        if await u.bot_permission_level <= 3 and interaction.guild.owner.id != interaction.user.id:
             await interaction.response.send_message(tunables('NO_PERM'))
             return
         
@@ -135,10 +132,10 @@ class Slash(commands.Cog):
                 await asyncio.sleep(1)
 
                 # Restore and delete nick cache
-                sel_cmd = f"SELECT name FROM NICKNAME_CACHE WHERE user_id='{member.id}' ORDER BY user_id DESC LIMIT 1"
-                rst_name = app_cmd_db.db_executor(sel_cmd)
-                del_cmd = f"DELETE FROM NICKNAME_CACHE WHERE user_id='{member.id}'"
-                app_cmd_db.db_executor(del_cmd)
+                sel_cmd = f"SELECT name FROM NICKNAME_CACHE WHERE user_id='{member.id}' AND server_id='{interaction.guild.id}' ORDER BY user_id DESC LIMIT 1"
+                rst_name = await db.execute(sel_cmd)
+                del_cmd = f"DELETE FROM NICKNAME_CACHE WHERE user_id='{member.id}' AND server_id='{interaction.guild.id}'"
+                await db.execute(del_cmd)
                 if rst_name == []: rst_name = None
 
                 try: await member.edit(nick=rst_name)
@@ -161,10 +158,10 @@ class Slash(commands.Cog):
             # Remember what their nick was before renameall
             if member.nick is not None and member.nick != name:
                 ins_cmd = (
-                    "INSERT INTO NICKNAME_CACHE (user_id,name) VALUES "+
-                    f"('{member.id}', '{member.nick}')"
+                    "INSERT INTO NICKNAME_CACHE (server_id,user_id,name) VALUES "+
+                    f"('{interaction.guild.id}', '{member.id}', '{member.nick}')"
                 )
-                app_cmd_db.db_executor(ins_cmd)
+                await db.execute(ins_cmd)
 
             await asyncio.sleep(1)
             try: await member.edit(nick=name)
@@ -177,9 +174,85 @@ class Slash(commands.Cog):
         await msg.edit(content=''.join(temp))
 
 
+    @app_commands.command(name="renameallrandom", description=f"{os.getenv('APP_CMD_PREFIX')}Rename every member of this guild to the name of another member")
+    @app_commands.guild_only
+    @app_commands.describe(rename="True will set everyone to random name. False will undo.")
+    async def rna(self, interaction: discord.Interaction, rename: bool):
+        u = MikoMember(user=interaction.user, client=interaction.client)
+        if not await u.manage_guild:
+            await interaction.response.send_message(content=f"{tunables('NO_PERM')}: Need `Manage Guild` permission.")
+            return
+        
+        if rename: temp = ["Renaming all members to the name of another member..."]
+        else: temp = ["Restoring all nicknames..."]
+        await interaction.response.send_message(content=''.join(temp))
+        msg = await interaction.original_response()
+        
+        members = list(interaction.guild.members)
+        names = list(interaction.guild.members)
+
+        temp.append("\n\n[")
+        temp.append("0")
+        temp.append(f"/{len(members)}] Running...")
+        try:
+            if rename:
+                for i, member in enumerate(members):
+                    while True:
+                        n = random.randint(0, len(names)-1)
+                        n = names.pop(n).name
+                        if n != member.name: break
+                    
+                    if i % 10 == 0:
+                        temp[2] = f"{i+1}"
+                        await msg.edit(content=''.join(temp))
+                    
+                    if member.nick is not None:
+                        await db.execute(
+                            "INSERT INTO NICKNAME_CACHE (server_id,user_id,name) VALUES "
+                            f"('{interaction.guild.id}', '{member.id}', '{member.nick}')"
+                        )
+                    try: await member.edit(nick=n)
+                    except:
+                        temp.append(f"\n\nRename yourself to: {n}")
+                        await msg.edit(content=''.join(temp))
+                    await asyncio.sleep(1)
+            else:
+                names = await db.execute(
+                    "SELECT user_id, name FROM NICKNAME_CACHE WHERE "
+                    f"server_id='{interaction.guild.id}'"
+                )
+                
+                for i, member in enumerate(members):
+                    if i % 10 == 0:
+                        temp[2] = f"{i+1}"
+                        await msg.edit(content=''.join(temp))
+                    
+                    n = await db.execute(
+                        "SELECT name FROM NICKNAME_CACHE WHERE "
+                        f"server_id='{interaction.guild.id}' AND "
+                        f"user_id='{member.id}' LIMIT 1"
+                    )
+                    if n is not None and n != []:
+                        await db.execute(
+                            "DELETE FROM NICKNAME_CACHE WHERE "
+                            f"server_id='{interaction.guild.id}' AND "
+                            f"user_id='{member.id}'"
+                        )
+                    try: await member.edit(nick=n if n is not None and n != [] else None)
+                    except: pass
+                    await asyncio.sleep(1)
+
+            temp[2] = f"{len(members)}"
+            temp.append("\n\nComplete!")
+        except Exception as e: print(e)
+
+        await msg.edit(content=''.join(temp))
+
+
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         u = MikoMember(user=interaction.user, client=interaction.client)
-        if not u.profile.cmd_enabled('MISC_CMDS'):
+        await u.ainit()
+        if (await u.profile).cmd_enabled('MISC_CMDS') != 1:
             await interaction.response.send_message(content=tunables('GENERIC_BOT_DISABLED_MESSAGE'), ephemeral=True)
             return False
         return True

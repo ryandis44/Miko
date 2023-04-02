@@ -7,10 +7,10 @@ import typing
 from Database.GuildObjects import MikoMember
 from Playtime.Views import PlaytimePageSelector, PlaytimeSearchPageSelector
 from Voice.Views import VoicetimePageSelector, VoicetimeSearchPageSelector
-from Voice.embeds import voicetime_embed, voicetime_search_embed
-from Voice.track_voice import avg_voicetime_result, get_average_voice_session, get_total_voice_activity_updates, get_total_voicetime_user, get_total_voicetime_user_guild, get_voicetime_today, total_voicetime_result
+from Voice.embeds import voicetime_search_embed
+from Voice.track_voice import avg_voicetime_result, total_voicetime_result
 from misc.embeds import modified_playtime_embed
-from Playtime.playtime import avg_playtime_result, get_app_from_str, get_average_session, get_total_activity_updates, get_total_playtime_user, playtime_embed, total_playtime_result
+from Playtime.playtime import avg_playtime_result, get_app_from_str, playtime_embed, total_playtime_result
 from tunables import *
 from Database.database_class import Database, AsyncDatabase
 import re
@@ -75,13 +75,14 @@ class PlaytimeCog(commands.Cog):
         await interaction.response.send_message(content=f"Querying database. This may take a few seconds... {tunables('LOADING_EMOJI')}")
         orig_msg = await interaction.original_response()
 
-
         # Guild MEMBER object needed, we can retrieve like this
         try:
             if scope.value != 'user': scope_not_user = True
             else: scope_not_user = False
         except: scope_not_user = False
-        if user is None or scope_not_user: user = interaction.guild.get_member(interaction.user.id)
+        if user is None or scope_not_user: user = interaction.user
+
+        u = MikoMember(user=user, client=interaction.client)
         #else:
         #    user_temp = interaction.guild.get_member(user.id)
         #    if user_temp is not None: user = user_temp
@@ -107,13 +108,13 @@ class PlaytimeCog(commands.Cog):
 
         try:
            if not game_query and not sort_query and not playtime_query and not scope_not_user:
-               tup = get_total_activity_updates(user)
-               avg = get_average_session(user)
-               tot_playtime = get_total_playtime_user(user)
+               tup = await u.playtime.total_entries
+               avg = await u.playtime.average_session
+               tot_playtime = await u.playtime.total
                if tup > page_size: view = PlaytimePageSelector(interaction.user, user, page_size, updates=tup,
                    playtime=tot_playtime, avg_session=avg)
                else: view = None
-               await orig_msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=playtime_embed(user, page_size, updates=tup,
+               await orig_msg.edit(content=tunables('PLAYTIME_CONTENT_MSG'), embed=await playtime_embed(u=u, limit=page_size, updates=tup,
                    playtime=tot_playtime, avg_session=avg), view=view)
                return
         except:
@@ -195,12 +196,12 @@ class PlaytimeCog(commands.Cog):
             if inverse_search:
                 if game[1:] == "": apps = []
                 else: 
-                    try: apps = get_app_from_str(game[1:])
+                    try: apps = await get_app_from_str(game[1:])
                     except:
                         await orig_msg.edit(content=tunables('GENERIC_APP_COMMAND_ERROR_MESSAGE'))
                         return
             else:
-                try: apps = get_app_from_str(game)
+                try: apps = await get_app_from_str(game)
                 except:
                     await orig_msg.edit(content=tunables('GENERIC_APP_COMMAND_ERROR_MESSAGE'))
                     return
@@ -221,7 +222,6 @@ class PlaytimeCog(commands.Cog):
         if game_query or not scope_not_user: sel_cmd.append(f"{''.join(part3)}{')' if game_query and scope_not_user else ''} ")
         del part3
         ####
-
 
         # Handle sort query
         part4 = []
@@ -245,6 +245,7 @@ class PlaytimeCog(commands.Cog):
         
         sel_cmd.append(query_limit)
 
+
         try:
             playtime_by_game = await app_cmd_db.execute(''.join(sel_cmd))
 
@@ -266,7 +267,7 @@ class PlaytimeCog(commands.Cog):
                                                     query=sel_cmd, scope=[scope_not_user, scope],
                                                     result=playtime_by_game, total=search_total, avg=search_avg)
             else: view = None
-            await orig_msg.edit(content=ct, embed=modified_playtime_embed(user, game, playtime_by_game[:page_size],
+            await orig_msg.edit(content=ct, embed=await modified_playtime_embed(u, game, playtime_by_game[:page_size],
                                 sort, page_size, len(playtime_by_game), scope=[scope_not_user, scope], ptquery=playtime,
                                 total=search_total, avg=search_avg), view=view)
 
@@ -276,15 +277,12 @@ class PlaytimeCog(commands.Cog):
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         u = MikoMember(user=interaction.user, client=interaction.client)
-        if not u.profile.cmd_enabled('PLAYTIME'):
+        await u.ainit()
+        if (await u.profile).cmd_enabled('PLAYTIME') != 1:
             await interaction.response.send_message(content=tunables('GENERIC_BOT_DISABLED_MESSAGE'), ephemeral=True)
             return False
-        
-        if not tunables('COMMAND_ENABLED_PLAYTIME_GENERIC'):
-            await interaction.response.send_message(content=tunables('COMMAND_DISABLED_MESSAGE'), ephemeral=True)
-            return False
 
-        u.increment_statistic('PLAYTIME_COMMAND')
+        await u.increment_statistic('PLAYTIME_COMMAND')
         return True
 
 

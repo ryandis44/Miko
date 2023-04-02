@@ -36,7 +36,7 @@ class HelpCog(commands.Cog):
         await help(interaction=interaction, category=category)
 
 
-    @app_commands.command(name="mikohelp", description=f"{os.getenv('APP_CMD_PREFIX')}Miko Help")
+    @app_commands.command(name="mhelp", description=f"{os.getenv('APP_CMD_PREFIX')}Miko Help")
     @app_commands.guild_only
     @app_commands.describe(
         category="Select a category for a more detailed help menu"
@@ -54,8 +54,9 @@ class HelpCog(commands.Cog):
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         u = MikoMember(user=interaction.user, client=interaction.client)
+        await u.ainit()
         await interaction.response.send_message(content=f"{tunables('LOADING_EMOJI')}", ephemeral=True)
-        u.increment_statistic('HELP_COMMAND')
+        await u.increment_statistic('HELP_COMMAND')
         return True
 
 
@@ -121,7 +122,7 @@ async def help(interaction: discord.Interaction, category) -> None:
             )
 
         case _: # No category specified
-            temp.append(''.join(help_embed(u=u)))
+            temp.append(''.join(await help_embed(u=u)))
 
 
     

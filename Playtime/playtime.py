@@ -5,7 +5,7 @@ from discord.utils import get
 from Playtime.GameActivity import GameActivity
 from utils.HashTable import HashTable
 from Database.database import if_not_list_create_list
-from Database.database_class import Database
+from Database.database_class import AsyncDatabase
 from misc.misc import time_elapsed, today
 from tunables import *
 
@@ -14,7 +14,7 @@ from tunables import *
 
 sessions_hash_table = HashTable(10000)
 
-ptdb = Database("playtime.py")
+db = AsyncDatabase("Playtime.playtime.py")
 
 def start_time(activity):
     try: return int(activity.start.timestamp())
@@ -24,17 +24,19 @@ def sesh_id(activity):
     try: return activity.session_id
     except: return None
 
-def fetch_playtime_sessions(client):
-    def restore(member, app_id, i, st):
+async def fetch_playtime_sessions(client):
+    async def restore(member, app_id, i, st):
         if not tunables('TRACK_PLAYTIME'): return
-        sessions_hash_table.set_val(member.id, GameActivity(member, app_id, i, st))
+        g = GameActivity(member, app_id, i, st)
+        await g.ainit()
+        sessions_hash_table.set_val(member.id, g)
         return
 
     sel_cmd = "SELECT value FROM PERSISTENT_VALUES WHERE variable='GLOBAL_REBOOT_TIME_ACTIVITY'"
-    end_time = ptdb.db_executor(sel_cmd)
+    end_time = await db.execute(sel_cmd)
     if end_time is None:
         sel_cmd = "SELECT end_time FROM PLAY_HISTORY WHERE end_time!='-1' ORDER BY end_time DESC LIMIT 1"
-        end_time = ptdb.db_executor(sel_cmd)
+        end_time = await db.execute(sel_cmd)
     
     if end_time is None or end_time == []:
         print("Could not fetch a time to restore any playtime sessions.")
@@ -44,7 +46,7 @@ def fetch_playtime_sessions(client):
         "SELECT user_id, session_id, app_id, start_time FROM PLAY_HISTORY "+
         f"WHERE end_time={end_time}"
     )
-    val = ptdb.db_executor(sel_cmd)
+    val = list(await db.execute(sel_cmd))
     rst = 0
     t = int(time.time()) - tunables('THRESHOLD_RESUME_REBOOT_GAME_ACTIVITY')
     
@@ -71,7 +73,7 @@ def fetch_playtime_sessions(client):
                 restored = f"> Restored {member}'s playtime session"
                 cur_playing = find_type_playing(member)
                 activity = member.activities[cur_playing[1]]
-                if cur_playing[0]: game = identify_current_application(activity, has_app_id(activity))
+                if cur_playing[0]: game = await identify_current_application(activity, has_app_id(activity))
                 else: continue
                 session_id = sesh_id(activity)
 
@@ -84,14 +86,14 @@ def fetch_playtime_sessions(client):
                     # the entry we have in our database. If so, restore session.
                     if st is not None and (st == val[outer][3] or end_time >= t):
                         if session_id is None:
-                            restore(member, game[1], cur_playing[1], st)
+                            await restore(member, game[1], cur_playing[1], st)
                             print(restored)
                             rst += 1
                         
                         # If the (discord provided) session id matches the id
                         # in the database entry, restore regardless of end time
                         elif val[outer][1] is not None and session_id == val[outer][1]:
-                            restore(member, game[1], cur_playing[1], st)
+                            await restore(member, game[1], cur_playing[1], st)
                             print(restored + f" from Session ID {session_id}")
                             rst += 1
 
@@ -101,14 +103,14 @@ def fetch_playtime_sessions(client):
                         # the end time is less than 5 minutes ago and the user 
                         # is playing the same game they were <5 minutes ago, restore
                         if session_id is None and end_time >= t:
-                            restore(member, game[1], cur_playing[1], val[outer][3])
+                            await restore(member, game[1], cur_playing[1], val[outer][3])
                             print(restored)
                             rst += 1
                         
                         # If the (discord provided) session id matches the id
                         # in the database entry, restore regardless of end time
                         elif val[outer][1] is not None and session_id == val[outer][1]:
-                            restore(member, game[1], cur_playing[1], val[outer][3])
+                            await restore(member, game[1], cur_playing[1], val[outer][3])
                             print(restored + f" from Session ID {session_id}")
                             rst += 1
                 
@@ -120,116 +122,79 @@ def fetch_playtime_sessions(client):
     else: print("No playtime sessions were restored.")
     return
 
-def end_all_sessions():
-    for pair in sessions_hash_table.get_all:
-        pair[0][1].close_activity_entry(True)
-        sessions_hash_table.delete_val(pair[0][0]) # untested
-    return
 
 
-# WIP
-def scrape_sessions(client):
-
-    for guild in client.guilds:
-        for member in guild.members:
-            if member.activities != () and not member.bot:
-                determine_activity(member, member, True)
-    print("Complete.")
-
-    return
 
 
 def translate_application_name(name):
     return name.replace("'", "''")
 
-def get_app_from_str(input):
+async def get_app_from_str(input):
     sel_cmd = f"SELECT name,app_id,emoji FROM APPLICATIONS WHERE name LIKE '{'%' + input + '%'}' AND counts_towards_playtime!='FALSE' LIMIT 10"
-    return ptdb.db_executor(sel_cmd)
-
-def get_total_playtime_desc_search(apps, user):
-
-    sel_cmd = []
-    sel_cmd.append("SELECT app.emoji, pt.app_id, app.name, SUM(pt.end_time - pt.start_time) AS ptime, AVG(pt.end_time - pt.start_time) AS avg "+
-                    "FROM PLAY_HISTORY AS pt "+
-                    "INNER JOIN APPLICATIONS AS app ON "+
-                    "(pt.app_id=app.app_id AND pt.end_time!=-1 AND app.counts_towards_playtime!='FALSE') "+
-                    "WHERE pt.app_id IN (")
-    previous = False
-    for app in apps:
-        if not previous:
-            sel_cmd.append(f"'{app[1]}'")
-            previous = True
-        else:
-            sel_cmd.append(f", '{app[1]}'")
-
-    sel_cmd.append(f") AND pt.user_id={user.id} ")
-    sel_cmd.append("GROUP BY pt.app_id ORDER BY ptime DESC")
-    return ptdb.db_executor(''.join(sel_cmd))
+    return await db.execute(sel_cmd)
 
 
 # Used to block tracking console-based application IDs.
 # Doing so allows tracking individual games, regardless
 # of the device it is being played on.
-def blacklisted_application_ids():
-    sel_cmd = "SELECT value FROM TUNABLES WHERE variable='BLACKLISTED_APPLICATION_IDS'"
-    return ptdb.db_executor(sel_cmd).split()
+# tunables('BLACKLISTED_APPLICATION_IDS)
 
-def identify_current_application(app, has_id):
+async def identify_current_application(app, has_id):
     tr_name = translate_application_name(app.name)
 
     info = [None, -1]
 
     try: # Treat a blacklisted application id as one that does not have a discord id
-        if has_id and str(app.application_id) in blacklisted_application_ids(): has_id = False
+        if has_id and str(app.application_id) in tunables('BLACKLISTED_APPLICATION_IDS').split(): has_id = False
     except: pass
 
     if has_id:
-        sel_cmd = f"SELECT * FROM APPLICATIONS WHERE app_id={app.application_id}"
-        val = ptdb.db_executor(sel_cmd)
-        if not ptdb.exists(len(val)):
+        sel_cmd = f"SELECT * FROM APPLICATIONS WHERE app_id='{app.application_id}'"
+        val = await db.execute(sel_cmd)
+        if not db.exists(len(val)):
             print(f"New application \"{tr_name}\" found! Saving in database with discord application ID '{app.application_id}'")
             ins_cmd = f"INSERT INTO APPLICATIONS (name,app_id,has_discord_id) VALUES ('{tr_name}', '{app.application_id}', 'TRUE')"
-            ptdb.db_executor(ins_cmd)
+            await db.execute(ins_cmd)
             info = [tr_name, app.application_id]
         else:
             info = [translate_application_name(val[0][0]), val[0][1]]
             if val[0][0] != app.name:
                 print(f"Updating application name {val[0][0]} to {tr_name} with discord ID {app.application_id} in database.")
                 upd_cmd = f"UPDATE APPLICATIONS SET name='{tr_name}' WHERE app_id='{app.application_id}'"
-                ptdb.db_executor(upd_cmd)
+                await db.execute(upd_cmd)
 
     elif not has_id:
         sel_cmd = f"SELECT name,app_id FROM APPLICATIONS WHERE name='{tr_name}'"
-        val = ptdb.db_executor(sel_cmd)
-        if not ptdb.exists(len(val)):
+        val = await db.execute(sel_cmd)
+        if not db.exists(len(val)):
             aid = None
             while True: # Make sure we do not have duplicate application id
                 aid = uuid.uuid4().hex
                 sel_check_cmd = f"SELECT * FROM APPLICATIONS WHERE app_id='{aid}'"
-                if ptdb.db_executor(sel_check_cmd) == []: break
+                if await db.execute(sel_check_cmd) == []: break
             print(f"New application \"{tr_name}\" found! Saving in database with non-discord application ID {aid}")
             ins_cmd = f"INSERT INTO APPLICATIONS (name,app_id) VALUES ('{tr_name}', '{aid}')"
-            ptdb.db_executor(ins_cmd)
+            await db.execute(ins_cmd)
             info = [tr_name, aid]
         else:
             info = [val[0][0], val[0][1]]
     return info
 
-def identify_application(bef_app, cur_app, bef_has_id, cur_has_id, status):
+async def identify_application(bef_app, cur_app, bef_has_id, cur_has_id, status):
 
     before = [None, -1]
     current = [None, -1]
 
     match status:
         case "start":
-            current = identify_current_application(cur_app, cur_has_id)
+            current = await identify_current_application(cur_app, cur_has_id)
 
         case "stop":
-            before = identify_current_application(bef_app, bef_has_id)
+            before = await identify_current_application(bef_app, bef_has_id)
 
         case "switch":
-            before = identify_current_application(bef_app, bef_has_id)
-            current = identify_current_application(cur_app, cur_has_id)
+            before = await identify_current_application(bef_app, bef_has_id)
+            current = await identify_current_application(cur_app, cur_has_id)
 
     return [before, current]
 
@@ -252,7 +217,7 @@ def has_app_id(activity):
         except: return False
         return True
 
-def determine_activity(bef: discord.Member, cur: discord.Member, u, scrape=False):
+async def determine_activity(bef: discord.Member, cur: discord.Member, u, scrape=False):
 
 
     # First, we need to determine if the user activity has changed. Presence updates do not just include activity
@@ -301,153 +266,69 @@ def determine_activity(bef: discord.Member, cur: discord.Member, u, scrape=False
     game = None
     #start
     if cur_playing[0] and not bef_playing[0]: #start activity
-        game = identify_application(None, cur.activities[cur_playing[1]], bef_has_app_id, cur_has_app_id, "start")
+        game = await identify_application(None, cur.activities[cur_playing[1]], bef_has_app_id, cur_has_app_id, "start")
     #stop
     if bef_playing[0] and not cur_playing[0]: #stop activity
-        game = identify_application(bef.activities[bef_playing[1]], None, bef_has_app_id, cur_has_app_id, "stop")
+        game = await identify_application(bef.activities[bef_playing[1]], None, bef_has_app_id, cur_has_app_id, "stop")
     #change
     if bef_playing[0] and cur_playing[0]: #switch activity
-        game = identify_application(bef.activities[bef_playing[1]], cur.activities[cur_playing[1]], bef_has_app_id, cur_has_app_id, "switch")
+        game = await identify_application(bef.activities[bef_playing[1]], cur.activities[cur_playing[1]], bef_has_app_id, cur_has_app_id, "switch")
 
     # game[0][0] is BEFORE game name
     # game[0][1] is BEFORE game ID
     # game[1][0] is CURRENT game name
     # game[1][1] is CURRENT game ID
 
-    def start(user, app_id):
-        if not u.track_playtime: return
+    async def start(user, app_id):
+        if not await u.track_playtime: return
 
         val = sessions_hash_table.get_val(user.id)
         if val is None: # No current session, create one
-            sessions_hash_table.set_val(user.id, GameActivity(user, app_id, cur_playing[1]))
+            g = GameActivity(user, app_id, cur_playing[1])
+            await g.ainit()
+            sessions_hash_table.set_val(user.id, g)
         else:
-            val.close_activity_entry()
+            await val.close_activity_entry()
             sessions_hash_table.delete_val(user.id)
-            sessions_hash_table.set_val(user.id, GameActivity(user, app_id, cur_playing[1]))
+            g = GameActivity(user, app_id, cur_playing[1])
+            await g.ainit()
+            sessions_hash_table.set_val(user.id, g)
 
-    def stop(user, app_id, initial):
+    async def stop(user, app_id, initial):
         try:
-            sessions_hash_table.get_val(user.id).close_activity_entry()
+            await sessions_hash_table.get_val(user.id).close_activity_entry()
             sessions_hash_table.delete_val(user.id)
         except:
-            start(user, app_id)
-            if initial: stop(user, app_id, False)
+            await start(user, app_id)
+            if initial: await stop(user, app_id, False)
 
     # Final activity status check: start, stop, change
     # start activity
     if game[1][0] is not None and game[0][0] is None:
-        if sessions_hash_table.get_val(cur.id) is None: start(cur, game[1][1])
+        if sessions_hash_table.get_val(cur.id) is None: await start(cur, game[1][1])
         else: return
         
     # stopped activity
     if game[0][0] is not None and game[1][0] is None:
-        stop(bef, game[0][1], True)
+        await stop(bef, game[0][1], True)
             
     
     #game_change = False
     # changed activity
     if game[0][0] is not None and game[1][0] is not None and game[0] != game[1]:
-        stop(bef, game[0][1], True)
-        start(cur, game[1][1])
+        await stop(bef, game[0][1], True)
+        await start(cur, game[1][1])
     
     if sesh_id(cur.activities[cur_playing[1]]) is not None:
-        try: sessions_hash_table.get_val(cur.id).update_session_id()
+        try: await sessions_hash_table.get_val(cur.id).update_session_id()
         except: pass
 
     return
 
 
-def get_total_playtime_user(user):
+async def get_total_playtime_user(user):
     sel_cmd = f"SELECT playtime FROM TOTAL_PLAYTIME WHERE user_id={user.id}"
-    return ptdb.db_executor(sel_cmd)
-
-def get_app_emoji(app_id):
-
-    first = True
-    sel_cmd = []
-    sel_cmd.append(f"SELECT emoji FROM APPLICATIONS WHERE")
-
-    if type(app_id) is list:
-        for id in app_id:
-            if first:
-                sel_cmd.append(f" (app_id='{id[0]}' ")
-                first = False
-            else:
-                sel_cmd.append(f"OR app_id='{id[0]}'")
-        sel_cmd.append(") ")
-    else:
-        sel_cmd.append(f" app_id='{app_id}' ")
-    
-    sel_cmd.append(f"AND emoji!=':video_game:' LIMIT 1")
-
-    emoji = ptdb.db_executor(''.join(sel_cmd))
-    if emoji is None:
-        return ":question:"
-    elif emoji == []:
-        return ":video_game:"
-    else:
-        return emoji
-
-def get_recent_activity(user, limit, offset):
-    sel_cmd = ("SELECT a.emoji, ph.end_time, a.name, (ph.end_time - ph.start_time) AS total "+
-                "FROM PLAY_HISTORY AS ph "+
-                "INNER JOIN APPLICATIONS AS a ON "+
-                "(ph.app_id=a.app_id AND counts_towards_playtime!='FALSE') "+
-                f"WHERE ph.user_id={user.id} AND ph.end_time!=-1 AND (ph.end_time - ph.start_time)>={tunables('THRESHOLD_LIST_GAME_ACTIVITY')} "+
-                f"ORDER BY ph.end_time DESC LIMIT {limit} OFFSET {offset}")
-    items = ptdb.db_executor(sel_cmd)
-    if items == []: return None
-    return items
-
-def get_total_activity_updates(user):
-    sel_cmd = (
-            "SELECT COUNT(*) FROM ("+
-            "SELECT a.emoji, ph.end_time, a.name, (ph.end_time - ph.start_time) AS total "+
-            "FROM PLAY_HISTORY AS ph "+
-            "INNER JOIN APPLICATIONS AS a ON "+
-            "(ph.app_id=a.app_id AND counts_towards_playtime!='FALSE') "+
-            f"WHERE ph.user_id={user.id} AND ph.end_time!=-1 AND (ph.end_time - ph.start_time)>={tunables('THRESHOLD_LIST_GAME_ACTIVITY')} "+
-            ") AS q"
-        )
-    val = ptdb.db_executor(sel_cmd)
-    if val == []: return 0
-    else: return val
-
-def get_total_activity_updates_query(query, query_limit):
-    sel_cmd = (
-            "SELECT COUNT(*) FROM ("+
-            f"{''.join(query[:-1])} {query_limit}"+
-            ") AS q"
-        )
-
-    val = ptdb.db_executor(sel_cmd)
-    try:
-        if val > 0: return int(val)
-    except: return 0
-
-def get_app_name_from_id(app_id):
-    sel_cmd = f"SELECT name FROM APPLICATIONS WHERE app_id='{app_id}'"
-    return ptdb.db_executor(sel_cmd)
-
-def get_app_id(activity):
-    has_id = True
-    app_id = None
-
-    try:
-        if activity.application_id is None:
-            has_id = False
-    except:
-        has_id = False
-    
-    if has_id:
-        return activity.application_id
-
-    sel_cmd = f"SELECT app_id FROM APPLICATIONS WHERE name='{activity.name}'"
-    app_id = ptdb.db_executor(sel_cmd)
-    if ptdb.exists(len(app_id)):
-        return app_id
-    
-    return "None"
+    return await db.execute(sel_cmd)
 
 def total_playtime_result(result):
     playtime = 0
@@ -463,77 +344,36 @@ def avg_playtime_result(result):
         i += 1
     return int(total / i)
 
-def get_start_time_by_session_id(session_id):
-    sel_cmd = f"SELECT start_time FROM PLAY_HISTORY WHERE session_id='{session_id}' ORDER BY start_time DESC LIMIT 1"
-    return int(ptdb.db_executor(sel_cmd))
-
-def is_currently_playing(user: discord.User):
+async def is_currently_playing(user: discord.User):
     global sessions_hash_table
     
     try:
         app: GameActivity = sessions_hash_table.get_val(user.id)
-        if not app.is_listed: return [False, 1, -1, ":question:"]
+        if not await app.is_listed: return [False, 1, -1, ":question:"]
 
         return [
             True,
             app.start_time,
             app.act_name,
-            app.emoji
+            await app.emoji
         ]
     except: # If we do not have the session stored in the hash table, we are not tracking it. Don't list
         return [False, 1, -1, ":question:"]
 
-def get_playtime_today(user):
-    sel_cmd = (f"SELECT SUM(ph.end_time - {today()}) "+
-                "FROM PLAY_HISTORY AS ph "+
-                "INNER JOIN APPLICATIONS AS a ON "+
-                "(ph.app_id=a.app_id AND counts_towards_playtime!='FALSE') "+
-                f"WHERE ph.user_id={user.id} AND ph.end_time!=-1 AND ph.end_time>={today()} AND (ph.end_time - ph.start_time)>={tunables('THRESHOLD_LIST_GAME_ACTIVITY')} "+
-                f"AND ph.start_time<{today()}")
-    playing_before_midnight = ptdb.db_executor(sel_cmd)
-
-    sel_cmd = (f"SELECT SUM(ph.end_time - start_time) "+
-                "FROM PLAY_HISTORY AS ph "+
-                "INNER JOIN APPLICATIONS AS a ON "+
-                f"(ph.app_id=a.app_id AND counts_towards_playtime!='FALSE') AND (ph.end_time - ph.start_time)>={tunables('THRESHOLD_LIST_GAME_ACTIVITY')} "+
-                f"WHERE user_id={user.id} AND end_time!=-1 AND start_time>={today()}")
-    playing_after_midnight = ptdb.db_executor(sel_cmd)
-
-    #if playing_after_midnight is not None and playing_before_midnight is not None:
-    #    return playing_before_midnight + playing_after_midnight
-    #elif playing_after_midnight is None and playing_before_midnight is None:
-    #    return None
-    #elif playing_after_midnight is None:
-    #    return playing_before_midnight
-    #elif playing_before_midnight is None:
-    #    return playing_after_midnight
-    
-    if playing_after_midnight is None: playing_after_midnight = 0
-    if playing_before_midnight is None: playing_before_midnight = 0
-    return playing_before_midnight + playing_after_midnight
-
-def get_average_session(user):
-    sel_cmd = f"SELECT avg FROM AVERAGE_PLAYTIME WHERE user_id={user.id}"
-
-    val = ptdb.db_executor(sel_cmd)
-    if val is None or val == []:
-        return "None"
-    return time_elapsed(int(val), 'h')
-
-def last_played(user_id, app_id):
+async def last_played(user_id, app_id):
     sel_cmd =f"SELECT end_time FROM PLAY_HISTORY WHERE user_id={user_id} AND app_id='{app_id}' AND end_time!=-1 ORDER BY end_time DESC LIMIT 1"
-    return ptdb.db_executor(sel_cmd)
+    return await db.execute(sel_cmd)
     
-def playtime_embed(user, limit, updates, playtime=[], avg_session="None", offset=0):
+async def playtime_embed(u, limit, updates, playtime=[], avg_session="None", offset=0):
     current_time = int(time.time())
-    playtime_today = get_playtime_today(user)
-    recent_activity = get_recent_activity(user, limit, offset)
-    currently_playing = is_currently_playing(user)
+    playtime_today = await u.playtime.playtime_today
+    recent_activity = await u.playtime.recent(limit=limit, offset=offset)
+    currently_playing = await u.playtime.playing
     current_game_playtime = None
     num = 1
 
     temp = []
-    temp.append(f":pencil: Name: {user.mention}\n")
+    temp.append(f":pencil: Name: {u.user.mention}\n")
     if playtime == [] and not currently_playing[0]:
         temp.append(f"Total playtime: `None`\n")
     elif currently_playing[0]:
@@ -587,11 +427,11 @@ def playtime_embed(user, limit, updates, playtime=[], avg_session="None", offset
 
 
     embed = discord.Embed (
-        title = f'{user.name} playtime statistics',
+        title = f'{await u.username} playtime statistics',
         color = GLOBAL_EMBED_COLOR,
         description=f"{''.join(temp)}"
     )
-    embed.set_thumbnail(url=user.avatar)
+    embed.set_thumbnail(url=await u.user_avatar)
     if num > limit: embed.set_footer(text=f"Showing {(offset + 1):,} - {(offset + limit):,} of {updates:,} updates")
     elif updates > 0: embed.set_footer(text=f"Showing {(offset + 1):,} - {updates:,} of {updates:,} updates")
     else: embed.set_footer(text="Showing 0 - 0 of 0 updates")

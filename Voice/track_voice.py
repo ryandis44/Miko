@@ -1,20 +1,19 @@
 import time
 import discord
-from Database.database_class import Database
 from Playtime.playtime import today
 from Voice.VoiceActivity import VoiceActivity, VOICE_SESSIONS
 from misc.misc import determine_htable_key, locate_htable_obj, time_elapsed
 from Database.GuildObjects import MikoMember
 from tunables import *
-tv = Database("Voice.track_voice.py")
+db = AsyncDatabase("Voice.track_voice.py")
 
-def fetch_voicetime_sessions(client: discord.Client):
+async def fetch_voicetime_sessions(client: discord.Client):
     
     sel_cmd = "SELECT value FROM PERSISTENT_VALUES WHERE variable='GLOBAL_REBOOT_TIME_ACTIVITY'"
-    end_time = tv.db_executor(sel_cmd)
+    end_time = await db.execute(sel_cmd)
     if end_time is None:
         sel_cmd = "SELECT end_time FROM VOICE_HISTORY WHERE end_time is not NULL ORDER BY end_time DESC LIMIT 1"
-        end_time = tv.db_executor(sel_cmd)
+        end_time = await db.execute(sel_cmd)
     
     if end_time is None or end_time == []:
         print("Could not fetch a time to restore any voicetime sessions.")
@@ -24,14 +23,16 @@ def fetch_voicetime_sessions(client: discord.Client):
         "SELECT user_id, start_time, server_id FROM VOICE_HISTORY "
         f"WHERE end_time={end_time}"
     )
-    val = tv.db_executor(sel_cmd)
+    val = list(await db.execute(sel_cmd))
+    
     rst = 0
     t = int(time.time()) - tunables('THRESHOLD_RESUME_REBOOT_VOICE_ACTIVITY')
-    def restore(member: discord.Member, restore=True):
+    async def restore(member: discord.Member, restore=True):
         u = MikoMember(user=member, client=client)
         key = determine_htable_key(map=VOICE_SESSIONS, key=member.id)
-        if restore: VOICE_SESSIONS[key] = VoiceActivity(u=u, start_time=t)
-        else: VOICE_SESSIONS[key] = VoiceActivity(u=u)
+        va = VoiceActivity(u=u, start_time=t if restore else None)
+        await va.ainit()
+        VOICE_SESSIONS[key] = va
         return
     
     # Not very fast, but only way to achieve voice session restoration
@@ -55,15 +56,15 @@ def fetch_voicetime_sessions(client: discord.Client):
                         break
 
 
-                # If the current app id is equal to the playtime database entry, continue
+                # If the current guild id is equal to the database entry, continue
                 if str(val[outer][2]) == str(guild.id):
                     
                     #if val[outer][1] >= t:
-                    restore(member)
+                    await restore(member=member)
                     print(f"> Restored {member}'s voice session")
                     rst += 1
                 else:
-                    restore(member=member, restore=False)
+                    await restore(member=member, restore=False)
                     print(f"> {member} switched guilds during restart, created a new voice session for them")
 
                 
@@ -73,6 +74,8 @@ def fetch_voicetime_sessions(client: discord.Client):
         print(f"Restored {rst} voice sessions.")
         print("Voice session restoration complete.")
     else: print("No voice sessions were restored.")
+    
+    print("Restore complete")
     return
 
 # Responsible for calculating total voicetime in a search result
@@ -91,7 +94,7 @@ def avg_voicetime_result(result):
         i += 1
     return int(total / i)
 
-def get_recent_voice_activity(user: discord.Member, page_size=10, offset=0):
+async def get_recent_voice_activity(user: discord.Member, page_size=10, offset=0):
     
     sel_cmd = (
         "SELECT end_time, server_id, (end_time - start_time) AS total "
@@ -102,81 +105,61 @@ def get_recent_voice_activity(user: discord.Member, page_size=10, offset=0):
         f"LIMIT {page_size} OFFSET {offset}"
     )
     
-    items = tv.db_executor(sel_cmd)
+    items = await db.execute(sel_cmd)
     if items == []: return None
     return items
 
-def get_voicetime_today(user_id) -> int:
+async def get_voicetime_today(user_id) -> int:
     sel_cmd = (
         f"SELECT SUM(end_time - {today()}) "
         "FROM VOICE_HISTORY WHERE "
         f"user_id='{user_id}' AND end_time is not NULL AND end_time>='{today()}' AND (end_time - start_time)>={tunables('THRESHOLD_LIST_VOICE_ACTIVITY')} "
         f"AND start_time<'{today()}'"
     )
-    voice_activity_before_midnight = tv.db_executor(sel_cmd)
+    voice_activity_before_midnight = await db.execute(sel_cmd)
 
     sel_cmd = (
         "SELECT SUM(end_time - start_time) "
         "FROM VOICE_HISTORY WHERE "
         f"user_id='{user_id}' AND end_time is not NULL AND start_time>='{today()}' AND (end_time - start_time)>={tunables('THRESHOLD_LIST_VOICE_ACTIVITY')} "
     )
-    voice_activity_after_midnight = tv.db_executor(sel_cmd)
+    voice_activity_after_midnight = await db.execute(sel_cmd)
 
     if voice_activity_before_midnight is None: voice_activity_before_midnight = 0
     if voice_activity_after_midnight is None: voice_activity_after_midnight = 0
     return int(voice_activity_after_midnight + voice_activity_before_midnight)
 
-def get_voicetime_today_user_guild(user_id, server_id) -> int:
-    sel_cmd = (
-        f"SELECT SUM(end_time - {today()}) "
-        "FROM VOICE_HISTORY WHERE "
-        f"user_id='{user_id}' AND server_id='{server_id}' AND end_time is not NULL AND end_time>='{today()}' AND (end_time - start_time)>={tunables('THRESHOLD_LIST_VOICE_ACTIVITY')} " # AND (end_time - start_time)>300
-        f"AND start_time<'{today()}'"
-    )
-    voice_activity_before_midnight = tv.db_executor(sel_cmd)
-
-    sel_cmd = (
-        "SELECT SUM(end_time - start_time) "
-        "FROM VOICE_HISTORY WHERE "
-        f"user_id='{user_id}' AND server_id='{server_id}' AND end_time is not NULL AND start_time>='{today()}' AND (end_time - start_time)>={tunables('THRESHOLD_LIST_VOICE_ACTIVITY')} "
-    )
-    voice_activity_after_midnight = tv.db_executor(sel_cmd)
-
-    if voice_activity_before_midnight is None: voice_activity_before_midnight = 0
-    if voice_activity_after_midnight is None: voice_activity_after_midnight = 0
-    return int(voice_activity_after_midnight + voice_activity_before_midnight)
-
-def get_total_voice_activity_updates(user_id: int) -> int:
+async def get_total_voice_activity_updates(user_id: int) -> int:
     sel_cmd = (
         "SELECT COUNT(*) FROM VOICE_HISTORY WHERE "
         f"user_id='{user_id}' AND end_time is not NULL AND "
         f"(end_time - start_time)>={tunables('THRESHOLD_LIST_VOICE_ACTIVITY')}"
     )
-    val = tv.db_executor(sel_cmd)
+    val = await db.execute(sel_cmd)
     if val == []: return int(0)
     else: return int(val)
 
-def get_total_voicetime_user(user_id) -> int:
+async def get_total_voicetime_user(user_id) -> int:
     sel_cmd = (
         "SELECT SUM(end_time - start_time) FROM VOICE_HISTORY WHERE "
         f"user_id='{user_id}' AND end_time is not NULL AND "
         f"(end_time - start_time)>={tunables('THRESHOLD_LIST_VOICE_ACTIVITY')} GROUP BY user_id"
     )
-    val = tv.db_executor(sel_cmd)
+    val = await db.execute(sel_cmd)
     if val == []: return int(0)
     else: return int(val)
 
-def get_total_voicetime_user_guild(user_id, server_id) -> int:
+async def get_total_voicetime_user_guild(user_id, server_id) -> int:
     sel_cmd = (
         "SELECT SUM(end_time - start_time) FROM VOICE_HISTORY WHERE "
         f"user_id='{user_id}' AND server_id='{server_id}' AND end_time is not NULL AND "
         f"(end_time - start_time)>={tunables('THRESHOLD_LIST_VOICE_ACTIVITY')} GROUP BY user_id"
     )
-    val = tv.db_executor(sel_cmd)
+    val = await db.execute(sel_cmd)
     if val == []: return int(0)
     else: return int(val)
 
-def get_average_voice_session(user_id: discord.User) -> str:
+async def get_average_voice_session(user_id: discord.User) -> str:
     
     sel_cmd = (
         "SELECT AVG(end_time - start_time) FROM VOICE_HISTORY WHERE "
@@ -184,11 +167,11 @@ def get_average_voice_session(user_id: discord.User) -> str:
         f"(end_time - start_time)>={tunables('THRESHOLD_LIST_VOICE_ACTIVITY')}"
     )
 
-    val = tv.db_executor(sel_cmd)
+    val = await db.execute(sel_cmd)
     if val is None or val == []: return "`None`"
     return f"`{time_elapsed(int(val), 'h')}`"
 
-def last_voiced_server(user_id, server_id) -> int:
+async def last_voiced_server(user_id, server_id) -> int:
     
     sel_cmd = (
         "SELECT end_time FROM VOICE_HISTORY WHERE "
@@ -197,7 +180,7 @@ def last_voiced_server(user_id, server_id) -> int:
         "ORDER BY end_time DESC LIMIT 1"
     )
     
-    val = tv.db_executor(sel_cmd)
+    val = await db.execute(sel_cmd)
     if val == []:
         return 0
     else: return int(val)
@@ -212,22 +195,24 @@ async def process_voice_state(u: MikoMember, bef: discord.VoiceState, cur: disco
     able to briefly allow for "duplicate" hash entries, allowing us to handle
     when discord sends updates out of order ('join' before 'left').
     '''
-    def stop():
+    async def stop():
         sesh = locate_htable_obj(map=VOICE_SESSIONS,
                                  key=u.user.id,
                                  comparable=u.guild.id)
         if sesh[0] is not None:
-            sesh[0].end()
+            await sesh[0].end()
             del VOICE_SESSIONS[sesh[1]]
            
     async def start():
-        if not u.track_voicetime: return
+        if not await u.track_voicetime: return
         sesh = locate_htable_obj(map=VOICE_SESSIONS,
                                  key=u.user.id,
                                  comparable=u.guild.id)
-        if sesh[0] is not None: stop()
+        if sesh[0] is not None: await stop()
         key = determine_htable_key(map=VOICE_SESSIONS, key=u.user.id)
-        VOICE_SESSIONS[key] = VoiceActivity(u=u)
+        va = VoiceActivity(u=u)
+        await va.ainit()
+        VOICE_SESSIONS[key] = va
         await VOICE_SESSIONS[key].heartbeat()
 
     async def check_tracking():
@@ -243,7 +228,7 @@ async def process_voice_state(u: MikoMember, bef: discord.VoiceState, cur: disco
     
     '''If member leaves all voice channels or goes to the afk channel, stop tracking'''
     if (bef.channel is not None and bef.channel != u.guild.afk_channel) and (cur.channel is None or cur.channel == cur.channel.guild.afk_channel):
-        stop()
+        await stop()
         return
     
     '''

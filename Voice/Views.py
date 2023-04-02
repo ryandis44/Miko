@@ -6,9 +6,8 @@ from tunables import *
 import typing
 from Database.database_class import Database
 from tunables import *
-from misc.embeds import modified_playtime_embed
 from Voice.embeds import voicetime_embed, voicetime_search_embed
-from Playtime.playtime import avg_playtime_result, get_total_activity_updates, get_total_activity_updates_query, playtime_embed, total_playtime_result
+from Playtime.playtime import avg_playtime_result, total_playtime_result
 
 ptv = Database("Playtime.Views.py")
 

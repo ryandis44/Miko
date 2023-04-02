@@ -6,7 +6,7 @@ import re
 from discord.ext import commands
 from discord import app_commands
 from Database.GuildObjects import MikoMember
-from Database.database_class import Database, ip
+from Database.database_class import ip
 from dotenv import load_dotenv
 from Music.UI import SongSelectView, PlaylistButtons, show_playlist_result, song_search_results
 from Music.PersistentPlayer import PersistentPlayer
@@ -17,7 +17,7 @@ load_dotenv()
 
 url_rx = re.compile(r'https?://(?:www\.)?.+')
 
-mp = Database("cogs.MusicCog.py")
+db = AsyncDatabase("cogs.MusicCog.py")
 
 class MusicCog(commands.Cog):
     def __init__(self, client: discord.Client):
@@ -145,12 +145,12 @@ class MusicCog(commands.Cog):
                     case 'TRACK_LOADED':
                         try: sesh = AUDIO_SESSIONS[interaction.guild.id]
                         except:
-                            AUDIO_SESSIONS[interaction.guild.id] = PersistentPlayer(
-                                original_interaction=interaction
-                            )
+                            pp = PersistentPlayer(original_interaction=interaction)
+                            await pp.ainit()
+                            AUDIO_SESSIONS[interaction.guild.id] = pp
                             sesh = AUDIO_SESSIONS[interaction.guild.id]
                         
-                        if u.music_channel is None:
+                        if await u.music_channel is None:
                             ad = f"\n\n{tunables('MUSIC_BOT_MUSIC_CHANNEL_AD')}"
                         else: ad = ""
                         await sesh.play(tracks=results.tracks[0], requester=interaction.user.id)
@@ -159,7 +159,7 @@ class MusicCog(commands.Cog):
                                 f"Added `{results.tracks[0]['title']}` by `{results.tracks[0]['author']}` to queue.{ad}"
                             )
                         )
-                        mc = u.music_channel
+                        mc = await u.music_channel
                         if mc is not None:
                             await mc.send(
                                 content=f"🎵 {interaction.user.mention} added `{results.tracks[0].title}` by `{results.tracks[0].author}` to the queue.",
@@ -231,7 +231,7 @@ class MusicCog(commands.Cog):
             await msg.delete()
             return
         
-        mc = u.music_channel
+        mc = await u.music_channel
         if mc is None:
             await msg.edit(
                 content=(
@@ -267,30 +267,27 @@ class MusicCog(commands.Cog):
         msg = await interaction.original_response()
         u = MikoMember(user=interaction.user, client=interaction.client, check_exists=False)
 
-        if not interaction.user.guild_permissions.manage_channels and u.bot_permission_level <= 3:
+        if not interaction.user.guild_permissions.manage_channels and await u.bot_permission_level <= 3:
             await msg.edit(content="You must have `Manage Channels` permission to set music channel.")
             return
 
         if channel is None:
             upd_cmd = f"UPDATE SERVERS SET music_channel=NULL WHERE server_id='{interaction.guild.id}'"
-            mp.db_executor(upd_cmd)
+            await db.execute(upd_cmd)
             await msg.edit(content=f"Successfully removed music channel from **{interaction.guild}**")
             return
 
         upd_cmd = f"UPDATE SERVERS SET music_channel='{channel.id}' WHERE server_id='{interaction.guild.id}'"
-        mp.db_executor(upd_cmd)
+        await db.execute(upd_cmd)
         await msg.edit(content=f"Set **{interaction.guild}** music channel to {channel.mention}\nRun the command again without arguments to unset channel.")
 
     
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         u = MikoMember(user=interaction.user, client=interaction.client)
+        await u.ainit()
 
-        if not tunables('COMMAND_ENABLED_PLAY'):
-            await interaction.response.send_message(content=tunables('COMMAND_DISABLED_MESSAGE'), ephemeral=True)
-            return False
-
-        if not u.profile.cmd_enabled('PLAY'):
+        if (await u.profile).cmd_enabled('PLAY') != 1:
             await interaction.response.send_message(content=tunables('MUSIC_BOT_NO_PRIVLEDGES'), ephemeral=True)
             return False
         

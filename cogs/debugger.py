@@ -2,7 +2,7 @@ import asyncio
 import uuid
 import discord
 from discord.ext import commands
-from Database.database_class import Database
+from Database.database_class import AsyncDatabase
 from tunables import tunables
 from discord.ext.commands import Context
 import os
@@ -10,14 +10,14 @@ from dotenv import load_dotenv
 from Playtime.playtime import sessions_hash_table
 from Voice.VoiceActivity import VOICE_SESSIONS
 
-from Playtime.playtime import fetch_playtime_sessions, find_type_playing, has_app_id, identify_current_application, sesh_id, start_time
+from Playtime.playtime import find_type_playing, has_app_id, identify_current_application, sesh_id, start_time
 from misc.misc import get_user_object
 from Database.GuildObjects import MikoMember
 from Polls.UI import active_polls
 from Music.LavalinkClient import AUDIO_SESSIONS
 load_dotenv()
 
-dbg = Database("cogs.debugger.py")
+db = AsyncDatabase("cogs.debugger.py")
 
 class Debugger(commands.Cog):
     def __init__(self, client):
@@ -30,15 +30,15 @@ class Debugger(commands.Cog):
         #if len(ctx.message.mentions) >= 1: user = ctx.message.mentions[0]
         #else: user = ctx.author
         u = MikoMember(user=ctx.author, client=self.client)
-        if u.bot_permission_level <= 4: return
-        u.increment_statistic('DEBUGGER_USED')
+        if await u.bot_permission_level <= 4: return
+        await u.increment_statistic('DEBUGGER_USED')
 
         if len(args) == 0:
             await ctx.channel.send(
                 f"Please provide something to debug: `{os.getenv('CMD_PREFIX1')}d <category> (user)`\n"
                 "Categories: `a` (activity), `gl` (guild list), "
                 "`as` (active playtime sessions), `av` (active voice sessions), `po` (active polls) "
-                "`music` (active music sessions), `tasks` (all active asyncio tasks)"
+                "`music` (active music sessions), `tasks` (all active asyncio tasks), `st` (sticker id in replied msg)"
             )
             return
         
@@ -56,7 +56,7 @@ class Debugger(commands.Cog):
                 for i, activity in enumerate(user.activities):
                     cur_playing = find_type_playing(user)
                     if cur_playing[0] and i == cur_playing[1]:
-                        game = identify_current_application(activity, has_app_id(activity))
+                        game = await identify_current_application(activity, has_app_id(activity))
                     else:
                         game = None
                     st = start_time(activity)
@@ -136,7 +136,7 @@ class Debugger(commands.Cog):
                 while True: # Make sure we do not have duplicate application id
                     aid = uuid.uuid4().hex
                     sel_check_cmd = f"SELECT * FROM APPLICATIONS WHERE app_id='{aid}'"
-                    res = dbg.db_executor(sel_check_cmd)
+                    res = await db.execute(sel_check_cmd)
                     if res == []: break
                 
                 await ctx.channel.send(f"{aid} {res}")
@@ -176,6 +176,21 @@ class Debugger(commands.Cog):
                 seshs = AUDIO_SESSIONS.items()
                 print(f"DEBUG REQUESTED 'music': {asyncio.all_tasks()}")
                 await ctx.channel.send(content=f"{asyncio.all_tasks()}")
+            
+            case 'st':
+
+                if ctx.message.reference is None:
+                    await ctx.send(content="Please reply to a message to get sticker id")
+                    return
+
+                if ctx.message.reference.resolved.stickers == []:
+                    await ctx.send(content="No sticker found")
+                    return
+
+                rmsg = ctx.message.reference.resolved
+                await ctx.send(
+                    content=f"Sticker ID: {rmsg.stickers[0].id}"
+                )
 
 
 

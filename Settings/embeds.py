@@ -24,7 +24,7 @@ def settings_initial(interaction: discord.Interaction) -> discord.Embed:
     embed.set_author(icon_url=interaction.client.user.avatar, name="Miko Settings")
     return embed
 
-def settings_list(u: MikoMember, settings: list) -> discord.Embed:
+async def settings_list(u: MikoMember, settings: list) -> discord.Embed:
 
     temp = []
     temp.append("__Select a setting to modify__:\n\n")
@@ -37,8 +37,8 @@ def settings_list(u: MikoMember, settings: list) -> discord.Embed:
         temp.append(f"{setting.emoji} ")
         temp.append(f"`{setting.name}`: ")
         temp.append(f"*{setting.desc}*")
-        if server: temp.append(f"{setting.value_str(server_id=u.guild.id)}")
-        else: temp.append(f"{setting.value_str(user_id=u.user.id)}")
+        if server: temp.append(f"{await setting.value_str(server_id=u.guild.id)}")
+        else: temp.append(f"{await setting.value_str(user_id=u.user.id)}")
         temp.append("\n")
 
 
@@ -47,12 +47,12 @@ def settings_list(u: MikoMember, settings: list) -> discord.Embed:
         description=f"{''.join(temp)}"
     )
     embed.set_author(
-        icon_url=u.guild.icon if server else u.user_avatar,
-        name=f"{u.guild if server else u.username} Settings"
+        icon_url=u.guild.icon if server else await u.user_avatar,
+        name=f"{u.guild if server else await u.username} Settings"
     )
     return embed
 
-def setting_embed(u: MikoMember, s: Setting) -> discord.Embed:
+async def setting_embed(u: MikoMember, s: Setting) -> discord.Embed:
 
     temp = []
     temp.append("• ")
@@ -60,16 +60,16 @@ def setting_embed(u: MikoMember, s: Setting) -> discord.Embed:
     temp.append(f"`{s.name}`: ")
     temp.append(f"*{s.desc}*")
     if s.table == "SERVERS":
-        temp.append(f"{s.value_str(server_id=u.guild.id)}")
+        temp.append(f"{await s.value_str(server_id=u.guild.id)}")
     elif s.table == "USER_SETTINGS":
-        temp.append(f"{s.value_str(user_id=u.user.id)}")
+        temp.append(f"{await s.value_str(user_id=u.user.id)}")
     temp.append("\n\n")
 
     temp.append("Press **Confirm** to set this setting to:")
     if s.table == "SERVERS":
-        temp.append(f"{s.value_str(server_id=u.guild.id, invert=True)}")
+        temp.append(f"{await s.value_str(server_id=u.guild.id, invert=True)}")
     elif s.table == "USER_SETTINGS":
-        temp.append(f"{s.value_str(user_id=u.user.id, invert=True)}")
+        temp.append(f"{await s.value_str(user_id=u.user.id, invert=True)}")
 
 
     embed = discord.Embed (
@@ -78,19 +78,19 @@ def setting_embed(u: MikoMember, s: Setting) -> discord.Embed:
         description=f"{''.join(temp)}"
     )
     embed.set_author(
-        icon_url=u.guild.icon if s.table == 'SERVERS' else u.user_avatar,
-        name=f"{u.guild if s.table == 'SERVERS' else f'{u.username} Personal'} Settings"
+        icon_url=u.guild.icon if s.table == 'SERVERS' else await u.user_avatar,
+        name=f"{u.guild if s.table == 'SERVERS' else f'{await u.username} Personal'} Settings"
     )
     return embed
 
-def setting_toggled(u: MikoMember, s: Setting) -> discord.Embed:
+async def setting_toggled(u: MikoMember, s: Setting) -> discord.Embed:
 
     temp = []
     temp.append(f"**{s.name}** is now")
     if s.table == "SERVERS":
-        temp.append(f"{s.value_str(server_id=u.guild.id)}")
+        temp.append(f"{await s.value_str(server_id=u.guild.id)}")
     elif s.table == "USER_SETTINGS":
-        temp.append(f"{s.value_str(user_id=u.user.id)}")
+        temp.append(f"{await s.value_str(user_id=u.user.id)}")
 
     embed = discord.Embed (
         title = "Success!",

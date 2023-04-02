@@ -1,13 +1,9 @@
-import asyncio
-import time
 import discord
 from tunables import *
 from GreenBook.Objects import GreenBook, Person
 from Database.GuildObjects import MikoMember
 from Database.database_class import AsyncDatabase
 db = AsyncDatabase("GreenBook.UI.py")
-
-        
 
 
 class BookView(discord.ui.View):
@@ -39,7 +35,7 @@ class BookView(discord.ui.View):
             temp.append(
                 "The YMCA Green Book for swim tests.\n"
                 "This book can be accessed any time in this server "
-                "using </book:1082021544831754301>.\n"
+                f"using {tunables('SLASH_COMMAND_SUGGEST_BOOK')}.\n"
                 ""
                 "Use the buttons below to search, add, or modify entries "
                 "in the green book.\n\n"
@@ -113,7 +109,7 @@ class BookView(discord.ui.View):
             embed=__search_embed(),
             view=self
         )
-        self.u.increment_statistic('YMCA_GREEN_BOOK_ENTRIES_SEARCHED')
+        await self.u.increment_statistic('YMCA_GREEN_BOOK_ENTRIES_SEARCHED')
 
     # Response after choosing someone from the dropdown
     async def respond_select_person(self, p: Person) -> None:
@@ -184,7 +180,7 @@ class BookView(discord.ui.View):
                         f":white_check_mark: __**Success! The entry for  `{p.last}, {p.first}`  has been updated.**__"
                     )
                     color = GREEN_BOOK_SUCCESS_COLOR
-                    self.u.increment_statistic('YMCA_GREEN_BOOK_ENTRIES_EDITED')
+                    await self.u.increment_statistic('YMCA_GREEN_BOOK_ENTRIES_EDITED')
         
             case 'NEW':
                 wristband = modal.wristband.value
@@ -207,7 +203,7 @@ class BookView(discord.ui.View):
                         f":exclamation:  __**`{p.last}, {p.first}`  is already in the Green Book. Here is their info:**__"
                     )
                     color = GREEN_BOOK_WARN_COLOR
-                self.u.increment_statistic('YMCA_GREEN_BOOK_ENTRIES_CREATED')
+                await self.u.increment_statistic('YMCA_GREEN_BOOK_ENTRIES_CREATED')
 
             case 'DELETE_WARN':
                 desc.append(
@@ -223,7 +219,7 @@ class BookView(discord.ui.View):
                 )
                 color = GREEN_BOOK_SUCCESS_COLOR
                 await p.delete()
-                self.u.increment_statistic('YMCA_GREEN_BOOK_ENTRIES_DELETED')
+                await self.u.increment_statistic('YMCA_GREEN_BOOK_ENTRIES_DELETED')
             
             case 'DELETE_CANCEL':
                 desc.append(
