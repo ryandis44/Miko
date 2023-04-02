@@ -32,8 +32,6 @@ def tunables_init(): # Initial call cannot be async
         )
     )
 
-def del_tunable(k) -> None: del TUNABLES[k]
-
 async def tunables_refresh():
     assign_tunables(await db.execute(
         "SELECT * FROM TUNABLES "
@@ -42,6 +40,7 @@ async def tunables_refresh():
 
 def assign_tunables(val):
     global TUNABLES
+    TUNABLES = {}
     for tunable in val:
         if tunable[1] == "TRUE": TUNABLES[tunable[0]] = True
         if tunable[1] == "FALSE": TUNABLES[tunable[0]] = False
@@ -51,8 +50,8 @@ def assign_tunables(val):
     configure_tunables()
 
 def configure_tunables() -> None:
-    try: TUNABLES['OPENAI_PERSONALITIES']
-    except: TUNABLES['OPENAI_PERSONALITIES'] = []
+    global TUNABLES
+    TUNABLES['OPENAI_PERSONALITIES'] = []
     temp = []
     for key, val in TUNABLES.items():
         if 'GUILD_PROFILE_' in key:
@@ -76,6 +75,7 @@ def configure_tunables() -> None:
             )
         )
         TUNABLES[f"OPENAI_PERSONALITY_{d['value']}"] = d['prompt']
+
 
 
 

@@ -270,7 +270,7 @@ class Dropdown(discord.ui.Select):
 
         super().__init__(
             placeholder="Select a tunable",
-            min_values=1,
+            min_values=0,
             max_values=1,
             options=options,
             row=1,
@@ -279,6 +279,9 @@ class Dropdown(discord.ui.Select):
         )
     
     async def callback(self, interaction: discord.Interaction):
+        if len(self.values) < 1:
+            await interaction.response.edit_message()
+            return
         v = int(self.values[0])
         m = TunableModal(prev=self)
         m.keyy.default = self.tun[v][0]
@@ -353,7 +356,6 @@ class TunableModal(discord.ui.Modal):
                 f"value='{self.vall.default}'"
             )
             await tunables_refresh()
-            del_tunable(self.keyy.default)
             await interaction.response.edit_message()
             await self.prev.view.main_response(query=self.keyy.default)
             return
