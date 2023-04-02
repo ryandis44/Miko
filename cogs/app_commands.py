@@ -132,9 +132,9 @@ class Slash(commands.Cog):
                 await asyncio.sleep(1)
 
                 # Restore and delete nick cache
-                sel_cmd = f"SELECT name FROM NICKNAME_CACHE WHERE user_id='{member.id}' ORDER BY user_id DESC LIMIT 1"
+                sel_cmd = f"SELECT name FROM NICKNAME_CACHE WHERE user_id='{member.id}' AND server_id='{interaction.guild.id}' ORDER BY user_id DESC LIMIT 1"
                 rst_name = await db.execute(sel_cmd)
-                del_cmd = f"DELETE FROM NICKNAME_CACHE WHERE user_id='{member.id}'"
+                del_cmd = f"DELETE FROM NICKNAME_CACHE WHERE user_id='{member.id}' AND server_id='{interaction.guild.id}'"
                 await db.execute(del_cmd)
                 if rst_name == []: rst_name = None
 
@@ -158,8 +158,8 @@ class Slash(commands.Cog):
             # Remember what their nick was before renameall
             if member.nick is not None and member.nick != name:
                 ins_cmd = (
-                    "INSERT INTO NICKNAME_CACHE (user_id,name) VALUES "+
-                    f"('{member.id}', '{member.nick}')"
+                    "INSERT INTO NICKNAME_CACHE (server_id,user_id,name) VALUES "+
+                    f"('{interaction.guild.id}', '{member.id}', '{member.nick}')"
                 )
                 await db.execute(ins_cmd)
 
