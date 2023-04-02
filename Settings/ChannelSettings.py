@@ -15,39 +15,39 @@ class ChatGPT(Setting):
             u=u,
             p=p,
             name = "ChatGPT Integration",
-            desc = "Choose to enable ChatGPT Integration and what mode to use",
-            emoji = "🎮",
+            desc = "**WORK IN PROGRESS BETA FEATURE. May not always work as intended.** Choose to enable ChatGPT Integration and what personality to use",
+            emoji = "🌐",
             table = "CHANNELS",
             col = "chatgpt",
             options=[
                 discord.SelectOption(
-                    label="Enabled: Normal Mode",
+                    label="Enabled: Normal",
                     description="Normal ChatGPT responses. Will answer questions.",
                     value="NORMAL",
                     emoji="🌐"
                 ),
                 discord.SelectOption(
-                    label="Enabled: Sarcastic Mode",
-                    description="Sarcastic responses. May go on a tangent or might get offended.",
+                    label="Enabled: Sarcastic",
+                    description="Sarcastic responses. May go on a tangent or get offended.",
                     value="SARCASTIC",
                     emoji="🤡"
                 ),
                 discord.SelectOption(
-                    label="Enabled: Asshole Mode",
+                    label="Enabled: Asshole",
                     description="Short and sweet sarcastic asshole responses.",
                     value="ASSHOLE",
                     emoji="😡"
                 ),
                 discord.SelectOption(
-                    label="Enabled: UwU/lolcat Mode",
-                    description="Lolcat and uwu speak. I don't think it even knows how to answer questions.",
+                    label="Enabled: UwU/lolcat",
+                    description="Lolcat and uwu speak with emojis. A lot. SOOO CUWTE UWU.",
                     value="UWU",
                     emoji="🐱"
                 ),
                 discord.SelectOption(
-                    label="Enabled: Unfiltered Mode",
-                    description="Unfiltered and profane responses. Will not answer questions. At all.",
-                    value="UNFILTERED",
+                    label="Enabled: Relentless",
+                    description="Unfiltered and profane responses. Does not give a f*ck.",
+                    value="RELENTLESS",
                     emoji="⚠"
                 ),
                 discord.SelectOption(
