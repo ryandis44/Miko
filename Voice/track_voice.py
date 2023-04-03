@@ -1,6 +1,6 @@
 import time
 import discord
-from Playtime.playtime import today
+from Presence.playtime import today
 from Voice.VoiceActivity import VoiceActivity, VOICE_SESSIONS
 from misc.misc import determine_htable_key, locate_htable_obj, time_elapsed
 from Database.GuildObjects import MikoMember

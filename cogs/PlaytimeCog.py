@@ -5,12 +5,12 @@ from discord.ext import commands
 from discord import app_commands
 import typing
 from Database.GuildObjects import MikoMember
-from Playtime.Views import PlaytimePageSelector, PlaytimeSearchPageSelector
+from Presence.Views import PlaytimePageSelector, PlaytimeSearchPageSelector
 from Voice.Views import VoicetimePageSelector, VoicetimeSearchPageSelector
 from Voice.embeds import voicetime_search_embed
 from Voice.track_voice import avg_voicetime_result, total_voicetime_result
 from misc.embeds import modified_playtime_embed
-from Playtime.playtime import avg_playtime_result, get_app_from_str, playtime_embed, total_playtime_result
+from Presence.playtime import avg_playtime_result, get_app_from_str, playtime_embed, total_playtime_result
 from tunables import *
 from Database.database_class import Database, AsyncDatabase
 import re
@@ -108,9 +108,9 @@ class PlaytimeCog(commands.Cog):
 
         try:
            if not game_query and not sort_query and not playtime_query and not scope_not_user:
-               tup = await u.playtime.total_entries
-               avg = await u.playtime.average_session
-               tot_playtime = await u.playtime.total
+               tup = await u.Presence.total_entries
+               avg = await u.Presence.average_session
+               tot_playtime = await u.Presence.total
                if tup > page_size: view = PlaytimePageSelector(interaction.user, user, page_size, updates=tup,
                    playtime=tot_playtime, avg_session=avg)
                else: view = None
@@ -146,11 +146,11 @@ class PlaytimeCog(commands.Cog):
 
         # Handle playtime query
         if playtime_query:
-            if playtime.lower() == "all":
+            if Presence.lower() == "all":
                 part2.append(") ")
             else:
                 regex_pt = r"^[<>]\d{1,5}[smhd]{0,1}$|^all$"
-                if not re.match(regex_pt, playtime.lower()):
+                if not re.match(regex_pt, Presence.lower()):
                     await orig_msg.edit(content=f"Error: Invalid playtime entry `{playtime}`. Examples: `>5m` (greater than 5 minutes), `<5h` (less than 5 hours), `all` returns all results. `<` and `>` are **required**.")
                     return
                 

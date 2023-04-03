@@ -1,5 +1,6 @@
 # Miko Bot main file
 from Database.database_class import connect_pool
+from Presence.Objects import HandlePresence
 from tunables import tunables_init, tunables, GLOBAL_EMBED_COLOR, tunables_refresh
 tunables_init()
 
@@ -29,7 +30,7 @@ from Voice.track_voice import fetch_voicetime_sessions, process_voice_state
 from misc.refresh import RefreshThread
 from Database.database import username_hist
 from utils.parse_inventory import check_for_karuta, parse_inventory
-from Playtime.playtime import determine_activity, fetch_playtime_sessions
+from Presence.playtime import determine_activity, fetch_playtime_sessions
 from Music.LavalinkClient import AUDIO_SESSIONS
 from Polls.UI import active_polls
 
@@ -234,9 +235,13 @@ async def on_presence_update(before: discord.Member, cur: discord.Member):
     if not running: return
     u = MikoMember(user=cur, client=client)
     await u.ainit()
+    await u.increment_statistic('PRESENCE_UPDATES')
     if (await u.profile).feature_enabled('TRACK_PLAYTIME') != 1: return
 
-    await u.increment_statistic('PRESENCE_UPDATES')
+    p = HandlePresence(u=u, b=before, a=cur)
+    await p.ainit()
+
+    return
     if cur.bot: return
     await determine_activity(before, cur, u)
 

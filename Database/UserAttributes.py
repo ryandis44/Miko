@@ -1,12 +1,12 @@
 from Database.ApplicationObjects import Application
-from Playtime.GameActivity import GameActivity
+from Presence.GameActivity import GameActivity
 from misc.misc import time_elapsed, today
 from tunables import tunables
 from Database.database_class import AsyncDatabase
 db = AsyncDatabase("Database.UserAttributes.py")
 
 #temporary
-from Playtime.playtime import sessions_hash_table
+from Presence.playtime import sessions_hash_table
 
 class Playtime:
     def __init__(self, u):

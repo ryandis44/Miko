@@ -2,7 +2,7 @@ import time
 import discord
 import uuid
 from discord.utils import get
-from Playtime.GameActivity import GameActivity
+from Presence.GameActivity import GameActivity
 from utils.HashTable import HashTable
 from Database.database import if_not_list_create_list
 from Database.database_class import AsyncDatabase
@@ -14,7 +14,7 @@ from tunables import *
 
 sessions_hash_table = HashTable(10000)
 
-db = AsyncDatabase("Playtime.playtime.py")
+db = AsyncDatabase("Presence.Presence.py")
 
 def start_time(activity):
     try: return int(activity.start.timestamp())
@@ -366,9 +366,9 @@ async def last_played(user_id, app_id):
     
 async def playtime_embed(u, limit, updates, playtime=[], avg_session="None", offset=0):
     current_time = int(time.time())
-    playtime_today = await u.playtime.playtime_today
-    recent_activity = await u.playtime.recent(limit=limit, offset=offset)
-    currently_playing = await u.playtime.playing
+    playtime_today = await u.Presence.playtime_today
+    recent_activity = await u.Presence.recent(limit=limit, offset=offset)
+    currently_playing = await u.Presence.playing
     current_game_playtime = None
     num = 1
 

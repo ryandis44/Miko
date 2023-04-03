@@ -43,8 +43,8 @@ from tunables import *
 
 
 # ga = Database("GameActivity.py")
-db = AsyncDatabase("Playtime.GameActivity.py")
-sdb = Database("Playtime.GameActivity.py")
+db = AsyncDatabase("Presence.GameActivity.py")
+sdb = Database("Presence.GameActivity.py")
 
 class GameActivity:
     def __init__(self, user, app_id, i, st=None) -> None:

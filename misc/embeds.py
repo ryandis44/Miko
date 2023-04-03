@@ -3,7 +3,7 @@ import time
 import discord
 from misc.misc import sanitize_track_name, time_elapsed
 
-from Playtime.playtime import last_played
+from Presence.playtime import last_played
 from tunables import *
 
 def plex_requests_embed():

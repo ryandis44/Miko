@@ -7,10 +7,10 @@ from tunables import tunables
 from discord.ext.commands import Context
 import os
 from dotenv import load_dotenv
-from Playtime.playtime import sessions_hash_table
+from Presence.playtime import sessions_hash_table
 from Voice.VoiceActivity import VOICE_SESSIONS
 
-from Playtime.playtime import find_type_playing, has_app_id, identify_current_application, sesh_id, start_time
+from Presence.playtime import find_type_playing, has_app_id, identify_current_application, sesh_id, start_time
 from misc.misc import get_user_object
 from Database.GuildObjects import MikoMember
 from Polls.UI import active_polls

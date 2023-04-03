@@ -6,9 +6,9 @@ from Database.GuildObjects import MikoMember
 from Database.database_class import AsyncDatabase
 from tunables import *
 from misc.embeds import modified_playtime_embed
-from Playtime.playtime import avg_playtime_result, playtime_embed, total_playtime_result
+from Presence.playtime import avg_playtime_result, playtime_embed, total_playtime_result
 
-db = AsyncDatabase("Playtime.Views.py")
+db = AsyncDatabase("Presence.Views.py")
 
 class PlaytimePageSelector(View):
     

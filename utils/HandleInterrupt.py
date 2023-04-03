@@ -2,7 +2,7 @@
 from select import select
 import time
 from Database.database_class import Database
-from Playtime.playtime import sessions_hash_table
+from Presence.playtime import sessions_hash_table
 from Voice.VoiceActivity import VOICE_SESSIONS
 
 hi = Database("HandleInterrupt.py")
