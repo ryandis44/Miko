@@ -232,6 +232,13 @@ async def on_guild_update(before: discord.Guild, after: discord.Guild):
 # Playtime
 @client.event
 async def on_presence_update(before: discord.Member, cur: discord.Member):
+    
+    '''
+    DONT FORGET TO REMOVE
+    '''
+    if cur.guild.id != 890638458211680256: return
+    
+    
     if not running: return
     u = MikoMember(user=cur, client=client)
     await u.ainit()

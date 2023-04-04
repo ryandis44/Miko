@@ -1,4 +1,5 @@
 import discord
+import itertools
 from Database.GuildObjects import MikoMember
 from Database.ApplicationObjects import Application
 
@@ -33,6 +34,9 @@ class ActivityUpdate:
         await self.__playing_init()
         
     
+    def __sort_key(self, v) -> str:
+        return v['name']
+    
     # Sort all user activities into dicts
     # that identify their type.
     #
@@ -44,11 +48,15 @@ class ActivityUpdate:
                 activity: discord.Activity
                 try:
                     if activity.type is discord.ActivityType.playing:
-                        user['playing'].append({
-                            'activity': activity,
-                            'app': None
-                        })
+                        try:
+                            user['playing'].append({
+                                'activity': activity,
+                                'name': activity.name,
+                                'app': None
+                            })
+                        except: continue
                 except: pass
+            user['playing'].sort(key=self.__sort_key)
     
     '''
     PLAYTIME TRACKING 3.0
@@ -64,11 +72,22 @@ class ActivityUpdate:
        activity.
     3. Store, remove, or check dict (hash table) containing all
        active playtime sessions.
+       
+    Dictionary map:
+    - user: discord.Member: user
+    - playing: list: list of dicts of playing activities
     
     '''
     async def __playing_init(self) -> None:
         await self.__get_activity_attributes() # 1.
         await self.__determine_status() # 2. and 3.
+        
+
+        for i, user in enumerate([self.b, self.a]):
+            for a in user['playing']:
+                print(f"{i+1}. {a['app']}")
+        print('\n\n')
+        
     
     
     async def __determine_status(self) -> None:
@@ -79,6 +98,17 @@ class ActivityUpdate:
         # START check
         if self.b['playing'] != self.a['playing']:
             if len(self.b['playing']) < len(self.a['playing']):
+                for b_activity, a_activity in itertools.zip_longest(self.b['playing'], self.a['playing']):
+                    
+                    # Before will be none in this case if the user has
+                    # started playing game (multiple activity support)
+                    if b_activity is not None:
+                        if b_activity['app'].id != a_activity['app'].id:
+                            pass
+                            '''Create new playtime entry for selected activity'''
+                    else:
+                        pass
+                        '''Create new playtime entry'''
                 
     
     
