@@ -233,6 +233,11 @@ async def on_guild_update(before: discord.Guild, after: discord.Guild):
 @client.event
 async def on_presence_update(before: discord.Member, cur: discord.Member):
     
+    # li = []
+    # li[0] = "hi"
+    # li[1] = "bye"
+    # print(li)
+    
     '''
     DONT FORGET TO REMOVE
     '''

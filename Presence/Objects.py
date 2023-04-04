@@ -43,11 +43,42 @@ class ActivityUpdate:
     # Other activity types would be added
     # here to be sorted.
     def __sort_activities(self) -> None:
+        
+        for b_activity, a_activity in itertools.zip_longest(self.b['user'].activities, self.a['user'].activities):
+            b_activity: discord.Activity
+            a_activity: discord.Activity
+            try:
+                if b_activity.type is discord.ActivityType.playing:
+                    self.b['playing'].append({
+                            'activity': b_activity,
+                            'name': b_activity.name,
+                            'app': None
+                        })
+            except: self.b['playing'].append(None)
+
+            try:
+                if a_activity.type is discord.ActivityType.playing:
+                    self.a['playing'].append({
+                            'activity': a_activity,
+                            'name': a_activity.name,
+                            'app': None
+                        })
+            except: self.a['playing'].append(None)
+        
+        '''Needs to be sorted ^^^^'''
+        
+        
+        
+        
         for user in [self.b, self.a]:
             for activity in user['user'].activities:
                 activity: discord.Activity
                 try:
                     if activity.type is discord.ActivityType.playing:
+                        
+                        # Try-except is here because if we cannot get an activity
+                        # name, then there is no entry in the database anyway.
+                        # Skip activity.
                         try:
                             user['playing'].append({
                                 'activity': activity,
@@ -57,6 +88,17 @@ class ActivityUpdate:
                         except: continue
                 except: pass
             user['playing'].sort(key=self.__sort_key)
+        
+        '''
+        B:
+            [Activity 1: VSCode]
+        
+        A:
+            [Activity 1: Minecraft]
+            [Activity 2: VSCode]
+            
+        b1 != a1
+        '''
     
     '''
     PLAYTIME TRACKING 3.0
@@ -93,22 +135,50 @@ class ActivityUpdate:
     async def __determine_status(self) -> None:
         global PLAYTIME_SESSIONS
         
+        
+        for b_activity, a_activity in itertools.zip_longest(self.b['playing'], self.a['playing']):
+            
+            # If not playing
+            if b_activity is None: pass
+                
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         # A change in games playing detected
         #
         # START check
-        if self.b['playing'] != self.a['playing']:
-            if len(self.b['playing']) < len(self.a['playing']):
-                for b_activity, a_activity in itertools.zip_longest(self.b['playing'], self.a['playing']):
-                    
-                    # Before will be none in this case if the user has
-                    # started playing game (multiple activity support)
-                    if b_activity is not None:
-                        if b_activity['app'].id != a_activity['app'].id:
-                            pass
-                            '''Create new playtime entry for selected activity'''
-                    else:
+        if len(self.b['playing']) < len(self.a['playing']):
+            print("**STARTED PLAYING**")
+            for b_activity, a_activity in itertools.zip_longest(self.b['playing'], self.a['playing']):
+                
+                # Before will be none in this case if the user has
+                # started playing game (multiple activity support)
+                if b_activity is not None:
+                    if b_activity['app'].id != a_activity['app'].id:
                         pass
-                        '''Create new playtime entry'''
+                        '''Create new playtime entry for selected activity'''
+                else:
+                    pass
+                    '''Create new playtime entry'''
+        elif len(self.b['playing']) > len(self.a['playing']):
+            print("**STOPPED PLAYING**")
+        
+        # Activity Heartbeat / No activity
+        else:
+            print("**ACTIVITY HEARTBEAT**")
+            for b_activity, a_activity in itertools.zip_longest(self.b['playing'], self.a['playing']):
+                
+                # If activity is same, update 'last_heartbeat' in
+                # PLAYTIME_ENTRIES object
+                if b_activity is not None and a_activity is not None:
+                    '''Update 'last_heartbeat' in GameActivity object'''
                 
     
     
