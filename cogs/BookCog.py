@@ -20,7 +20,6 @@ class BookCog(commands.Cog):
 
     @app_commands.command(name="book", description=f"{os.getenv('APP_CMD_PREFIX')}View/Edit the Green Book")
     @app_commands.guild_only
-    @app_commands.guilds(discord.Object(id=890638458211680256), discord.Object(id=1060357911483797704))
     async def book(self, interaction: discord.Interaction):
         await BookView(original_interaction=interaction).ainit()
 
