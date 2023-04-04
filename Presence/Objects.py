@@ -31,11 +31,15 @@ class ActivityUpdate:
     async def ainit(self) -> None:
         self.__sort_activities()
         await self.__playing_init()
-        print(self.b, "\n\n", self.a)
+        for app in self.a['playing']:
+            print(app['app'])
         
     
     # Sort all user activities into dicts
     # that identify their type.
+    #
+    # Other activity types would be added
+    # here to be sorted.
     def __sort_activities(self) -> None:
         for user in [self.b, self.a]:
             for activity in user['user'].activities:
@@ -71,9 +75,10 @@ class ActivityUpdate:
                 except: app['name'] = None
                 try: app['app_id'] = str(app['activity'].application_id)
                 except: app['app_id'] = None
-
+                
                 app['app'] = await self.__identify_app(app=app)
                 
     async def __identify_app(self, app) -> Application:
         a = Application(app=app)
-        return await a.ainit()
+        await a.ainit()
+        return a
