@@ -274,10 +274,7 @@ async def determine_activity(bef: discord.Member, cur: discord.Member, u, scrape
     if bef_playing[0] and cur_playing[0]: #switch activity
         game = await identify_application(bef.activities[bef_playing[1]], cur.activities[cur_playing[1]], bef_has_app_id, cur_has_app_id, "switch")
 
-    # game[0][0] is BEFORE game name
-    # game[0][1] is BEFORE game ID
-    # game[1][0] is CURRENT game name
-    # game[1][1] is CURRENT game ID
+
 
     async def start(user, app_id):
         if not await u.track_playtime: return
@@ -301,7 +298,12 @@ async def determine_activity(bef: discord.Member, cur: discord.Member, u, scrape
         except:
             await start(user, app_id)
             if initial: await stop(user, app_id, False)
-
+            
+    # game[0][0] is BEFORE game name
+    # game[0][1] is BEFORE game ID
+    # game[1][0] is CURRENT game name
+    # game[1][1] is CURRENT game ID
+    
     # Final activity status check: start, stop, change
     # start activity
     if game[1][0] is not None and game[0][0] is None:

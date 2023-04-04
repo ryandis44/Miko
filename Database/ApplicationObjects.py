@@ -26,6 +26,9 @@ class Application:
     
     def __str__(self) -> str:
         return f"Application: {self.name} | {self.id} | {self.emoji}"
+
+    def __eq__(self, __value: object) -> bool:
+        return self.id == __value.id
     
     def __assign_attributes(self) -> None:
         self.name: str = self.__val[0]

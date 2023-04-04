@@ -15,7 +15,7 @@ class PresenceUpdate:
         await self.__determine_update()
     
     async def __determine_update(self) -> None:
-        if self.b.activities == self.a.activities: return # Add scrape
+        if self.b.activities == self.a.activities or self.a.bot: return # Add scrape
         
         # We know an activity update has happened, create class
         await ActivityUpdate(u=self.u, b=self.b, a=self.a).ainit()
@@ -31,8 +31,6 @@ class ActivityUpdate:
     async def ainit(self) -> None:
         self.__sort_activities()
         await self.__playing_init()
-        for app in self.a['playing']:
-            print(app['app'])
         
     
     # Sort all user activities into dicts
@@ -58,9 +56,31 @@ class ActivityUpdate:
     Function responsible for all playtime tracking. All 'playing'
     activities get processed by this function. It will decide
     whether to start, stop, or continue tracking.
+    
+    Broken up into parts:
+    
+    1. Determine activity attributes, including 'Application' object
+    2. Determine if user has started, stopped, or is continuing this
+       activity.
+    3. Store, remove, or check dict (hash table) containing all
+       active playtime sessions.
+    
     '''
     async def __playing_init(self) -> None:
-        await self.__get_activity_attributes()
+        await self.__get_activity_attributes() # 1.
+        await self.__determine_status() # 2. and 3.
+    
+    
+    async def __determine_status(self) -> None:
+        global PLAYTIME_SESSIONS
+        
+        # A change in games playing detected
+        #
+        # START check
+        if self.b['playing'] != self.a['playing']:
+            if len(self.b['playing']) < len(self.a['playing']):
+                
+    
     
     # Get application ID, session ID, start time, and
     # activity name, if applicable
@@ -78,6 +98,8 @@ class ActivityUpdate:
                 
                 app['app'] = await self.__identify_app(app=app)
                 
+    # Generates an 'Application' object if the user
+    # has any 'playing' status
     async def __identify_app(self, app) -> Application:
         a = Application(app=app)
         await a.ainit()
