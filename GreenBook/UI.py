@@ -33,12 +33,12 @@ class BookView(discord.ui.View):
             temp = []
 
             temp.append(
-                "The YMCA Green Book for swim tests.\n"
+                "The YMCA Swim Test Book for swim tests.\n"
                 "This book can be accessed any time in this server "
                 f"using {tunables('SLASH_COMMAND_SUGGEST_BOOK')}.\n"
                 ""
                 "Use the buttons below to search, add, or modify entries "
-                "in the green book.\n\n"
+                "in the Swim Test Book.\n\n"
             )
 
             total_entries = await self.book.total_entries
@@ -54,7 +54,7 @@ class BookView(discord.ui.View):
             embed = discord.Embed(description=''.join(temp), color=GREEN_BOOK_NEUTRAL_COLOR)
             embed.set_author(
                 icon_url=self.u.guild.icon,
-                name=f"{self.u.guild} Green Book"
+                name=f"{self.u.guild} Swim Test Book"
             )
             return embed
         
@@ -94,7 +94,7 @@ class BookView(discord.ui.View):
                 temp.append(f"{result}\n")
 
             embed = discord.Embed(description=''.join(temp), color=color)
-            embed.set_author( icon_url=self.u.guild.icon, name=f"{self.u.guild} Green Book")
+            embed.set_author( icon_url=self.u.guild.icon, name=f"{self.u.guild} Swim Test Book")
             return embed
         
         self.clear_items()
@@ -120,7 +120,7 @@ class BookView(discord.ui.View):
             )
             embed.set_author(
                 icon_url=self.u.guild.icon,
-                name=f"{self.u.guild} Green Book"
+                name=f"{self.u.guild} Swim Test Book"
             )
             return embed
         self.clear_items()
@@ -195,19 +195,19 @@ class BookView(discord.ui.View):
                 )
                 if p.new:
                     desc.append(
-                        f":white_check_mark: __**Success!  `{p.last}, {p.first}`  has been added to the Green Book.**__"
+                        f":white_check_mark: __**Success!  `{p.last}, {p.first}`  has been added to the Swim Test Book.**__"
                     )
                     color = GREEN_BOOK_SUCCESS_COLOR
                 else:
                     desc.append(
-                        f":exclamation:  __**`{p.last}, {p.first}`  is already in the Green Book. Here is their info:**__"
+                        f":exclamation:  __**`{p.last}, {p.first}`  is already in the Swim Test Book. Here is their info:**__"
                     )
                     color = GREEN_BOOK_WARN_COLOR
                 await self.u.increment_statistic('YMCA_GREEN_BOOK_ENTRIES_CREATED')
 
             case 'DELETE_WARN':
                 desc.append(
-                    f"⚠ __**Warning: You are about to remove  `{p.last}, {p.first}`  from the Green Book. "
+                    f"⚠ __**Warning: You are about to remove  `{p.last}, {p.first}`  from the Swim Test Book. "
                     "Confirm deletion?**__"
                 )
                 history=False
@@ -215,7 +215,7 @@ class BookView(discord.ui.View):
             
             case 'DELETE_CONFIRM':
                 desc.append(
-                    f":white_check_mark: __**Success!  `{p.last}, {p.first}`  has been removed from the Green Book.**__"
+                    f":white_check_mark: __**Success!  `{p.last}, {p.first}`  has been removed from the Swim Test Book.**__"
                 )
                 color = GREEN_BOOK_SUCCESS_COLOR
                 await p.delete()
@@ -223,7 +223,7 @@ class BookView(discord.ui.View):
             
             case 'DELETE_CANCEL':
                 desc.append(
-                    f":x: __**Cancelled.  `{p.last}, {p.first}`  was not removed from the Green Book.**__"
+                    f":x: __**Cancelled.  `{p.last}, {p.first}`  was not removed from the Swim Test Book.**__"
                 )
                 color = GREEN_BOOK_FAIL_COLOR
                 
@@ -236,7 +236,7 @@ class BookView(discord.ui.View):
             desc.append("\n\n")
             desc.append(''.join(await self.__detailed_entry_embed_description(p=p, history=history)))
         embed = discord.Embed(description=''.join(desc), color=color)
-        embed.set_author(icon_url=self.u.guild.icon, name=f"{self.u.guild} Green Book")
+        embed.set_author(icon_url=self.u.guild.icon, name=f"{self.u.guild} Swim Test Book")
 
         self.clear_items()
         match t:
@@ -273,7 +273,7 @@ class BookView(discord.ui.View):
 
         temp.append(
             "Use the dropdown below to set the channel "
-            f"that {self.u.client.user.mention} will send new Green Book entries "
+            f"that {self.u.client.user.mention} will send new Swim Test Book entries "
             "to. Select `Deselect Channel` to remove current channel "
             "(if any)."
             "\n\n"
@@ -317,7 +317,7 @@ class BookView(discord.ui.View):
                     color = GREEN_BOOK_FAIL_COLOR
                 else:
                     desc.append(
-                        f"✅ **Success! Set {channel.mention} as the Green Book log channel. "
+                        f"✅ **Success! Set {channel.mention} as the Swim Test Book log channel. "
                         "To unset this channel, press the `Deselect Channel` button.**"
                     )
                     await db.execute(
@@ -331,7 +331,7 @@ class BookView(discord.ui.View):
                 if log_channel is not None:
                     desc.append(
                         f"✅ **Success! {log_channel.mention} will no longer receive "
-                        "Green Book log updates.**"
+                        "Swim Test Book log updates.**"
                     )
                     await db.execute(
                         "UPDATE SERVERS SET ymca_green_book_channel=NULL WHERE "
@@ -351,7 +351,7 @@ class BookView(discord.ui.View):
         desc.append("\n\n")
         desc.append(''.join(self.__log_channel_description(log_channel=log_channel)))
         embed = discord.Embed(description=''.join(desc), color=color)
-        embed.set_author(icon_url=self.u.guild.icon, name=f"{self.u.guild} Green Book")
+        embed.set_author(icon_url=self.u.guild.icon, name=f"{self.u.guild} Swim Test Book")
 
         self.clear_items()
         self.add_item(SelectLogChannel(bview=self))
@@ -489,7 +489,7 @@ async def on_modal_error(modal, error_interaction: discord.Interaction):
 class FullEntryModal(discord.ui.Modal):
 
     def __init__(self, bview: BookView, p: Person=None):
-        super().__init__(title="New Green Book Entry", custom_id="entry_modal")
+        super().__init__(title="New Swim Test Book Entry", custom_id="entry_modal")
         self.bview = bview
         self.p = p
 
@@ -535,7 +535,7 @@ class FullEntryModal(discord.ui.Modal):
 class AgeWristbandModal(discord.ui.Modal):
 
     def __init__(self, bview: BookView, p: Person):
-        super().__init__(title="New Green Book Entry", custom_id="entry_modal")
+        super().__init__(title="New Swim Test Book Entry", custom_id="entry_modal")
         self.bview = bview
         self.p = p
     
