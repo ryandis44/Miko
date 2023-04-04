@@ -203,7 +203,7 @@ def show_playlist_result(res):
 
 
 async def help_embed(u) -> list:
-    
+    pr = await u.profile
     temp = []
     temp.append(
         f"{u.client.user.mention} help menu. Use `/help <category>` "
@@ -211,13 +211,26 @@ async def help_embed(u) -> list:
         "\n\n"
     )
 
+    if pr.feature_enabled('CHATGPT'):
+        temp.append(
+            "🌐 __**ChatGPT Integration**__:\n"
+            f"> To use ChatGPT, open your settings menu ({tunables('SLASH_COMMAND_SUGGEST_SETTINGS')}) "
+            "in the channel you wish to use ChatGPT and select `Channel` -> `ChatGPT Integration`. From here, "
+            "you can enable it and set its personality or disable it (per-channel) [must have `Manage Channel` "
+            "permission in that channel]."
+            "\n> \n"
+            "> Once enabled, @ Miko (the bot itself, not the bot role) in the channel you just edited and ask it "
+            "anything. You can also reply to Miko to continue the conversation."
+            "\n\n"
+        )
+
     p = os.getenv('CMD_PREFIX1')
     chat_cmds = []
-    if (await u.profile).cmd_enabled('ROLL') == 1: chat_cmds.append(f"**{p}r**, **{p}roll**: :game_die: Roll a number between 0 and 100\n")
-    if (await u.profile).cmd_enabled('EIGHT_BALL') == 1: chat_cmds.append(f"**{p}8b**, **{p}8ball**: :8ball: Ask an 8 ball any question\n")
-    if (await u.profile).cmd_enabled('COIN_FLIP') == 1: chat_cmds.append(f"**{p}fl**, **{p}flip**: :coin: Flip a coin\n")
-    if (await u.profile).cmd_enabled('ANIME_SEARCH') == 1: chat_cmds.append(f"**{p}as**, **{p}anisearch**: <:uwuyummy:958323925803204618> Search for any anime\n")
-    if (await u.profile).cmd_enabled('USER_INFO') == 1: chat_cmds.append(f"**{p}s**, **{p}info**: :bar_chart: User Stats/Info\n")
+    if pr.cmd_enabled('ROLL') == 1: chat_cmds.append(f"**{p}r**, **{p}roll**: :game_die: Roll a number between 0 and 100\n")
+    if pr.cmd_enabled('EIGHT_BALL') == 1: chat_cmds.append(f"**{p}8b**, **{p}8ball**: :8ball: Ask an 8 ball any question\n")
+    if pr.cmd_enabled('COIN_FLIP') == 1: chat_cmds.append(f"**{p}fl**, **{p}flip**: :coin: Flip a coin\n")
+    if pr.cmd_enabled('ANIME_SEARCH') == 1: chat_cmds.append(f"**{p}as**, **{p}anisearch**: <:uwuyummy:958323925803204618> Search for any anime\n")
+    if pr.cmd_enabled('USER_INFO') == 1: chat_cmds.append(f"**{p}s**, **{p}info**: :bar_chart: User Stats/Info\n")
     if len(chat_cmds) > 0:
         temp.append(":speech_balloon: __**Text Commands**__:\n> ")
         temp.append('> '.join(chat_cmds))
@@ -227,14 +240,14 @@ async def help_embed(u) -> list:
     slash_cmds = []
     slash_cmds.append(f"{tunables('SLASH_COMMAND_SUGGEST_HELP')}: :book: Show this help menu\n")
     slash_cmds.append(f"{tunables('SLASH_COMMAND_SUGGEST_SETTINGS')}: :gear: Change {u.client.user.mention} settings (for yourself and {u.guild.name})\n")
-    if (await u.profile).cmd_enabled('PLAYTIME') == 1: slash_cmds.append(f"{tunables('SLASH_COMMAND_SUGGEST_PLAYTIME')}: :video_game: Playtime tracking and detailed searching\n")
-    if (await u.profile).cmd_enabled('VOICETIME') == 1: slash_cmds.append(f"{tunables('SLASH_COMMAND_SUGGEST_VOICETIME')}: :microphone2: Voicechat tracking and detailed searching\n")
-    if (await u.profile).cmd_enabled('POLL') == 1: slash_cmds.append(f"{tunables('SLASH_COMMAND_SUGGEST_POLL')}: :chart_with_upwards_trend: Create a poll lasting up to 24-hours.\n")
+    if pr.cmd_enabled('PLAYTIME') == 1: slash_cmds.append(f"{tunables('SLASH_COMMAND_SUGGEST_PLAYTIME')}: :video_game: Playtime tracking and detailed searching\n")
+    if pr.cmd_enabled('VOICETIME') == 1: slash_cmds.append(f"{tunables('SLASH_COMMAND_SUGGEST_VOICETIME')}: :microphone2: Voicechat tracking and detailed searching\n")
+    if pr.cmd_enabled('POLL') == 1: slash_cmds.append(f"{tunables('SLASH_COMMAND_SUGGEST_POLL')}: :chart_with_upwards_trend: Create a poll lasting up to 24-hours.\n")
     temp.append(":computer: __**Slash Commands**__:\n> ")
     temp.append('> '.join(slash_cmds))
 
 
-    if (await u.profile).cmd_enabled('PLAY') == 1:
+    if pr.cmd_enabled('PLAY') == 1:
         music_cmds = []
         music_cmds.append(
             "Your guild has been granted access music commands and has "
@@ -252,7 +265,7 @@ async def help_embed(u) -> list:
         temp.append('> '.join(music_cmds))
 
 
-    if (await u.profile).feature_enabled('THEBOYS_HELP') == 1:
+    if pr.feature_enabled('THEBOYS_HELP') == 1:
         tb = []
         tb.append(f"{tunables('SLASH_COMMAND_SUGGEST_LEVEL')}: :test_tube: View your level\n")
         tb.append(f"{tunables('SLASH_COMMAND_SUGGEST_TOKENS')}: :coin: View your tokens `[WIP]`\n")
