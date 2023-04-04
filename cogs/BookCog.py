@@ -18,7 +18,7 @@ class BookCog(commands.Cog):
         self.tree = app_commands.CommandTree(self.client)
 
 
-    @app_commands.command(name="book", description=f"{os.getenv('APP_CMD_PREFIX')}View/Edit the Green Book")
+    @app_commands.command(name="book", description=f"{os.getenv('APP_CMD_PREFIX')}View/Edit the Book")
     @app_commands.guild_only
     async def book(self, interaction: discord.Interaction):
         await BookView(original_interaction=interaction).ainit()

@@ -1,6 +1,5 @@
 # Miko Bot main file
 from Database.database_class import connect_pool
-from Presence.Objects import HandlePresence
 from tunables import tunables_init, tunables, GLOBAL_EMBED_COLOR, tunables_refresh
 tunables_init()
 
@@ -16,6 +15,7 @@ import discord
 import re
 import random
 import signal
+from Presence.Objects import PresenceUpdate
 from Plex.embeds import info_anime, info_dubbed, info_quality, info_subbed, plex_update_2_28_23, plex_update_2_3
 from misc.embeds import plex_requests_embed
 from dpyConsole import Console
@@ -236,9 +236,9 @@ async def on_presence_update(before: discord.Member, cur: discord.Member):
     u = MikoMember(user=cur, client=client)
     await u.ainit()
     await u.increment_statistic('PRESENCE_UPDATES')
-    if (await u.profile).feature_enabled('TRACK_PLAYTIME') != 1: return
+    # if (await u.profile).feature_enabled('TRACK_PLAYTIME') != 1: return
 
-    p = HandlePresence(u=u, b=before, a=cur)
+    p = PresenceUpdate(u=u, b=before, a=cur)
     await p.ainit()
 
     return
