@@ -241,7 +241,7 @@ async def on_presence_update(before: discord.Member, cur: discord.Member):
     '''
     DONT FORGET TO REMOVE
     '''
-    if cur.guild.id != 890638458211680256: return
+    if cur.guild.id != 890638458211680256 or cur.id != 221438665749037056: return
     
     
     if not running: return
