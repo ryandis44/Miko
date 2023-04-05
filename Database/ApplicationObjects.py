@@ -30,23 +30,32 @@ class Application:
     def __eq__(self, __value: object) -> bool:
         return self.id == __value.id
     
+    @property
+    async def counts_towards_playtime(self) -> bool:
+        val = await db.execute(
+            "SELECT counts_towards_playtime FROM APPLICATIONS "
+            f"{self.where} "
+            "LIMIT 1"
+        )
+        if val == "TRUE": return True
+        return False
+    
     def __assign_attributes(self) -> None:
         self.name: str = self.__val[0]
         self.id: str = self.__val[1]
         self.discord_id: bool = True if self.__val[2] == "TRUE" else False
-        self.counts_towards_playtime: bool = True if self.__val[3] == "TRUE" else False
-        self.emoji: str = self.__val[4]
+        self.emoji: str = self.__val[3]
     
     async def __check_database(self) -> None:
         if self.__raw_app['app_id'] is not None:
-            where = f"app_id='{self.__raw_app['app_id']}'"
-        else: where = f"name='{self.__raw_app['name']}'"
+            self.where = f"app_id='{self.__raw_app['app_id']}'"
+        else: self.where = f"name='{self.__raw_app['name']}'"
         
         while True:
             self.__val = await db.execute(
-                "SELECT name,app_id,has_discord_id,counts_towards_playtime,emoji "
+                "SELECT name,app_id,has_discord_id,emoji "
                 "FROM APPLICATIONS WHERE "
-                f"{where} "
+                f"{self.where} "
                 "LIMIT 1"
             )
             if self.__val is None or self.__val == []:

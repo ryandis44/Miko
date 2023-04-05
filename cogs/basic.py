@@ -8,6 +8,7 @@ from Database.GuildObjects import MikoGuild, MikoMember, MikoTextChannel
 from Database.database_class import Database, AsyncDatabase
 from Plex.embeds import plex_update_2_2
 from Database.database import add_bot, add_react_all_to_user, add_react_to_user, add_rename_any_user, del_bot, del_react_all_to_user, del_react_to_user, del_rename_any_user, generic_list_embed, top_channels_embed_server, top_users_embed_server, user_info_embed
+from Presence.Objects import PLAYTIME_SESSIONS
 from misc.holiday_roles import get_holiday
 from misc.misc import time_elapsed, translate_mention
 import os
@@ -164,7 +165,7 @@ class Basic(commands.Cog):
         except: user = ctx.author
 
         await ctx.send(
-            content=f"{tunables('AAA_TEST')}"
+            content=f"{PLAYTIME_SESSIONS[ctx.author.id]}"
         )
 
 
