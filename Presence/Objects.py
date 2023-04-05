@@ -132,10 +132,20 @@ class ActivityUpdate:
             try: val = val['sessions'][activity['app'].id]
             except: pass
             if type(val) == GameActivity:
-                pass # do something
+                print("Type is GameActivity")
+                await self.__end_session(activity)
+                await self.__create_session(activity)
             else:
+                print("Type is NOT GameActivity")
                 await g.ainit()
                 PLAYTIME_SESSIONS[self.u.user.id]['sessions'][activity['app'].id] = g
+    
+    async def __end_session(self, activity) -> None: pass
+    
+    async def __session_heartbeat(self, activity) -> bool:
+        try: g: GameActivity = PLAYTIME_SESSIONS[self.u.user.id]['session'][activity['app'].id]
+        except: return False
+        await g.refresh(activity)
             
             
             
@@ -157,55 +167,21 @@ class ActivityUpdate:
                 pass # stop
                 continue
             
-            if b_activity is not None and a_activity is not None:
-                print("**ACTIVITY HEARTBEAT**")
-                if b_activity['app'] == a_activity['app']:
-                    pass # update 'last_refresh' if tracking
-                    continue
+            # if b_activity is not None and a_activity is not None:
+            #     print("**ACTIVITY HEARTBEAT**")
+            #     if b_activity['app'] == a_activity['app']:
+                    
+            #         # This check is to ensure we are tracking the activity
+            #         # that has not changed.
+            #         if not await self.__session_heartbeat(a_activity):
+            #             await self.__create_session(a_activity)
+            #             await self.__session_heartbeat(a_activity)
+            #         continue
                 
-                else:
-                    pass # stop b_activity and start a_activity. Activity has changed
+                # else:
+                #     pass # stop b_activity and start a_activity. Activity has changed
                 
                 
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        # # A change in games playing detected
-        # #
-        # # START check
-        # if len(self.b['playing']) < len(self.a['playing']):
-        #     print("**STARTED PLAYING**")
-        #     for b_activity, a_activity in itertools.zip_longest(self.b['playing'], self.a['playing']):
-                
-        #         # Before will be none in this case if the user has
-        #         # started playing game (multiple activity support)
-        #         if b_activity is not None:
-        #             if b_activity['app'].id != a_activity['app'].id:
-        #                 pass
-        #                 '''Create new playtime entry for selected activity'''
-        #         else:
-        #             pass
-        #             '''Create new playtime entry'''
-        # elif len(self.b['playing']) > len(self.a['playing']):
-        #     print("**STOPPED PLAYING**")
-        
-        # # Activity Heartbeat / No activity
-        # else:
-        #     print("**ACTIVITY HEARTBEAT**")
-        #     for b_activity, a_activity in itertools.zip_longest(self.b['playing'], self.a['playing']):
-                
-        #         # If activity is same, update 'last_heartbeat' in
-        #         # PLAYTIME_ENTRIES object
-        #         if b_activity is not None and a_activity is not None:
-        #             pass
-        #             '''Update 'last_heartbeat' in GameActivity object'''
                 
     
     

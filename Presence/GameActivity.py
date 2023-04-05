@@ -78,68 +78,18 @@ class GameActivity:
             self.restored = True
             self.start_time = st
             self.resume_time = int(time.time()) - tunables('THRESHOLD_RESUME_REBOOT_GAME_ACTIVITY')
-            
+
+        self.last_heartbeat = self.start_time
             
         print("GameActivity object created.")
     
     async def ainit(self) -> None:
         print("Async init...")
         # await self.__new_activity_entry()
-
-    @property
-    def get_id(self) -> int:
-        return self.user.id
-    @property
-    def get_user(self) -> discord.Member:
-        return self.user
-    @property
-    def get_start(self) -> int:
-        return int(self.start_time)
-    @property
-    def get_app_name(self) -> str:
-        return self.act_name
-    @property
-    def get_session_id(self) -> str:
-        return self.session_id
-    @property
-    def get_resume_time(self) -> int:
-        return self.resume_time
-    @property
-    def is_restored(self) -> bool:
-        return self.restored
     @property
     def is_resumed(self) -> bool:
         if self.resume_time is None: return False
         else: return True
-    @property
-    async def is_listed(self) -> bool:
-        sel_cmd = f"SELECT counts_towards_playtime FROM APPLICATIONS WHERE app_id='{self.app_id}'"
-        val = await db.execute(sel_cmd)
-        if val == "FALSE": return False
-        return True
-    @property
-    async def emoji(self):
-        first = True
-        sel_cmd = []
-        sel_cmd.append(f"SELECT emoji FROM APPLICATIONS WHERE")
-
-        if type(self.app_id) is list:
-            for id in self.app_id:
-                if first:
-                    sel_cmd.append(f" (app_id='{id[0]}' ")
-                    first = False
-                else:
-                    sel_cmd.append(f"OR app_id='{id[0]}'")
-            sel_cmd.append(") ")
-        else:
-            sel_cmd.append(f" app_id='{self.app_id}' ")
-        
-        sel_cmd.append(f"AND emoji!=':video_game:' LIMIT 1")
-
-        emoji = await db.execute(''.join(sel_cmd))
-        if emoji is None: return ":question:"
-        elif emoji == []: return ":video_game:"
-        return emoji 
     
 
     # Object gets created when activity is started,
@@ -279,15 +229,25 @@ class GameActivity:
     
     '''
 
-
-
-    async def update_session_id(self):
-        sid = self.sesh_id()
-        if self.session_id is not None and sid != self.session_id:
-            self.session_id = sid
-            upd_cmd = (
+    async def refresh(self, activity) -> None:
+        self.last_heartbeat = int(time.time())
+        if activity['session_id'] is not None and self.session_id is not None:
+            self.session_id = activity['session_id']
+            
+            await db.execute(
                 f"UPDATE PLAY_HISTORY SET session_id='{self.session_id}' WHERE "+
-                f"user_id='{self.user.id}' AND app_id='{self.app.id}' AND end_time is NULL AND start_time='{self.start_time}' "+
+                f"user_id='{self.u.user.id}' AND app_id='{self.app.id}' AND end_time is NULL AND start_time='{self.start_time}' "+
                 "ORDER BY start_time DESC LIMIT 1"
             )
-            await db.execute(upd_cmd)
+
+
+    # async def update_session_id(self):
+    #     sid = self.sesh_id()
+    #     if self.session_id is not None and sid != self.session_id:
+    #         self.session_id = sid
+    #         upd_cmd = (
+    #             f"UPDATE PLAY_HISTORY SET session_id='{self.session_id}' WHERE "+
+    #             f"user_id='{self.user.id}' AND app_id='{self.app.id}' AND end_time is NULL AND start_time='{self.start_time}' "+
+    #             "ORDER BY start_time DESC LIMIT 1"
+    #         )
+    #         await db.execute(upd_cmd)

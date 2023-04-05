@@ -3,12 +3,13 @@ import uuid
 import discord
 from discord.ext import commands
 from Database.database_class import AsyncDatabase
+from Presence.GameActivity import GameActivity
 from tunables import tunables
 from discord.ext.commands import Context
 import os
 from dotenv import load_dotenv
-from Presence.playtime import sessions_hash_table
 from Voice.VoiceActivity import VOICE_SESSIONS
+from Presence.Objects import PLAYTIME_SESSIONS
 
 from Presence.playtime import find_type_playing, has_app_id, identify_current_application, sesh_id, start_time
 from misc.misc import get_user_object
@@ -66,17 +67,17 @@ class Debugger(commands.Cog):
                     temp.append(f"> Session ID: `{sesh_id(activity)}`\n")
                     temp.append(f"> Activity Info (Database): `{game}`")
                 
-                sesh = sessions_hash_table.get_val(user.id)
-                if sesh is not None:
-                    st = sesh.get_start
+                for sesh in PLAYTIME_SESSIONS[user.id]:
+                    sesh: GameActivity
+                    st = sesh.start_time
                     temp.append("\n")
                     temp.append(f"\n`GameActivity` Object: `{sesh}`\n")
-                    temp.append(f"> User ID: `{sesh.get_id}`\n")
+                    temp.append(f"> User ID: `{sesh.u.user.id}`\n")
                     temp.append(f"> Start Time: `{st}` { f'<t:{st}:R>' if st is not None else '' }\n")
-                    temp.append(f"> Session ID: `{sesh.get_session_id}`\n")
-                    temp.append(f"> App name/ID: `{sesh.get_app_name}`/`{sesh.get_app_id}`\n")
-                    temp.append(f"> Restored: `{sesh.is_restored}`\n")
-                    temp.append(f"> Resumed: `{sesh.is_resumed}` { f'<t:{sesh.get_resume_time}:R>' if sesh.get_resume_time is not None else '' }")
+                    temp.append(f"> Session ID: `{sesh.session_id}`\n")
+                    temp.append(f"> App name/ID: `{sesh.app.name}`/`{sesh.app.id}`\n")
+                    temp.append(f"> Restored: `{sesh.restored}`\n")
+                    temp.append(f"> Resumed: `{sesh.is_resumed}` { f'<t:{sesh.resume_time}:R>' if sesh.is_resumed else '' }")
 
                 # If active playtime session, print
 
@@ -100,17 +101,22 @@ class Debugger(commands.Cog):
             
             case 'as': # Active playtime sessions
                 temp = []
-                sessions = sessions_hash_table.get_all
-                await ctx.channel.send(f"`{len(sessions)}` active playtime :video_game: sessions")
-                for pair in sessions:
-                    st = pair[0][1].get_start
-                    temp.append(f"\n{pair[0][1].get_user}:\n")
-                    temp.append(f"> User ID: `{pair[0][1].get_id}`\n")
+                print("Wtf")
+                users = PLAYTIME_SESSIONS.items()
+                sessions = user.items()
+                print(sessions)
+                await ctx.channel.send(f"`{len(val)}` active playtime :video_game: sessions")
+                for user_ids, user_sessions in sessions.items():
+                    print(user_sessions)
+                    game: GameActivity
+                    st = game.start_time
+                    temp.append(f"\n{game.u.user}:\n")
+                    temp.append(f"> User ID: `{game.u.user.id}`\n")
                     temp.append(f"> Start Time: `{st}` { f'<t:{st}:R>' if st is not None else '' }\n")
-                    temp.append(f"> Session ID: `{pair[0][1].get_session_id}`\n")
-                    temp.append(f"> App name/ID: `{pair[0][1].get_app_name}`/`{pair[0][1].get_app_id}`\n")
-                    temp.append(f"> Restored: `{pair[0][1].is_restored}`\n")
-                    temp.append(f"> Resumed: `{pair[0][1].is_resumed}` { f'<t:{pair[0][1].get_resume_time}:R>' if pair[0][1].get_resume_time is not None else '' }\n")
+                    temp.append(f"> Session ID: `{game.session_id}`\n")
+                    temp.append(f"> App name/ID: `{game.app.name}`/`{game.app.id}`\n")
+                    temp.append(f"> Restored: `{game.restored}`\n")
+                    temp.append(f"> Resumed: `{game.is_resumed}` { f'<t:{game.resume_time}:R>' if game.is_resumed else '' }\n")
                 await ctx.channel.send(''.join(temp))
             
             case 'va': # Active voice sessions
