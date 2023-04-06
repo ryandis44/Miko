@@ -1,3 +1,4 @@
+import asyncio
 import time
 import discord
 import itertools
@@ -18,8 +19,13 @@ class PresenceUpdate:
         self.restored = restored
     
     async def ainit(self) -> None:
-        if not self.__ensure_unique_update(): return # duplicate detection
-        await self.__determine_update()
+        # if not self.__ensure_unique_update(): return # duplicate detection
+        if await self.__presence_lock():
+            print("Executing...")
+            await self.__determine_update()
+            await self.__presence_lock(release=True)
+            print("lock released")
+            
     
     async def __determine_update(self) -> None:
         if self.b.activities == self.a.activities or self.a.bot: return # Add scrape
@@ -27,6 +33,26 @@ class PresenceUpdate:
         # We know an activity update has happened, create class
         await ActivityUpdate(u=self.u, b=self.b, a=self.a, restored=self.restored).ainit()
     
+    
+    async def __presence_lock(self, release=False) -> bool:
+        val = PRESENCE_UPDATES.get(self.u.user.id)
+        
+        if val is None:
+            if release: return True
+            lock = asyncio.Lock()
+            PRESENCE_UPDATES[self.u.user.id] = {
+                'at': int(time.time()),
+                'lock': lock
+            }
+            return await lock.acquire()
+        
+        if release:
+            val['lock'].release()
+            return True
+
+        # if val['lock'].locked(): return False
+        return await val['lock'].acquire()
+        
     
     '''
     Function responsible for ensuring we do not process duplicate presence
@@ -200,7 +226,7 @@ class ActivityUpdate:
                 if val.app != activity['app']:
                     await self.__end_session(val.app)
                     await self.__create_session(activity)
-            
+                else: print("**DUPLICATE UPDATE DETECTED, doing nothing**")
             
             # If there IS NOT an active Playtime session
             # for this user and this app id
@@ -234,17 +260,17 @@ class ActivityUpdate:
             
             # If not playing
             if b_activity is None and a_activity is not None:
-                # print("**STARTED ACTIVITY**")
+                print("**STARTED ACTIVITY**")
                 await self.__create_session(a_activity)
                 continue
             
             if b_activity is not None and a_activity is None:
-                # print("**STOPPED ACTIVITY**")
+                print("**STOPPED ACTIVITY**")
                 await self.__end_session(b_activity['app'])
                 continue
             
             if b_activity is not None and a_activity is not None:
-                # print("**ACTIVITY HEARTBEAT**")
+                print("**ACTIVITY HEARTBEAT**")
                 if b_activity['app'] == a_activity['app']:
                     
                     # This check is to ensure we are tracking the activity
@@ -256,7 +282,7 @@ class ActivityUpdate:
                 
                 else:
                     # stop b_activity and start a_activity. Activity has changed
-                    # print("**ACTIVITY CHANGED**")
+                    print("**ACTIVITY CHANGED**")
                     await self.__end_session(b_activity['app'])
                     await self.__create_session(a_activity)
                     continue

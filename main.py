@@ -415,7 +415,7 @@ async def on_ready():
     if initial:
         initial = False
         print("\nAttempting to restore playtime sessions...")
-        await fetch_playtime_sessions(client=client)
+        # await fetch_playtime_sessions(client=client)
         print("\nAttempting to restore voicetime sessions...")
         await fetch_voicetime_sessions(client=client)
         print("\n")

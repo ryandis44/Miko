@@ -78,6 +78,7 @@ class GameActivity:
         self.last_heartbeat = self.start_time
     
     async def ainit(self) -> None:
+        print("Ainit...")
         await self.__new_activity_entry()
     @property
     def is_resumed(self) -> bool:
@@ -182,6 +183,7 @@ class GameActivity:
         if val == [] and not attempt >= 5 and self.resume_time is None:
             await self.__new_activity_entry(attempt + 1) # Only try 5 times
         elif attempt >= 5: pass # Entry is dead. Could not communicate with database.
+        print("Database entry made.")
 
 
     # Close activity entry in database and delete object

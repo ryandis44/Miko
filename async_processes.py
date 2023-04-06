@@ -42,6 +42,7 @@ class MaintenanceThread(threading.Thread):
         
         for key in del_list:
             del PRESENCE_UPDATES[key]
+            print(f"Deleted {key}")
 
     def run(self):
         num = -1
