@@ -11,7 +11,6 @@ def equal_tuples(tuple1, tuple2) -> bool:
     
     for i1, i2 in zip(tuple1, tuple2):
         if repr(i1) != repr(i2):
-            # print(f"{i1} DOES NOT EQUAL {i2}")
             return False
     return True
 

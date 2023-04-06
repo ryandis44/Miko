@@ -228,6 +228,7 @@ async def on_guild_update(before: discord.Guild, after: discord.Guild):
     if before.icon != after.icon:
         await regen_guild_emoji(client=client, guild=after)
 
+
 # Playtime
 @client.event
 async def on_presence_update(before: discord.Member, cur: discord.Member):

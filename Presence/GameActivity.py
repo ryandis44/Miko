@@ -194,7 +194,7 @@ class GameActivity:
 
 
     # Close activity entry in database and delete object
-    async def __close_activity_entry(self, keep_sid=False, current_time=None):
+    async def __close_activity_entry(self, keep_sid=True, current_time=None):
         if current_time is None: current_time = int(time.time())
         
         # Unlike 1.0, if a class is made then a database entry has also been made.
@@ -213,7 +213,7 @@ class GameActivity:
 
 
     # Bandaid function for synchronous shutdown
-    def close_activity_entry_synchronous(self, keep_sid=False, current_time=None):
+    def close_activity_entry_synchronous(self, keep_sid=True, current_time=None):
         if current_time is None: current_time = int(time.time())
         
         # Unlike 1.0, if a class is made then a database entry has also been made.

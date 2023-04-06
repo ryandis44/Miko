@@ -41,8 +41,8 @@ class PresenceUpdate:
     
     Time is stored for the 'presence_table_cleanup' function in
     async_processes.py to determine if that update needs to be
-    deleted from cache.
-    - Presence updates older than 1 mintue are automatically deleted.
+    deleted from cache. [Separate thread]
+    - Presence updates older than 15 seconds are automatically deleted.
     '''
     def __ensure_unique_update(self) -> bool:
         try: val = PRESENCE_UPDATES[self.u.user.id]
