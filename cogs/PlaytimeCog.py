@@ -146,11 +146,11 @@ class PlaytimeCog(commands.Cog):
 
         # Handle playtime query
         if playtime_query:
-            if Presence.lower() == "all":
+            if playtime.lower() == "all":
                 part2.append(") ")
             else:
                 regex_pt = r"^[<>]\d{1,5}[smhd]{0,1}$|^all$"
-                if not re.match(regex_pt, Presence.lower()):
+                if not re.match(regex_pt, playtime.lower()):
                     await orig_msg.edit(content=f"Error: Invalid playtime entry `{playtime}`. Examples: `>5m` (greater than 5 minutes), `<5h` (less than 5 hours), `all` returns all results. `<` and `>` are **required**.")
                     return
                 
