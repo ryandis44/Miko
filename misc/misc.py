@@ -6,7 +6,6 @@ from datetime import date, datetime
 
 def equal_tuples(tuple1, tuple2) -> bool:
     if len(tuple1) != len(tuple2):
-        print("LENGTH IS NOT EQUAL")
         return False
     
     for i1, i2 in zip(tuple1, tuple2):
