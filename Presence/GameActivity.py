@@ -62,7 +62,7 @@ db = AsyncDatabase("Presence.GameActivity.py")
 sdb = Database("Presence.GameActivity.py")
 
 class GameActivity:
-    def __init__(self, u, activity, st: int=None) -> None:
+    def __init__(self, u, activity, restored=False) -> None:
         
         self.u = u
         self.activity = activity
@@ -70,21 +70,14 @@ class GameActivity:
         self.session_id = activity['session_id']
         
         self.resume_time = None
-        if st is None:
-            self.restored = False
-            self.start_time = activity['start_time'] if type(activity['start_time']) == int else int(time.time())
-            self.__resume_time_check = int(time.time()) - tunables('THRESHOLD_RESUME_GAME_ACTIVITY')
-        else:
-            self.restored = True
-            self.start_time = st
-            self.__resume_time_check = int(time.time()) - tunables('THRESHOLD_RESUME_REBOOT_GAME_ACTIVITY')
+        self.restored = restored
+        self.start_time = activity['start_time'] if type(activity['start_time']) == int else int(time.time())
+        if not self.restored: self.__resume_time_check = int(time.time()) - tunables('THRESHOLD_RESUME_GAME_ACTIVITY')
+        else: self.__resume_time_check = int(time.time()) - tunables('THRESHOLD_RESUME_REBOOT_GAME_ACTIVITY')
 
         self.last_heartbeat = self.start_time
-            
-        # print("GameActivity object created.")
     
     async def ainit(self) -> None:
-        print("Async init...")
         await self.__new_activity_entry()
     @property
     def is_resumed(self) -> bool:
@@ -106,7 +99,6 @@ class GameActivity:
     # Object gets created when activity is started,
     # so update database accordingly
     async def __new_activity_entry(self, attempt=1):
-        
         # Verify there is not already an entry. If there is, grab it
         sel_cmd = []
         sel_cmd.append(
@@ -190,7 +182,6 @@ class GameActivity:
         if val == [] and not attempt >= 5 and self.resume_time is None:
             await self.__new_activity_entry(attempt + 1) # Only try 5 times
         elif attempt >= 5: pass # Entry is dead. Could not communicate with database.
-        print("Database entry made.")
 
 
     # Close activity entry in database and delete object
@@ -233,6 +224,8 @@ class GameActivity:
 
     async def end(self, keep_sid=True, current_time=None) -> None:
         await self.__close_activity_entry(keep_sid=keep_sid, current_time=current_time)
+        
+        
 
 
     async def refresh(self, activity) -> None:

@@ -3,8 +3,8 @@ import discord
 import uuid
 from discord.utils import get
 from Presence.GameActivity import GameActivity
+from Presence.Objects import ActivityUpdate
 from utils.HashTable import HashTable
-from Database.database import if_not_list_create_list
 from Database.database_class import AsyncDatabase
 from misc.misc import time_elapsed, today
 from tunables import *
@@ -23,107 +23,6 @@ def start_time(activity):
 def sesh_id(activity):
     try: return activity.session_id
     except: return None
-
-async def fetch_playtime_sessions(client):
-    async def restore(member, app_id, i, st):
-        if not tunables('TRACK_PLAYTIME'): return
-        g = GameActivity(member, app_id, i, st)
-        await g.ainit()
-        sessions_hash_table.set_val(member.id, g)
-        return
-
-    sel_cmd = "SELECT value FROM PERSISTENT_VALUES WHERE variable='GLOBAL_REBOOT_TIME_ACTIVITY'"
-    end_time = await db.execute(sel_cmd)
-    if end_time is None:
-        sel_cmd = "SELECT end_time FROM PLAY_HISTORY WHERE end_time!='-1' ORDER BY end_time DESC LIMIT 1"
-        end_time = await db.execute(sel_cmd)
-    
-    if end_time is None or end_time == []:
-        print("Could not fetch a time to restore any playtime sessions.")
-        return
-    
-    sel_cmd = (
-        "SELECT user_id, session_id, app_id, start_time FROM PLAY_HISTORY "+
-        f"WHERE end_time={end_time}"
-    )
-    val = list(await db.execute(sel_cmd))
-    rst = 0
-    t = int(time.time()) - tunables('THRESHOLD_RESUME_REBOOT_GAME_ACTIVITY')
-    
-    # Not very fast, but only way to achieve game session restoration
-    for guild in client.guilds:
-        if val == []: break
-        for member in guild.members:
-            if val == []: break
-            if val != [] and any(str(member.id) in sl for sl in val) and member.activities != ():
-                
-
-                # Find which iteration of val the member.id was matched to
-                outer = 0
-                found = False
-                for i, entry in enumerate(val):
-                    for user in entry:
-                        if user == str(member.id):
-                            found = True
-                            break
-                    if found:
-                        outer = i
-                        break
-                
-                restored = f"> Restored {member}'s playtime session"
-                cur_playing = find_type_playing(member)
-                activity = member.activities[cur_playing[1]]
-                if cur_playing[0]: game = await identify_current_application(activity, has_app_id(activity))
-                else: continue
-                session_id = sesh_id(activity)
-
-                st = start_time(activity)
-
-                # If the current app id is equal to the playtime database entry, continue
-                if game[1] == val[outer][2]:
-                    
-                    # If the (member.)activity has supplied a start time, check if it is equal to the start time of
-                    # the entry we have in our database. If so, restore session.
-                    if st is not None and (st == val[outer][3] or end_time >= t):
-                        if session_id is None:
-                            await restore(member, game[1], cur_playing[1], st)
-                            print(restored)
-                            rst += 1
-                        
-                        # If the (discord provided) session id matches the id
-                        # in the database entry, restore regardless of end time
-                        elif val[outer][1] is not None and session_id == val[outer][1]:
-                            await restore(member, game[1], cur_playing[1], st)
-                            print(restored + f" from Session ID {session_id}")
-                            rst += 1
-
-                    elif st is None:
-
-                        # If we do not have a session id or a start time but 
-                        # the end time is less than 5 minutes ago and the user 
-                        # is playing the same game they were <5 minutes ago, restore
-                        if session_id is None and end_time >= t:
-                            await restore(member, game[1], cur_playing[1], val[outer][3])
-                            print(restored)
-                            rst += 1
-                        
-                        # If the (discord provided) session id matches the id
-                        # in the database entry, restore regardless of end time
-                        elif val[outer][1] is not None and session_id == val[outer][1]:
-                            await restore(member, game[1], cur_playing[1], val[outer][3])
-                            print(restored + f" from Session ID {session_id}")
-                            rst += 1
-                
-                del val[outer] # Done processing this user, delete from memory
-
-    if rst > 0:
-        print(f"Restored {rst} playtime sessions.")
-        print("Playtime session restoration complete.")
-    else: print("No playtime sessions were restored.")
-    return
-
-
-
 
 
 def translate_application_name(name):

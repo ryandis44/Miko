@@ -14,6 +14,10 @@ will update the name of the application if:
     2) The name on discord is different than the database (name change)
 
 '''
+class PartialApplication:
+    def __init__(self) -> None:
+        pass
+
 class Application:
     
     def __init__(self, app):

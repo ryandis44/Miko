@@ -3,6 +3,7 @@ import discord
 import itertools
 from Presence.GameActivity import GameActivity
 from Database.ApplicationObjects import Application
+# from Database.GuildObjects import MikoMember
 from misc.misc import equal_tuples
 
 PRESENCE_UPDATES = {}
@@ -10,10 +11,11 @@ PLAYTIME_SESSIONS = {}
 
 class PresenceUpdate:
     
-    def __init__(self, u, b: discord.Member, a: discord.Member) -> None:
+    def __init__(self, u, b: discord.Member, a: discord.Member, restored=False) -> None:
         self.u = u
         self.b = b # Before presence update
         self.a = a # After presence update
+        self.restored = restored
     
     async def ainit(self) -> None:
         if not self.__ensure_unique_update(): return # duplicate detection
@@ -23,7 +25,7 @@ class PresenceUpdate:
         if self.b.activities == self.a.activities or self.a.bot: return # Add scrape
         
         # We know an activity update has happened, create class
-        await ActivityUpdate(u=self.u, b=self.b, a=self.a).ainit()
+        await ActivityUpdate(u=self.u, b=self.b, a=self.a, restored=self.restored).ainit()
     
     
     '''
@@ -60,6 +62,9 @@ class PresenceUpdate:
         '''
         If duplicate entries are still happening,
         revisit this code
+        
+        IF duplicates are still happening, place this
+        code to be executed AFTER __sort_activities()
         '''
         if equal_tuples(val['b'], self.b.activities) and \
             equal_tuples(val['a'], self.a.activities):
@@ -71,10 +76,11 @@ class PresenceUpdate:
 
 class ActivityUpdate:
     
-    def __init__(self, u, b: discord.Member, a: discord.Member) -> None:
+    def __init__(self, u, b: discord.Member, a: discord.Member, restored=False) -> None:
         self.u = u
         self.b = {'user': b, 'playing': []} # Before presence update
         self.a = {'user': a, 'playing': []} # After presence update
+        self.restored = restored
     
     async def ainit(self) -> None:
         self.__sort_activities()
@@ -171,7 +177,7 @@ class ActivityUpdate:
         # PLAYTIME_SESSIONS
         try: val = PLAYTIME_SESSIONS[self.u.user.id]
         except: val = None
-        g = GameActivity(u=self.u, activity=activity)
+        g = GameActivity(u=self.u, activity=activity, restored=self.restored)
         
         
         # If there IS NOT an active sessions
@@ -228,17 +234,17 @@ class ActivityUpdate:
             
             # If not playing
             if b_activity is None and a_activity is not None:
-                print("**STARTED ACTIVITY**")
+                # print("**STARTED ACTIVITY**")
                 await self.__create_session(a_activity)
                 continue
             
             if b_activity is not None and a_activity is None:
-                print("**STOPPED ACTIVITY**")
+                # print("**STOPPED ACTIVITY**")
                 await self.__end_session(b_activity['app'])
                 continue
             
             if b_activity is not None and a_activity is not None:
-                print("**ACTIVITY HEARTBEAT**")
+                # print("**ACTIVITY HEARTBEAT**")
                 if b_activity['app'] == a_activity['app']:
                     
                     # This check is to ensure we are tracking the activity
@@ -250,9 +256,10 @@ class ActivityUpdate:
                 
                 else:
                     # stop b_activity and start a_activity. Activity has changed
-                    print("**ACTIVITY CHANGED**")
+                    # print("**ACTIVITY CHANGED**")
                     await self.__end_session(b_activity['app'])
                     await self.__create_session(a_activity)
+                    continue
                 
                 
                 

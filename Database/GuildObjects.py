@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import random
 import re
+import copy
 import time
 import discord
 from Database.UserAttributes import Playtime
@@ -11,6 +12,7 @@ from Leveling.LevelClass import LevelClass
 # from Pets.PetClass import PetOwner
 # from Tokens.TokenClass import Token
 from Emojis.emoji_generator import get_emoji_url, get_guild_emoji
+from Presence.Objects import PresenceUpdate
 from misc.embeds import help_embed
 from misc.holiday_roles import get_holiday
 from misc.misc import generate_nickname, react_all_emoji_list, today
@@ -627,7 +629,7 @@ class MikoMember(MikoGuild):
             "SELECT track_playtime FROM USER_SETTINGS WHERE "
             f"user_id='{self.user.id}'"
         )
-        if val == "FALSE" or not tunables('TRACK_PLAYTIME'): return False
+        if val == "FALSE" or not tunables('FEATURE_ENABLED_TRACK_PLAYTIME'): return False
         return True
     @property
     async def public_playtime(self):
@@ -643,7 +645,7 @@ class MikoMember(MikoGuild):
             "SELECT track_voicetime FROM USER_SETTINGS WHERE "
             f"user_id='{self.user.id}'"
         )
-        if val == "FALSE" or not tunables('TRACK_VOICETIME'): return False
+        if val == "FALSE" or not tunables('FEATURE_ENABLED_TRACK_VOICETIME'): return False
         return True
     @property
     async def public_voicetime(self):
@@ -1038,3 +1040,45 @@ class MikoMessage():
                 for emoji in sample_list:
                     await asyncio.sleep(0.5)
                     await self.message.add_reaction(emoji)
+
+
+# Placed here due to circular import
+# Restore playtime sessions after reboot
+async def fetch_playtime_sessions(client: discord.Client) -> None:
+    
+    end_time = await db.execute("SELECT value FROM PERSISTENT_VALUES WHERE variable='GLOBAL_REBOOT_TIME_ACTIVITY'")
+    if end_time is None:
+        end_time = await db.execute("SELECT end_time FROM PLAY_HISTORY WHERE end_time IS NOT NULL ORDER BY end_time DESC LIMIT 1")
+    
+    if end_time is None or end_time == []:
+        print("Could not fetch a time to restore any playtime sessions.")
+        return
+    
+    sel_cmd = (
+        "SELECT user_id, session_id, app_id, start_time FROM PLAY_HISTORY "+
+        f"WHERE end_time={end_time}"
+    )
+    val = list(await db.execute(sel_cmd))
+    sessions_restored = 0
+    
+    # Not very fast, but only way to achieve game session restoration
+    for guild in client.guilds:
+        if val == []: break
+        for member in guild.members:
+            if val == []: break
+            if val != [] and any(str(member.id) in sl for sl in val) and member.activities != ():
+                
+                b = copy.copy(member)
+                b.activities = []
+                app = PresenceUpdate(
+                    u=MikoMember(user=member, client=client),
+                    b=b, a=member, restored=True
+                )
+                await app.ainit()
+                sessions_restored += 1
+                print(f"> Restored {member}'s playtime session")
+
+    if sessions_restored > 0:
+        print(f"Restored {sessions_restored} playtime sessions.")
+        print("Playtime session restoration complete.")
+    else: print("No playtime sessions were restored.")

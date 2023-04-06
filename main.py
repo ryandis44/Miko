@@ -22,14 +22,13 @@ from dpyConsole import Console
 from discord.utils import get
 from discord.ext import commands
 from dotenv import load_dotenv
-from Database.GuildObjects import MikoGuild, MikoMember, MikoMessage
+from Database.GuildObjects import MikoGuild, MikoMember, MikoMessage, fetch_playtime_sessions
 from Emojis.emoji_generator import regen_guild_emoji
 from async_processes import heartbeat, set_async_client, MaintenanceThread
 from utils.HandleInterrupt import interrupt, nullify_restore_time
 from Voice.track_voice import fetch_voicetime_sessions, process_voice_state
 from Database.database import username_hist
 from utils.parse_inventory import check_for_karuta, parse_inventory
-from Presence.playtime import determine_activity, fetch_playtime_sessions
 from Music.LavalinkClient import AUDIO_SESSIONS
 from Polls.UI import active_polls
 
