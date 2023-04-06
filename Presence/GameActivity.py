@@ -69,8 +69,6 @@ class GameActivity:
         self.app: Application = activity['app']
         self.session_id = activity['session_id']
         
-        print(activity['start_time'])
-        
         self.resume_time = None
         if st is None:
             self.restored = False
@@ -87,7 +85,7 @@ class GameActivity:
     
     async def ainit(self) -> None:
         print("Async init...")
-        # await self.__new_activity_entry()
+        await self.__new_activity_entry()
     @property
     def is_resumed(self) -> bool:
         if self.resume_time is None: return False
@@ -161,7 +159,7 @@ class GameActivity:
         # - User was playing a game (for any amount of time) and their
         #   crashes. They restart the game within 10m; resume the original
         #   session
-        elif int(val[0][1]) >= self.__resume_time_check:
+        elif val[0][1] is not None and (int(val[0][1]) >= self.__resume_time_check):
             self.resume_time = self.start_time
             self.start_time = val[0][0]
             upd_cmd = []
@@ -192,6 +190,7 @@ class GameActivity:
         if val == [] and not attempt >= 5 and self.resume_time is None:
             await self.__new_activity_entry(attempt + 1) # Only try 5 times
         elif attempt >= 5: pass # Entry is dead. Could not communicate with database.
+        print("Database entry made.")
 
 
     # Close activity entry in database and delete object
@@ -232,16 +231,9 @@ class GameActivity:
         return
 
 
-    async def end(self, keep_sid=False, current_time=None) -> None:
+    async def end(self, keep_sid=True, current_time=None) -> None:
         await self.__close_activity_entry(keep_sid=keep_sid, current_time=current_time)
 
-
-    '''
-    
-    TODO:
-    - Update session ID
-    
-    '''
 
     async def refresh(self, activity) -> None:
         self.last_heartbeat = int(time.time())

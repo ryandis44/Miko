@@ -367,11 +367,9 @@ async def last_played(user_id, app_id):
     return await db.execute(sel_cmd)
     
 async def playtime_embed(u, limit, updates, playtime=0, avg_session="None", offset=0):
-    current_time = int(time.time())
     playtime_today = await u.playtime.playtime_today
     recent_activity = await u.playtime.recent(limit=limit, offset=offset)
     current = await u.playtime.playing
-    current_game_playtime = None
     num = 1
 
     playtime += current['total']
@@ -392,41 +390,6 @@ async def playtime_embed(u, limit, updates, playtime=0, avg_session="None", offs
     if playtime_today == 0: pttd_str = "`None`"
     else: pttd_str = f"`{time_elapsed(playtime_today, 'h')}`"
     temp.append(f":date: Playtime today: {pttd_str}\n")
-    
-    
-    # elif current['sessions'] != []:
-    #     current_game_playtime = (current_time - currently_playing[1])
-    #     temp_playtime = current_game_playtime + playtime
-    # else:
-    #     temp.append(f":stopwatch: Total playtime: `{time_elapsed(playtime, 'h')}` | `{round(time_elapsed(playtime, 'r'), 1)}h`\n")
-
-
-    # if playtime_today == 0 and not currently_playing[0]:
-    #     temp.append(f":chart_with_upwards_trend: Average Session: `{avg_session}`\n")
-    #     temp.append(f":date: Playtime today: `None`\n\n")
-    # elif currently_playing[0]:
-
-    #     current_day_playtime = 0
-    #     if playtime_today >= 0:
-    #         current_day_playtime = playtime_today
-        
-    #     if currently_playing[1] >= today():
-    #         current_day_playtime += current_time - currently_playing[1]
-    #     else:
-    #         current_day_playtime += current_time - today()
-        
-    #     temp.append(f":stopwatch: Total playtime: `{time_elapsed(temp_playtime, 'h')}` | `{round(time_elapsed(temp_playtime, 'r'), 1)}h`\n")
-    #     temp.append(f":chart_with_upwards_trend: Average Session: `{avg_session}`\n")
-    #     temp.append(f":date: Playtime today: `{time_elapsed(current_day_playtime, 'h')}`")
-    #     temp.append("\n\n")
-    #     if currently_playing[3] == ":question:":
-    #         temp.append(f"`Current game did not provide a valid session ID`\n\n")
-    #     else:
-    #         temp.append(f"{currently_playing[3]} <t:{currently_playing[1]}:R> **{currently_playing[2]}** `{time_elapsed(current_game_playtime, 'h')}` _(current)_\n\n")
-    # else:
-    #     temp.append(f":chart_with_upwards_trend: Average Session: `{avg_session}`\n")
-    #     temp.append(f":date: Playtime today: `{time_elapsed(playtime_today, 'h')}`\n\n")
-    
 
     # Currently playing
     c_len = len(current['sessions'])
@@ -450,6 +413,7 @@ async def playtime_embed(u, limit, updates, playtime=0, avg_session="None", offs
     elif recent_activity is None and current['sessions'] != []:
         temp.append("`No other recent activity.`")
     else:
+        temp.append("_Recent Activity:_\n")
         for item in recent_activity:
             temp.append(f"{item[0]} ")
             temp.append(f"<t:{item[1]}:R> ")
@@ -458,10 +422,10 @@ async def playtime_embed(u, limit, updates, playtime=0, avg_session="None", offs
             num += 1
 
 
-    embed = discord.Embed (
-        title = f'{await u.username} playtime statistics',
-        color = GLOBAL_EMBED_COLOR,
-        description=f"{''.join(temp)}"
+    embed = discord.Embed (color = GLOBAL_EMBED_COLOR, description=f"{''.join(temp)}")
+    embed.set_author(
+        icon_url=await u.user_avatar,
+        name=f"{await u.username} playtime statistics"
     )
     embed.set_thumbnail(url=await u.user_avatar)
     if num > limit: embed.set_footer(text=f"Showing {(offset + 1):,} - {(offset + limit):,} of {updates:,} updates")

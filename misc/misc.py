@@ -1,6 +1,19 @@
 import random
 import discord
+import itertools
 from datetime import date, datetime
+
+
+def equal_tuples(tuple1, tuple2) -> bool:
+    if len(tuple1) != len(tuple2):
+        print("LENGTH IS NOT EQUAL")
+        return False
+    
+    for i1, i2 in zip(tuple1, tuple2):
+        if repr(i1) != repr(i2):
+            # print(f"{i1} DOES NOT EQUAL {i2}")
+            return False
+    return True
 
 # Returns a user ID without <@> i.e. <@221438665749037056> --> 221438665749037056
 def translate_mention(uid):

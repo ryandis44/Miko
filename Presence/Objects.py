@@ -1,8 +1,11 @@
+import time
 import discord
 import itertools
 from Presence.GameActivity import GameActivity
 from Database.ApplicationObjects import Application
+from misc.misc import equal_tuples
 
+PRESENCE_UPDATES = {}
 PLAYTIME_SESSIONS = {}
 
 class PresenceUpdate:
@@ -13,6 +16,7 @@ class PresenceUpdate:
         self.a = a # After presence update
     
     async def ainit(self) -> None:
+        if not self.__ensure_unique_update(): return # duplicate detection
         await self.__determine_update()
     
     async def __determine_update(self) -> None:
@@ -20,6 +24,49 @@ class PresenceUpdate:
         
         # We know an activity update has happened, create class
         await ActivityUpdate(u=self.u, b=self.b, a=self.a).ainit()
+    
+    
+    '''
+    Function responsible for ensuring we do not process duplicate presence
+    updates from users in multiple guilds with Miko.
+    
+    Check a hash (dict) table to see if user has had a presence update
+    recently. If so, pull that update and check if it matches the update
+    being checked. If it does, immediately stop processing this presence
+    update, as it has already been processed.
+    
+    If there is no recent presence update, add the current update to
+    a hash table containing the before and after presence updates, as
+    well as the time we stored it to be used in comparison later.
+    
+    Time is stored for the 'presence_table_cleanup' function in
+    async_processes.py to determine if that update needs to be
+    deleted from cache.
+    - Presence updates older than 1 mintue are automatically deleted.
+    '''
+    def __ensure_unique_update(self) -> bool:
+        try: val = PRESENCE_UPDATES[self.u.user.id]
+        except: val = None
+        
+        if val is None:
+            PRESENCE_UPDATES[self.u.user.id] = {
+                'at': int(time.time()),
+                'b': self.b.activities,
+                'a': self.a.activities
+            }
+            return True
+
+
+        '''
+        If duplicate entries are still happening,
+        revisit this code
+        '''
+        if equal_tuples(val['b'], self.b.activities) and \
+            equal_tuples(val['a'], self.a.activities):
+                return False
+        else:
+            del PRESENCE_UPDATES[self.u.user.id]
+            return self.__ensure_unique_update()
 
 
 class ActivityUpdate:
@@ -41,6 +88,9 @@ class ActivityUpdate:
     #
     # Other activity types would be added
     # here to be sorted.
+    #
+    # This function currently only identifies
+    # 'playing' type activities
     def __sort_activities(self) -> None:
         for b_activity, a_activity in itertools.zip_longest(self.b['user'].activities, self.a['user'].activities):
             b_activity: discord.Activity
@@ -68,7 +118,7 @@ class ActivityUpdate:
         
         '''
         This block of code is responsible for reordering both arrays and ensuring the
-        indexes match eachother.
+        indexes match each other.
         
         i.e.
         arr1 = [{'app': VSCode}, {'app': Minecraft}]
@@ -108,6 +158,7 @@ class ActivityUpdate:
         await self.__get_activity_attributes() # 1.
         await self.__determine_status() # 2. and 3.
         
+        # Debug code to print active applications
         # for i, user in enumerate([self.b, self.a]):
         #     for a in user['playing']:
         #         if a is None: continue
@@ -116,12 +167,12 @@ class ActivityUpdate:
         
     
     async def __create_session(self, activity) -> None:
+        # Initialize sessions dict under user ID in
+        # PLAYTIME_SESSIONS
         try: val = PLAYTIME_SESSIONS[self.u.user.id]
         except: val = None
         g = GameActivity(u=self.u, activity=activity)
         
-        # Initialize sessions dict under user ID in
-        # PLAYTIME_SESSIONS
         
         # If there IS NOT an active sessions
         # list for this user

@@ -24,10 +24,9 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from Database.GuildObjects import MikoGuild, MikoMember, MikoMessage
 from Emojis.emoji_generator import regen_guild_emoji
-from async_processes import heartbeat, set_async_client
+from async_processes import heartbeat, set_async_client, MaintenanceThread
 from utils.HandleInterrupt import interrupt, nullify_restore_time
 from Voice.track_voice import fetch_voicetime_sessions, process_voice_state
-from misc.refresh import RefreshThread
 from Database.database import username_hist
 from utils.parse_inventory import check_for_karuta, parse_inventory
 from Presence.playtime import determine_activity, fetch_playtime_sessions
@@ -48,8 +47,8 @@ client = commands.Bot(command_prefix = [os.getenv('CMD_PREFIX1'), os.getenv('CMD
 console = Console(client)
 running = True
 
-db_class = RefreshThread(client=client)
-db_class.start()
+maintenance = MaintenanceThread()
+maintenance.start()
 
 def thread_kill(one=None, two=None):
     global running
@@ -293,7 +292,6 @@ async def on_message(message: discord.Message):
     
     if message.content.lower().startswith(f"{os.getenv('CMD_PREFIX1')}rt") and await mm.user.bot_permission_level >= 5:
         await message.channel.send("Fetching tunables from database...")
-        db_class.refresh_tunables()
         await tunables_refresh()
         await message.channel.send("Tunables refreshed.")
 
