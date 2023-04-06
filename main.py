@@ -233,15 +233,15 @@ async def on_guild_update(before: discord.Guild, after: discord.Guild):
 @client.event
 async def on_presence_update(before: discord.Member, cur: discord.Member):
     
-    # li = []
-    # li[0] = "hi"
-    # li[1] = "bye"
-    # print(li)
     
     '''
     DONT FORGET TO REMOVE
     '''
-    if cur.guild.id != 890638458211680256 or cur.id != 221438665749037056: return
+    if cur.id != 221438665749037056: return
+    print(f"Presence update: {cur} {cur.guild}")
+    '''
+    DONT FORGET TO REMOVE
+    '''
     
     
     if not running: return

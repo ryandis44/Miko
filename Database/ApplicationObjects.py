@@ -22,13 +22,13 @@ class Application:
     async def ainit(self) -> None:
         await self.__check_database()
         self.__assign_attributes()
-        # update app with discord ID
     
     def __str__(self) -> str:
         return f"Application: {self.name} | {self.id} | {self.emoji}"
 
     def __eq__(self, __value: object) -> bool:
-        return self.id == __value.id
+        try: return self.id == __value.id
+        except: return False
     
     @property
     async def counts_towards_playtime(self) -> bool:

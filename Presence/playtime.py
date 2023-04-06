@@ -366,58 +366,88 @@ async def last_played(user_id, app_id):
     sel_cmd =f"SELECT end_time FROM PLAY_HISTORY WHERE user_id={user_id} AND app_id='{app_id}' AND end_time!=-1 ORDER BY end_time DESC LIMIT 1"
     return await db.execute(sel_cmd)
     
-async def playtime_embed(u, limit, updates, playtime=[], avg_session="None", offset=0):
+async def playtime_embed(u, limit, updates, playtime=0, avg_session="None", offset=0):
     current_time = int(time.time())
-    playtime_today = await u.Presence.playtime_today
-    recent_activity = await u.Presence.recent(limit=limit, offset=offset)
-    currently_playing = await u.Presence.playing
+    playtime_today = await u.playtime.playtime_today
+    recent_activity = await u.playtime.recent(limit=limit, offset=offset)
+    current = await u.playtime.playing
     current_game_playtime = None
     num = 1
 
+    playtime += current['total']
+    playtime_today += current['total']
+
     temp = []
     temp.append(f":pencil: Name: {u.user.mention}\n")
-    if playtime == [] and not currently_playing[0]:
-        temp.append(f"Total playtime: `None`\n")
-    elif currently_playing[0]:
-        if playtime == []:
-            playtime = 0
-        current_game_playtime = (current_time - currently_playing[1])
-        temp_playtime = current_game_playtime + playtime
-    else:
-        temp.append(f":stopwatch: Total playtime: `{time_elapsed(playtime, 'h')}` | `{round(time_elapsed(playtime, 'r'), 1)}h`\n")
+    
+    # Total playtime
+    if playtime == 0: pt_str = "`None`"
+    else: pt_str = f"`{time_elapsed(playtime, 'h')}` | `{round(time_elapsed(playtime, 'r'), 1)}h`"
+    temp.append(f":stopwatch: Total playtime: {pt_str}\n")
+    
+    # Average Session
+    temp.append(f":chart_with_upwards_trend: Average Session: `{avg_session}`\n")
+    
+    # Playtime today
+    if playtime_today == 0: pttd_str = "`None`"
+    else: pttd_str = f"`{time_elapsed(playtime_today, 'h')}`"
+    temp.append(f":date: Playtime today: {pttd_str}\n")
+    
+    
+    # elif current['sessions'] != []:
+    #     current_game_playtime = (current_time - currently_playing[1])
+    #     temp_playtime = current_game_playtime + playtime
+    # else:
+    #     temp.append(f":stopwatch: Total playtime: `{time_elapsed(playtime, 'h')}` | `{round(time_elapsed(playtime, 'r'), 1)}h`\n")
 
 
-    if playtime_today == 0 and not currently_playing[0]:
-        temp.append(f":chart_with_upwards_trend: Average Session: `{avg_session}`\n")
-        temp.append(f":date: Playtime today: `None`\n\n")
-    elif currently_playing[0]:
+    # if playtime_today == 0 and not currently_playing[0]:
+    #     temp.append(f":chart_with_upwards_trend: Average Session: `{avg_session}`\n")
+    #     temp.append(f":date: Playtime today: `None`\n\n")
+    # elif currently_playing[0]:
 
-        current_day_playtime = 0
-        if playtime_today >= 0:
-            current_day_playtime = playtime_today
+    #     current_day_playtime = 0
+    #     if playtime_today >= 0:
+    #         current_day_playtime = playtime_today
         
-        if currently_playing[1] >= today():
-            current_day_playtime += current_time - currently_playing[1]
-        else:
-            current_day_playtime += current_time - today()
+    #     if currently_playing[1] >= today():
+    #         current_day_playtime += current_time - currently_playing[1]
+    #     else:
+    #         current_day_playtime += current_time - today()
         
-        temp.append(f":stopwatch: Total playtime: `{time_elapsed(temp_playtime, 'h')}` | `{round(time_elapsed(temp_playtime, 'r'), 1)}h`\n")
-        temp.append(f":chart_with_upwards_trend: Average Session: `{avg_session}`\n")
-        temp.append(f":date: Playtime today: `{time_elapsed(current_day_playtime, 'h')}`")
-        temp.append("\n\n")
-        if currently_playing[3] == ":question:":
-            temp.append(f"`Current game did not provide a valid session ID`\n\n")
-        else:
-            temp.append(f"{currently_playing[3]} <t:{currently_playing[1]}:R> **{currently_playing[2]}** `{time_elapsed(current_game_playtime, 'h')}` _(current)_\n\n")
-    else:
-        temp.append(f":chart_with_upwards_trend: Average Session: `{avg_session}`\n")
-        temp.append(f":date: Playtime today: `{time_elapsed(playtime_today, 'h')}`\n\n")
+    #     temp.append(f":stopwatch: Total playtime: `{time_elapsed(temp_playtime, 'h')}` | `{round(time_elapsed(temp_playtime, 'r'), 1)}h`\n")
+    #     temp.append(f":chart_with_upwards_trend: Average Session: `{avg_session}`\n")
+    #     temp.append(f":date: Playtime today: `{time_elapsed(current_day_playtime, 'h')}`")
+    #     temp.append("\n\n")
+    #     if currently_playing[3] == ":question:":
+    #         temp.append(f"`Current game did not provide a valid session ID`\n\n")
+    #     else:
+    #         temp.append(f"{currently_playing[3]} <t:{currently_playing[1]}:R> **{currently_playing[2]}** `{time_elapsed(current_game_playtime, 'h')}` _(current)_\n\n")
+    # else:
+    #     temp.append(f":chart_with_upwards_trend: Average Session: `{avg_session}`\n")
+    #     temp.append(f":date: Playtime today: `{time_elapsed(playtime_today, 'h')}`\n\n")
     
-    
-    
-    if recent_activity is None and not currently_playing[0]:
+
+    # Currently playing
+    c_len = len(current['sessions'])
+    if c_len > 1: temp.append("\n_Current Activities:_\n")
+    elif c_len > 0: temp.append("\n_Current Activity:_\n")
+    for session in current['sessions']:
+        session: GameActivity
+        temp.append(
+            f"{session.app.emoji} "
+            f"<t:{session.start_time}:R> "
+            f"**{session.app.name}** "
+            f"`{time_elapsed(session.time_elapsed, 'h')}`\n"
+        )
+
+
+
+
+    temp.append("\n")
+    if recent_activity is None and current['sessions'] == []:
         temp.append("`No recent activity.`")
-    elif recent_activity is None and currently_playing[0]:
+    elif recent_activity is None and current['sessions'] != []:
         temp.append("`No other recent activity.`")
     else:
         for item in recent_activity:

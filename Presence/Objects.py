@@ -1,14 +1,13 @@
 import discord
 import itertools
 from Presence.GameActivity import GameActivity
-from Database.GuildObjects import MikoMember
 from Database.ApplicationObjects import Application
 
 PLAYTIME_SESSIONS = {}
 
 class PresenceUpdate:
     
-    def __init__(self, u: MikoMember, b: discord.Member, a: discord.Member) -> None:
+    def __init__(self, u, b: discord.Member, a: discord.Member) -> None:
         self.u = u
         self.b = b # Before presence update
         self.a = a # After presence update
@@ -25,7 +24,7 @@ class PresenceUpdate:
 
 class ActivityUpdate:
     
-    def __init__(self, u: MikoMember, b: discord.Member, a: discord.Member) -> None:
+    def __init__(self, u, b: discord.Member, a: discord.Member) -> None:
         self.u = u
         self.b = {'user': b, 'playing': []} # Before presence update
         self.a = {'user': a, 'playing': []} # After presence update
@@ -123,33 +122,53 @@ class ActivityUpdate:
         
         # Initialize sessions dict under user ID in
         # PLAYTIME_SESSIONS
+        
+        # If there IS NOT an active sessions
+        # list for this user
         if val is None:
             await g.ainit()
             PLAYTIME_SESSIONS[self.u.user.id] = {
                 'sessions': {activity['app'].id: g}
             }
+        
+        # If there IS an active sessions
+        # list for this user
         else:
             try: val = val['sessions'][activity['app'].id]
             except: pass
+            
+            # If there IS an active Playtime session
+            # for this user and this app id
             if type(val) == GameActivity:
-                print("Type is GameActivity")
-                await self.__end_session(activity)
-                await self.__create_session(activity)
+                if val.app != activity['app']:
+                    await self.__end_session(val.app)
+                    await self.__create_session(activity)
+            
+            
+            # If there IS NOT an active Playtime session
+            # for this user and this app id
             else:
-                print("Type is NOT GameActivity")
                 await g.ainit()
                 PLAYTIME_SESSIONS[self.u.user.id]['sessions'][activity['app'].id] = g
     
-    async def __end_session(self, activity) -> None: pass
+    async def __end_session(self, app: Application) -> None:
+        try: val = PLAYTIME_SESSIONS[self.u.user.id]['sessions'][app.id]
+        except: return
+        val: GameActivity
+        await val.end()
+        del PLAYTIME_SESSIONS[self.u.user.id]['sessions'][app.id]
+        
+        # Cleanup
+        if len(PLAYTIME_SESSIONS[self.u.user.id]['sessions']) == 0:
+            del PLAYTIME_SESSIONS[self.u.user.id]
     
     async def __session_heartbeat(self, activity) -> bool:
-        try: g: GameActivity = PLAYTIME_SESSIONS[self.u.user.id]['session'][activity['app'].id]
+        try: g: GameActivity = PLAYTIME_SESSIONS[self.u.user.id]['sessions'][activity['app'].id]
         except: return False
         await g.refresh(activity)
             
             
             
-    
     async def __determine_status(self) -> None:
         global PLAYTIME_SESSIONS
         
@@ -164,22 +183,25 @@ class ActivityUpdate:
             
             if b_activity is not None and a_activity is None:
                 print("**STOPPED ACTIVITY**")
-                pass # stop
+                await self.__end_session(b_activity['app'])
                 continue
             
-            # if b_activity is not None and a_activity is not None:
-            #     print("**ACTIVITY HEARTBEAT**")
-            #     if b_activity['app'] == a_activity['app']:
+            if b_activity is not None and a_activity is not None:
+                print("**ACTIVITY HEARTBEAT**")
+                if b_activity['app'] == a_activity['app']:
                     
-            #         # This check is to ensure we are tracking the activity
-            #         # that has not changed.
-            #         if not await self.__session_heartbeat(a_activity):
-            #             await self.__create_session(a_activity)
-            #             await self.__session_heartbeat(a_activity)
-            #         continue
+                    # This check is to ensure we are tracking the activity
+                    # that has not changed.
+                    if not await self.__session_heartbeat(a_activity):
+                        await self.__create_session(a_activity)
+                        await self.__session_heartbeat(a_activity)
+                    continue
                 
-                # else:
-                #     pass # stop b_activity and start a_activity. Activity has changed
+                else:
+                    # stop b_activity and start a_activity. Activity has changed
+                    print("**ACTIVITY CHANGED**")
+                    await self.__end_session(b_activity['app'])
+                    await self.__create_session(a_activity)
                 
                 
                 

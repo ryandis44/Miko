@@ -108,9 +108,9 @@ class PlaytimeCog(commands.Cog):
 
         try:
            if not game_query and not sort_query and not playtime_query and not scope_not_user:
-               tup = await u.Presence.total_entries
-               avg = await u.Presence.average_session
-               tot_playtime = await u.Presence.total
+               tup = await u.playtime.total_entries
+               avg = await u.playtime.average_session
+               tot_playtime = await u.playtime.total
                if tup > page_size: view = PlaytimePageSelector(interaction.user, user, page_size, updates=tup,
                    playtime=tot_playtime, avg_session=avg)
                else: view = None

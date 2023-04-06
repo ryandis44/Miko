@@ -6,7 +6,7 @@ from Database.database_class import AsyncDatabase
 db = AsyncDatabase("Database.UserAttributes.py")
 
 #temporary
-from Presence.playtime import sessions_hash_table
+from Presence.Objects import PLAYTIME_SESSIONS
 
 class Playtime:
     def __init__(self, u):
@@ -49,20 +49,33 @@ class Playtime:
     
     # Returns GameActivity object if game found, else None
     @property
-    async def playing(self) -> GameActivity:
-        global sessions_hash_table
-        try:
-            app: GameActivity = sessions_hash_table.get_val(self.u.user.id)
-            if not await app.is_listed: return [False, 1, -1, ":question:"]
+    async def playing(self) -> dict:
+        global PLAYTIME_SESSIONS
+        
+        temp = []
+        total = 0
+        try: pt = PLAYTIME_SESSIONS[self.u.user.id]
+        except: pt = {'sessions': []}
+        
+        for s in pt['sessions']:
+            sesh: GameActivity = pt['sessions'][s]
+            temp.append(sesh)
+            total += sesh.time_elapsed
+        
+        return {'total': total, 'sessions': temp}
+        
+        # try:
+        #     app: GameActivity = sessions_hash_table.get_val(self.u.user.id)
+        #     if not await app.is_listed: return [False, 1, -1, ":question:"]
 
-            return [
-                True,
-                app.start_time,
-                app.act_name,
-                await app.emoji
-            ]
-        except: # If we do not have the session stored in the hash table, we are not tracking it. Don't list
-            return [False, 1, -1, ":question:"]
+        #     return [
+        #         True,
+        #         app.start_time,
+        #         app.act_name,
+        #         await app.emoji
+        #     ]
+        # except: # If we do not have the session stored in the hash table, we are not tracking it. Don't list
+        #     return [False, 1, -1, ":question:"]
     
     # Total number of (listable) playtime sessions
     @property
@@ -87,7 +100,7 @@ class Playtime:
             "SELECT avg FROM AVERAGE_PLAYTIME WHERE "
             f"user_id='{self.u.user.id}'"
         )
-        if val is None or val == []: return "0s"
+        if val is None or val == []: return "None"
         return time_elapsed(int(val), 'h')
     ##########################################
             

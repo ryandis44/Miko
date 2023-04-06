@@ -51,7 +51,7 @@ the activity must "go through" in order to be resumed. Here is the logic:
 
 
 import time
-import discord
+import asyncio
 from Database.database_class import AsyncDatabase, Database
 from Database.ApplicationObjects import Application
 from tunables import *
@@ -69,19 +69,21 @@ class GameActivity:
         self.app: Application = activity['app']
         self.session_id = activity['session_id']
         
+        print(activity['start_time'])
+        
         self.resume_time = None
         if st is None:
             self.restored = False
-            self.start_time = activity['start_time'] if activity['start_time'] is not None else int(time.time())
-            self.resume_time = int(time.time()) - tunables('THRESHOLD_RESUME_GAME_ACTIVITY')
+            self.start_time = activity['start_time'] if type(activity['start_time']) == int else int(time.time())
+            self.__resume_time_check = int(time.time()) - tunables('THRESHOLD_RESUME_GAME_ACTIVITY')
         else:
             self.restored = True
             self.start_time = st
-            self.resume_time = int(time.time()) - tunables('THRESHOLD_RESUME_REBOOT_GAME_ACTIVITY')
+            self.__resume_time_check = int(time.time()) - tunables('THRESHOLD_RESUME_REBOOT_GAME_ACTIVITY')
 
         self.last_heartbeat = self.start_time
             
-        print("GameActivity object created.")
+        # print("GameActivity object created.")
     
     async def ainit(self) -> None:
         print("Async init...")
@@ -90,7 +92,18 @@ class GameActivity:
     def is_resumed(self) -> bool:
         if self.resume_time is None: return False
         else: return True
+    @property
+    def time_elapsed(self) -> int:
+        return int(time.time()) - self.start_time
     
+    
+    # Responsible for ensuring user is still doing activity
+    async def heartbeat(self) -> None:
+        while True:
+            
+            # do something
+            
+            await asyncio.sleep(10)
 
     # Object gets created when activity is started,
     # so update database accordingly
@@ -111,7 +124,7 @@ class GameActivity:
         # if the resume time of the old entry is equal to the start time of the new entry.
         if self.session_id is None: sel_cmd.append(
             f"AND ((start_time='{self.start_time}' OR resume_time='{self.start_time}') "
-            f"OR end_time>='{self.resume_time}') "
+            f"OR end_time>='{self.__resume_time_check}') "
         )
         else: sel_cmd.append(f"AND session_id='{self.session_id}' ")
         sel_cmd.append("LIMIT 1")
@@ -148,7 +161,7 @@ class GameActivity:
         # - User was playing a game (for any amount of time) and their
         #   crashes. They restart the game within 10m; resume the original
         #   session
-        elif int(val[0][1]) >= self.resume_time:
+        elif int(val[0][1]) >= self.__resume_time_check:
             self.resume_time = self.start_time
             self.start_time = val[0][0]
             upd_cmd = []
@@ -182,7 +195,7 @@ class GameActivity:
 
 
     # Close activity entry in database and delete object
-    async def close_activity_entry(self, keep_sid=False, current_time=None):
+    async def __close_activity_entry(self, keep_sid=False, current_time=None):
         if current_time is None: current_time = int(time.time())
         
         # Unlike 1.0, if a class is made then a database entry has also been made.
@@ -219,7 +232,8 @@ class GameActivity:
         return
 
 
-
+    async def end(self, keep_sid=False, current_time=None) -> None:
+        await self.__close_activity_entry(keep_sid=keep_sid, current_time=current_time)
 
 
     '''

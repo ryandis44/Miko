@@ -165,7 +165,7 @@ class Basic(commands.Cog):
         except: user = ctx.author
 
         await ctx.send(
-            content=f"{PLAYTIME_SESSIONS[ctx.author.id]}"
+            content=f"{len(PLAYTIME_SESSIONS[ctx.author.id]['sessions'])}"
         )
 
 

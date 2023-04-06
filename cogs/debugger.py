@@ -67,17 +67,20 @@ class Debugger(commands.Cog):
                     temp.append(f"> Session ID: `{sesh_id(activity)}`\n")
                     temp.append(f"> Activity Info (Database): `{game}`")
                 
-                for sesh in PLAYTIME_SESSIONS[user.id]:
-                    sesh: GameActivity
-                    st = sesh.start_time
+                try: pt = PLAYTIME_SESSIONS[user.id]
+                except: pt = {'sessions': []}
+                for sesh in pt['sessions']:
+                    s = pt['sessions'][sesh]
+                    s: GameActivity
+                    st = s.start_time
                     temp.append("\n")
-                    temp.append(f"\n`GameActivity` Object: `{sesh}`\n")
-                    temp.append(f"> User ID: `{sesh.u.user.id}`\n")
+                    temp.append(f"\n`GameActivity` Object: `{s}`\n")
+                    temp.append(f"> User ID: `{s.u.user.id}`\n")
                     temp.append(f"> Start Time: `{st}` { f'<t:{st}:R>' if st is not None else '' }\n")
-                    temp.append(f"> Session ID: `{sesh.session_id}`\n")
-                    temp.append(f"> App name/ID: `{sesh.app.name}`/`{sesh.app.id}`\n")
-                    temp.append(f"> Restored: `{sesh.restored}`\n")
-                    temp.append(f"> Resumed: `{sesh.is_resumed}` { f'<t:{sesh.resume_time}:R>' if sesh.is_resumed else '' }")
+                    temp.append(f"> Session ID: `{s.session_id}`\n")
+                    temp.append(f"> App name/ID: `{s.app.name}`/`{s.app.id}`\n")
+                    temp.append(f"> Restored: `{s.restored}`\n")
+                    temp.append(f"> Resumed: `{s.is_resumed}` { f'<t:{s.resume_time}:R>' if s.is_resumed else '' }")
 
                 # If active playtime session, print
 
@@ -93,30 +96,28 @@ class Debugger(commands.Cog):
                         temp.append(f"`{guild} ({guild.member_count})`")
                     else: temp.append(f"`{guild} ({guild.member_count})`, ")
                 await ctx.channel.send(''.join(temp))
-                
-            #case 'rs':
-            #    await ctx.channel.send("Attempting to restore sessions...")
-            #    fetch_playtime_sessions(self.client)
-            #    await ctx.channel.send("Active sessions restored.")
-            
+
+
             case 'as': # Active playtime sessions
                 temp = []
-                print("Wtf")
                 users = PLAYTIME_SESSIONS.items()
-                sessions = user.items()
-                print(sessions)
-                await ctx.channel.send(f"`{len(val)}` active playtime :video_game: sessions")
-                for user_ids, user_sessions in sessions.items():
-                    print(user_sessions)
-                    game: GameActivity
-                    st = game.start_time
-                    temp.append(f"\n{game.u.user}:\n")
-                    temp.append(f"> User ID: `{game.u.user.id}`\n")
-                    temp.append(f"> Start Time: `{st}` { f'<t:{st}:R>' if st is not None else '' }\n")
-                    temp.append(f"> Session ID: `{game.session_id}`\n")
-                    temp.append(f"> App name/ID: `{game.app.name}`/`{game.app.id}`\n")
-                    temp.append(f"> Restored: `{game.restored}`\n")
-                    temp.append(f"> Resumed: `{game.is_resumed}` { f'<t:{game.resume_time}:R>' if game.is_resumed else '' }\n")
+                for user_sessions in users:
+                    for i, s in enumerate(user_sessions[1]['sessions']):
+                        # 1 is the value of the key value pair of the dict containing all sessions for this user
+                        # 'sessions' denotes we want sessions
+                        # 's' is the individual session
+                        game: GameActivity = user_sessions[1]['sessions'][s]
+                        st = game.start_time
+                        temp.append(
+                            f"\n{game.u.user} (Activity `{i+1}`):\n"
+                            f"> User ID: `{game.u.user.id}`\n"
+                            f"> Start Time: `{st}` { f'<t:{st}:R>' if st is not None else '' }\n"
+                            f"> Session ID: `{game.session_id}`\n"
+                            f"> App name/ID: `{game.app.name}`/`{game.app.id}`\n"
+                            f"> Restored: `{game.restored}`\n"
+                            f"> Resumed: `{game.is_resumed}` { f'<t:{game.resume_time}:R>' if game.is_resumed else '' }\n"
+                        )
+                await ctx.channel.send(f"`{len(temp)}` active playtime :video_game: sessions")
                 await ctx.channel.send(''.join(temp))
             
             case 'va': # Active voice sessions
