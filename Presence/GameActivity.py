@@ -64,6 +64,8 @@ sdb = Database("Presence.GameActivity.py")
 class GameActivity:
     def __init__(self, u, activity, restored=False) -> None:
         
+        self.test = "Test"
+        
         self.u = u
         self.activity = activity
         self.app: Application = activity['app']
@@ -80,6 +82,8 @@ class GameActivity:
     async def ainit(self) -> None:
         print("Ainit...")
         await self.__new_activity_entry()
+        
+        
     @property
     def is_resumed(self) -> bool:
         if self.resume_time is None: return False
@@ -93,7 +97,7 @@ class GameActivity:
     async def heartbeat(self) -> None:
         while True:
             
-            # do something
+            print(self.test)
             
             await asyncio.sleep(10)
 

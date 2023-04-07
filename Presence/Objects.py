@@ -18,23 +18,37 @@ class PresenceUpdate:
         self.a = a # After presence update
         self.restored = restored
     
+    
+    '''
+    - self.__ensure_unique_update():
+        - Works by ensuring no *duplicate* entries are processed
+        - NO duplicates
+        - Not thoroughly tested, but seems to work very well
+        - Discards duplicate updates so a database call is only
+          made for the first one
+        * Could still allow duplicates, but very very rare
+    
+    - self.__presence_lock():
+        - Works by ensuring all presence updates from an individual
+          user are executed one at a time (in order of being received)
+        - Has duplicates, but dupe detection code works here because
+          each update is processed one at a time per user
+        - Creates calls to the database for every duplicate update
+    
+    '''
     async def ainit(self) -> None:
         # if not self.__ensure_unique_update(): return # duplicate detection
-        if await self.__presence_lock():
-            print("Executing...")
+        async with await self.__presence_lock():
             await self.__determine_update()
-            await self.__presence_lock(release=True)
-            print("lock released")
             
     
     async def __determine_update(self) -> None:
         if self.b.activities == self.a.activities or self.a.bot: return # Add scrape
-        
-        # We know an activity update has happened, create class
+
         await ActivityUpdate(u=self.u, b=self.b, a=self.a, restored=self.restored).ainit()
     
     
-    async def __presence_lock(self, release=False) -> bool:
+    async def __presence_lock(self, release=False) -> asyncio.Lock:
         val = PRESENCE_UPDATES.get(self.u.user.id)
         
         if val is None:
@@ -44,14 +58,9 @@ class PresenceUpdate:
                 'at': int(time.time()),
                 'lock': lock
             }
-            return await lock.acquire()
+            return lock
         
-        if release:
-            val['lock'].release()
-            return True
-
-        # if val['lock'].locked(): return False
-        return await val['lock'].acquire()
+        return val['lock']
         
     
     '''
@@ -210,6 +219,7 @@ class ActivityUpdate:
         # list for this user
         if val is None:
             await g.ainit()
+            g.test = "Turds"
             PLAYTIME_SESSIONS[self.u.user.id] = {
                 'sessions': {activity['app'].id: g}
             }
