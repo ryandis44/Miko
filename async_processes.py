@@ -3,13 +3,15 @@ import asyncio
 import aiohttp
 import discord
 import threading
+from Database.ApplicationObjects import Application
 from Plex.background import end_of_week_int
 from Plex.embeds import plex_multi_embed, plex_upcoming
+from Presence.GameActivity import GameActivity
 from Voice.VoiceActivity import VoiceActivity, VOICE_SESSIONS
 from Database.GuildObjects import MikoMember
 from Database.database_class import AsyncDatabase
 from Polls.UI import active_polls
-from Presence.Objects import PRESENCE_UPDATES
+from Presence.Objects import PRESENCE_UPDATES, PLAYTIME_SESSIONS
 
 from tunables import tunables
 db = AsyncDatabase("async_processes.py")
@@ -42,7 +44,6 @@ class MaintenanceThread(threading.Thread):
         
         for key in del_list:
             del PRESENCE_UPDATES[key]
-            print(f"Deleted {key}")
 
     def run(self):
         num = -1
@@ -62,10 +63,15 @@ async def heartbeat():
         if num % 10 == 0:
             try: await voice_heartbeat()
             except Exception as e: print(f"some shit stopped working idk [voice heartbeat]: {e}")
-
-        if num % 10 == 0:
+            
+            try: await playtime_heartbeat()
+            except Exception as e: print(f"Playtime heartbeat failed: {e}")
+            
+        if num % 60 == 0:
             try: await check_notify()
             except Exception as e: print(f"Plex notify check failed, trying again in 60 seconds...: {e}")
+            
+
 
         # Check if miko is still in guilds
         # if num % 3600 == 0:
@@ -122,3 +128,47 @@ async def check_notify():
                     content=None
                 )
                 except Exception as e: print(e)
+
+
+async def playtime_heartbeat() -> None:
+    if len(PLAYTIME_SESSIONS) == 0: return
+    del_dict = {}
+    users = PLAYTIME_SESSIONS.items()
+    for user_sessions in users:
+        for s in user_sessions[1]['sessions']:
+            game: GameActivity = user_sessions[1]['sessions'][s]
+            
+            still_playing = False
+            for activity in game.u.user.activities:
+                activity: discord.Activity
+                try:
+                    if activity.type is discord.ActivityType.playing:
+                        try: app_id = activity.application_id
+                        except: app_id = None
+                        a = Application(
+                            app={
+                                'name': activity.name,
+                                'app_id': app_id
+                            }
+                        )
+                        await a.ainit()
+                        
+                        if a == game.app:
+                            still_playing = True
+                            break
+                except: pass
+            
+            if not still_playing:
+                val = del_dict.get(game.u.user.id)
+                if val is None:
+                    del_dict[game.u.user.id] = [game]
+                else: val.append(game)
+                
+    
+    for user_id, sessions in del_dict.items():
+        for session in sessions:
+            session: GameActivity
+            await session.end()
+            del PLAYTIME_SESSIONS[user_id]['sessions'][session.app.id]
+            if len(PLAYTIME_SESSIONS[user_id]['sessions']) == 0:
+                del PLAYTIME_SESSIONS[user_id]

@@ -231,30 +231,12 @@ async def on_guild_update(before: discord.Guild, after: discord.Guild):
 # Playtime
 @client.event
 async def on_presence_update(before: discord.Member, cur: discord.Member):
-    
-    
-    '''
-    DONT FORGET TO REMOVE
-    '''
-    if cur.id != 221438665749037056: return
-    print(f"Presence update: {cur} {cur.guild}")
-    '''
-    DONT FORGET TO REMOVE
-    '''
-    
-    
     if not running: return
     u = MikoMember(user=cur, client=client)
     await u.ainit()
     await u.increment_statistic('PRESENCE_UPDATES')
-    # if (await u.profile).feature_enabled('TRACK_PLAYTIME') != 1: return
-
     p = PresenceUpdate(u=u, b=before, a=cur)
     await p.ainit()
-
-    return
-    if cur.bot: return
-    await determine_activity(before, cur, u)
 
 
 # Voicetime
@@ -415,7 +397,7 @@ async def on_ready():
     if initial:
         initial = False
         print("\nAttempting to restore playtime sessions...")
-        # await fetch_playtime_sessions(client=client)
+        await fetch_playtime_sessions(client=client)
         print("\nAttempting to restore voicetime sessions...")
         await fetch_voicetime_sessions(client=client)
         print("\n")

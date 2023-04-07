@@ -1,14 +1,29 @@
 '''
 PLAYTIME ACTIVITY TRACKING 3.0
 
+Changes since 2.0:
+    - Session ID is now only used to resume playtime sessions when the bot restarts
+      for sessions with a session ID but no start time. Last resort.
+    - Decluttered code
+    - end_time and session_id are updated during all resumes
+    - end_time is set to NULL when a session is active instead of -1
+    - Got rid of HashMap for storing playtime sessions, now using builtin Python global dict
 
+New to 3.0:
+    - All games/apps are now stored in an 'Application' object and are accessed
+      through the self.app variable
+    - Playtime tracking relies on presence updates, and Miko receives a presence update
+      for each member for every server it is in. So if one person is in 5 servers with
+      Miko, Miko will receive 5 identical updates for that user. This led to duplicate
+      entries in 2.0, this has been fixed in 3.0.
+    - Multiple activity tracking. Miko can track multiple activities simultaneously now.
+    - Resuming sessions after reboot now go through PresenceUpdate and will be processed
+      like any other presence update.
+    - Sessions can be started/resumed/updated during every presence update
 
 '''
-
-
-''' 
-**DEPRECIATED DOCUMENTATION**
-
+#####################################################################################################
+'''
 Playtime activity tracking 2.0
 
 This class handles all playtime tracking. The purpose of this class is to optimize storing, tracking,
@@ -64,8 +79,6 @@ sdb = Database("Presence.GameActivity.py")
 class GameActivity:
     def __init__(self, u, activity, restored=False) -> None:
         
-        self.test = "Test"
-        
         self.u = u
         self.activity = activity
         self.app: Application = activity['app']
@@ -80,7 +93,6 @@ class GameActivity:
         self.last_heartbeat = self.start_time
     
     async def ainit(self) -> None:
-        print("Ainit...")
         await self.__new_activity_entry()
         
         
@@ -92,14 +104,6 @@ class GameActivity:
     def time_elapsed(self) -> int:
         return int(time.time()) - self.start_time
     
-    
-    # Responsible for ensuring user is still doing activity
-    async def heartbeat(self) -> None:
-        while True:
-            
-            print(self.test)
-            
-            await asyncio.sleep(10)
 
     # Object gets created when activity is started,
     # so update database accordingly
@@ -107,34 +111,43 @@ class GameActivity:
         # Verify there is not already an entry. If there is, grab it
         sel_cmd = []
         sel_cmd.append(
-            "SELECT start_time,end_time,resume_time FROM PLAY_HISTORY WHERE "
+            "SELECT start_time,end_time,resume_time,session_id FROM PLAY_HISTORY WHERE "
             f"user_id='{self.u.user.id}' AND app_id='{self.app.id}' " 
         )
 
-        # Session ID > Start time; Session ID guarantees identifying a unique session over a session start time
+
+        # SESSION ID IS ONLY USEFUL FOR WHEN MIKO RESTARTS AND WE NEED TO RESTART A PLAYTIME SESSION
+        # THAT DOES NOT HAVE A START TIME BUT HAS A SESSION ID. that is all.
+        #
         # If the user starts a new session of the same game they stopped playing 10>= minutes ago, resume that
         # session.
         #
         # Resume time and start time are using self.start_time because an entry can be ended and resumed
         # if the resume time of the old entry is equal to the start time of the new entry.
-        if self.session_id is None: sel_cmd.append(
+        if self.session_id is not None:
+            session_id_check = f" OR session_id='{self.session_id}')"
+        else: session_id_check = ")"
+        sel_cmd.append(
             f"AND ((start_time='{self.start_time}' OR resume_time='{self.start_time}') "
-            f"OR end_time>='{self.__resume_time_check}') "
+            f"OR end_time>='{self.__resume_time_check}'{session_id_check} "
         )
-        else: sel_cmd.append(f"AND session_id='{self.session_id}' ")
-        sel_cmd.append("LIMIT 1")
+        sel_cmd.append("ORDER BY start_time DESC LIMIT 1")
         
+        # For if, elif, else below
+        if self.session_id is not None:
+            session_id_check = f"'{self.session_id}'"
+        else: session_id_check = "NULL"
+        
+
         val = await db.execute(''.join(sel_cmd))
         if val != []: self.resume_time = val[0][2]
+        
+        # New entry
         if val == []:
-            ins_cmd = []
-            ins_cmd.append(f"INSERT INTO PLAY_HISTORY (user_id, app_id, start_time")
-            if self.session_id is not None: ins_cmd.append(", session_id) ")
-            else: ins_cmd.append(") ")
-            ins_cmd.append(f" VALUES ('{self.u.user.id}', '{self.app.id}', '{self.start_time}'")
-            if self.session_id is not None: ins_cmd.append(f", '{self.session_id}')")
-            else: ins_cmd.append(")")
-            await db.execute(''.join(ins_cmd))
+            await db.execute(
+                f"INSERT INTO PLAY_HISTORY (user_id, app_id, start_time, session_id) VALUES "
+                f"('{self.u.user.id}', '{self.app.id}', '{self.start_time}', {session_id_check})"
+            )
             
         # If start time is the same, resume
         #
@@ -144,10 +157,10 @@ class GameActivity:
         #   Using the start time, we can accurately resume the same session within
         #   miko
         elif int(val[0][0]) == self.start_time:
-            upd_cmd = []
-            upd_cmd.append(f"UPDATE PLAY_HISTORY SET end_time=NULL WHERE user_id='{self.u.user.id}' AND app_id='{self.app.id}' AND start_time='{self.start_time}'")
-            if self.session_id is not None: upd_cmd.append(f" AND session_id='{self.session_id}'")
-            await db.execute(''.join(upd_cmd))
+            await db.execute(
+                f"UPDATE PLAY_HISTORY SET end_time=NULL, session_id={session_id_check} "
+                f"WHERE user_id='{self.u.user.id}' AND app_id='{self.app.id}' AND start_time='{self.start_time}' "
+            )
         
         # Resume if ended 10m>= ago
         # If the row has an end time that ended less than 5m ago
@@ -159,11 +172,10 @@ class GameActivity:
         elif val[0][1] is not None and (int(val[0][1]) >= self.__resume_time_check):
             self.resume_time = self.start_time
             self.start_time = val[0][0]
-            upd_cmd = []
-            upd_cmd.append(f"UPDATE PLAY_HISTORY SET end_time=NULL, resume_time='{self.resume_time}'")
-            if self.session_id is not None: upd_cmd.append(f", session_id='{self.session_id}'")
-            upd_cmd.append(f" WHERE user_id='{self.u.user.id}' AND app_id='{self.app.id}' AND start_time='{self.start_time}'")
-            await db.execute(''.join(upd_cmd))
+            await db.execute(
+                f"UPDATE PLAY_HISTORY SET end_time=NULL, resume_time='{self.resume_time}', session_id={session_id_check} "
+                f"WHERE user_id='{self.u.user.id}' AND app_id='{self.app.id}' AND start_time='{self.start_time}'"
+            )
         
         # Resume if resume_time is equal to start time
         # If our resume time equals the start time of the current activity
@@ -173,25 +185,36 @@ class GameActivity:
         #   hid their online status for more than 10m. This prevents creating
         #   a duplicate session that would start before the last (resumed)
         #   session ended
-        elif int(val[0][2]) == self.start_time:
+        elif val[0][2] is not None and int(val[0][2]) == self.start_time:
             self.resume_time = self.start_time
             self.start_time = val[0][0]
-            upd_cmd = []
-            upd_cmd.append(f"UPDATE PLAY_HISTORY SET end_time=NULL WHERE user_id='{self.u.user.id}' AND app_id='{self.app.id}' AND start_time='{self.start_time}'")
-            if self.session_id is not None: upd_cmd.append(f" AND session_id='{self.session_id}'")
-            await db.execute(''.join(upd_cmd))
+            await db.execute(
+                f"UPDATE PLAY_HISTORY SET end_time=NULL, session_id={session_id_check} WHERE user_id='{self.u.user.id}' "
+                f"AND app_id='{self.app.id}' AND start_time='{self.start_time}' AND session_id='{self.session_id}'"
+            )
+        
+        # Create new session if session ID is same but start time is different
+        #
+        # Example case:
+        # - Discord API screws you over and hands an already used session ID to
+        #   the same user for completely different sessions, and sometimes even
+        #   completely different games.
+        elif val[0][3] is not None and (val[0][3] == self.session_id and val[0][0] != self.start_time):
+            await db.execute(
+                "INSERT INTO PLAY_HISTORY (user_id, app_id, start_time, session_id) VALUES "
+                f"('{self.u.user.id}', '{self.app.id}', '{self.start_time}', '{self.session_id}')"
+            )
 
 
         # Verify a database entry has been made. If not, recurse and try again.
         val = await db.execute(''.join(sel_cmd))
         if val == [] and not attempt >= 5 and self.resume_time is None:
             await self.__new_activity_entry(attempt + 1) # Only try 5 times
-        elif attempt >= 5: pass # Entry is dead. Could not communicate with database.
-        print("Database entry made.")
+        elif attempt >= 5: return # Entry is dead. Could not communicate with database.
 
 
     # Close activity entry in database and delete object
-    async def __close_activity_entry(self, keep_sid=True, current_time=None):
+    async def __close_activity_entry(self, keep_sid=False, current_time=None):
         if current_time is None: current_time = int(time.time())
         
         # Unlike 1.0, if a class is made then a database entry has also been made.
@@ -210,7 +233,7 @@ class GameActivity:
 
 
     # Bandaid function for synchronous shutdown
-    def close_activity_entry_synchronous(self, keep_sid=True, current_time=None):
+    def close_activity_entry_synchronous(self, keep_sid=False, current_time=None):
         if current_time is None: current_time = int(time.time())
         
         # Unlike 1.0, if a class is made then a database entry has also been made.
@@ -228,7 +251,7 @@ class GameActivity:
         return
 
 
-    async def end(self, keep_sid=True, current_time=None) -> None:
+    async def end(self, keep_sid=False, current_time=None) -> None:
         await self.__close_activity_entry(keep_sid=keep_sid, current_time=current_time)
         
         
@@ -244,15 +267,3 @@ class GameActivity:
                 f"user_id='{self.u.user.id}' AND app_id='{self.app.id}' AND end_time is NULL AND start_time='{self.start_time}' "+
                 "ORDER BY start_time DESC LIMIT 1"
             )
-
-
-    # async def update_session_id(self):
-    #     sid = self.sesh_id()
-    #     if self.session_id is not None and sid != self.session_id:
-    #         self.session_id = sid
-    #         upd_cmd = (
-    #             f"UPDATE PLAY_HISTORY SET session_id='{self.session_id}' WHERE "+
-    #             f"user_id='{self.user.id}' AND app_id='{self.app.id}' AND end_time is NULL AND start_time='{self.start_time}' "+
-    #             "ORDER BY start_time DESC LIMIT 1"
-    #         )
-    #         await db.execute(upd_cmd)

@@ -234,9 +234,8 @@ class ActivityUpdate:
             # for this user and this app id
             if type(val) == GameActivity:
                 if val.app != activity['app']:
-                    await self.__end_session(val.app)
+                    await self.__end_session(val.activity)
                     await self.__create_session(activity)
-                else: print("**DUPLICATE UPDATE DETECTED, doing nothing**")
             
             # If there IS NOT an active Playtime session
             # for this user and this app id
@@ -244,12 +243,15 @@ class ActivityUpdate:
                 await g.ainit()
                 PLAYTIME_SESSIONS[self.u.user.id]['sessions'][activity['app'].id] = g
     
-    async def __end_session(self, app: Application) -> None:
-        try: val = PLAYTIME_SESSIONS[self.u.user.id]['sessions'][app.id]
-        except: return
+    async def __end_session(self, activity) -> None:
+        try: val = PLAYTIME_SESSIONS[self.u.user.id]['sessions'][activity['app'].id]
+        except:
+            await self.__create_session(activity)
+            await self.__end_session(activity)
+            return
         val: GameActivity
         await val.end()
-        del PLAYTIME_SESSIONS[self.u.user.id]['sessions'][app.id]
+        del PLAYTIME_SESSIONS[self.u.user.id]['sessions'][activity['app'].id]
         
         # Cleanup
         if len(PLAYTIME_SESSIONS[self.u.user.id]['sessions']) == 0:
@@ -270,17 +272,14 @@ class ActivityUpdate:
             
             # If not playing
             if b_activity is None and a_activity is not None:
-                print("**STARTED ACTIVITY**")
                 await self.__create_session(a_activity)
                 continue
             
             if b_activity is not None and a_activity is None:
-                print("**STOPPED ACTIVITY**")
-                await self.__end_session(b_activity['app'])
+                await self.__end_session(b_activity)
                 continue
             
             if b_activity is not None and a_activity is not None:
-                print("**ACTIVITY HEARTBEAT**")
                 if b_activity['app'] == a_activity['app']:
                     
                     # This check is to ensure we are tracking the activity
@@ -292,8 +291,7 @@ class ActivityUpdate:
                 
                 else:
                     # stop b_activity and start a_activity. Activity has changed
-                    print("**ACTIVITY CHANGED**")
-                    await self.__end_session(b_activity['app'])
+                    await self.__end_session(b_activity)
                     await self.__create_session(a_activity)
                     continue
                 
@@ -311,6 +309,7 @@ class ActivityUpdate:
                 except: app['start_time'] = None
                 try: app['session_id'] = str(app['activity'].session_id)
                 except: app['session_id'] = None
+                if app['session_id'] == "None": app['session_id'] = None
                 try: app['name'] = str(app['activity'].name)
                 except: app['name'] = None
                 try: app['app_id'] = str(app['activity'].application_id)

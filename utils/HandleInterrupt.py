@@ -25,7 +25,7 @@ def interrupt() -> None:
             # 'sessions' denotes we want sessions
             # 's' is the individual session
             game = user_sessions[1]['sessions'][s]
-            game.close_activity_entry_synchronous(current_time=current_time)
+            game.close_activity_entry_synchronous(current_time=current_time, keep_sid=True)
             playtime_sessions += 1
             print(f"> Ended {game.u.user}'s playtime session.")
     print(f"[1/2] Ended {playtime_sessions} playtime sessions.")
