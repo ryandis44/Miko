@@ -33,7 +33,7 @@ class Playtime:
             "FROM PLAY_HISTORY AS ph "
             "INNER JOIN APPLICATIONS AS a ON "
             "(ph.app_id=a.app_id AND counts_towards_playtime!='FALSE') "
-            f"WHERE ph.user_id={self.u.user.id} AND ph.end_time!=-1 AND ph.end_time>={today()} AND (ph.end_time - ph.start_time)>={tunables('THRESHOLD_LIST_GAME_ACTIVITY')} "
+            f"WHERE ph.user_id={self.u.user.id} AND ph.end_time IS NOT NULL AND ph.end_time>={today()} AND (ph.end_time - ph.start_time)>={tunables('THRESHOLD_LIST_GAME_ACTIVITY')} "
             f"AND ph.start_time<{today()}"
         )
         playtime_after_midnight = await db.execute(
@@ -41,7 +41,7 @@ class Playtime:
             "FROM PLAY_HISTORY AS ph "
             "INNER JOIN APPLICATIONS AS a ON "
             f"(ph.app_id=a.app_id AND counts_towards_playtime!='FALSE') AND (ph.end_time - ph.start_time)>={tunables('THRESHOLD_LIST_GAME_ACTIVITY')} "
-            f"WHERE user_id={self.u.user.id} AND end_time!=-1 AND start_time>={today()}"
+            f"WHERE user_id={self.u.user.id} AND end_time IS NOT NULL AND start_time>={today()}"
         )
         if playtime_after_midnight is None: playtime_after_midnight = 0
         if playtime_before_midnight is None: playtime_before_midnight = 0
@@ -72,7 +72,7 @@ class Playtime:
             "FROM PLAY_HISTORY AS ph "
             "INNER JOIN APPLICATIONS AS a ON "
             "(ph.app_id=a.app_id AND counts_towards_playtime!='FALSE') "
-            f"WHERE ph.user_id={self.u.user.id} AND ph.end_time!=-1 AND (ph.end_time - ph.start_time)>={tunables('THRESHOLD_LIST_GAME_ACTIVITY')} "
+            f"WHERE ph.user_id={self.u.user.id} AND ph.end_time IS NOT NULL AND (ph.end_time - ph.start_time)>={tunables('THRESHOLD_LIST_GAME_ACTIVITY')} "
             ") AS q"
         )
         if val is None or val == []: return 0
@@ -98,7 +98,7 @@ class Playtime:
             "FROM PLAY_HISTORY AS ph "
             "INNER JOIN APPLICATIONS AS a ON "
             "(ph.app_id=a.app_id AND counts_towards_playtime!='FALSE') "
-            f"WHERE ph.user_id={self.u.user.id} AND ph.end_time!=-1 AND (ph.end_time - ph.start_time)>={tunables('THRESHOLD_LIST_GAME_ACTIVITY')} "
+            f"WHERE ph.user_id={self.u.user.id} AND ph.end_time IS NOT NULL AND (ph.end_time - ph.start_time)>={tunables('THRESHOLD_LIST_GAME_ACTIVITY')} "
             f"ORDER BY ph.end_time DESC LIMIT {limit} OFFSET {offset}"
         )
         if val is None or val == []: return None
@@ -109,7 +109,7 @@ class Playtime:
     async def last_played(self, app_id) -> int:
         val = await db.execute(
             f"SELECT end_time FROM PLAY_HISTORY WHERE "
-            f"user_id={self.u.user.id} AND app_id='{app_id}' AND end_time!=-1 "
+            f"user_id={self.u.user.id} AND app_id='{app_id}' AND end_time IS NOT NULL "
             "ORDER BY end_time DESC LIMIT 1"
         )
         if val is None or val == []: return 0
