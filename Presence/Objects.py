@@ -48,11 +48,10 @@ class PresenceUpdate:
         await ActivityUpdate(u=self.u, b=self.b, a=self.a, restored=self.restored).ainit()
     
     
-    async def __presence_lock(self, release=False) -> asyncio.Lock:
+    async def __presence_lock(self) -> asyncio.Lock:
         val = PRESENCE_UPDATES.get(self.u.user.id)
         
         if val is None:
-            if release: return True
             lock = asyncio.Lock()
             PRESENCE_UPDATES[self.u.user.id] = {
                 'at': int(time.time()),
@@ -60,6 +59,7 @@ class PresenceUpdate:
             }
             return lock
         
+        val['at'] = int(time.time())
         return val['lock']
         
     

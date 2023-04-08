@@ -8,7 +8,7 @@ from Plex.background import end_of_week_int
 from Plex.embeds import plex_multi_embed, plex_upcoming
 from Presence.GameActivity import GameActivity
 from Voice.VoiceActivity import VoiceActivity, VOICE_SESSIONS
-from Database.GuildObjects import MikoMember
+from Database.GuildObjects import MikoMember, CHECK_LOCK
 from Database.database_class import AsyncDatabase
 from Polls.UI import active_polls
 from Presence.Objects import PRESENCE_UPDATES, PLAYTIME_SESSIONS
@@ -34,28 +34,29 @@ class MaintenanceThread(threading.Thread):
     def stopped(self):
         return self._stop.isSet()
 
-    def presence_table_cleanup(self) -> None:
-        if len(PRESENCE_UPDATES) == 0: return
-        t = int(time.time())
-        del_list = []
-        for key, update in PRESENCE_UPDATES.items():
-            if update['at'] < t - 15:
-                del_list.append(key)
-        
-        for key in del_list:
-            del PRESENCE_UPDATES[key]
-
     def run(self):
         num = -1
         while True:
 
             if num % 10 == 0:
-                try: self.presence_table_cleanup()
+                try:
+                    for table in [PRESENCE_UPDATES, CHECK_LOCK]: lock_table_cleanup(table=table)
                 except Exception as e: print(f"Presence table cleanup failed: {e}")
             
             if num >= 1000: num = 0
             num += 1
             time.sleep(1)
+
+def lock_table_cleanup(table: dict) -> None:
+        if len(table) == 0: return
+        t = int(time.time())
+        del_list = []
+        for key, update in table.items():
+            if update['at'] < t - 15:
+                del_list.append(key)
+        
+        for key in del_list:
+            del table[key]
 
 async def heartbeat():
     num = 1

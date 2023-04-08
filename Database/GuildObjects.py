@@ -19,6 +19,22 @@ from misc.misc import generate_nickname, react_all_emoji_list, today
 from tunables import *
 ago = AsyncDatabase("Database.GuildObjects.py")
 
+CHECK_LOCK = {}
+
+def check_lock(key) -> asyncio.Lock:
+        val = CHECK_LOCK.get(key)
+        
+        if val is None:
+            lock = asyncio.Lock()
+            CHECK_LOCK[key] = {
+                'at': int(time.time()),
+                'lock': lock
+            }
+            return lock
+        
+        val['at'] = int(time.time())
+        return val['lock']
+
 class MikoGuild():
 
     def __init__(self, guild: discord.Guild, client: discord.Client, guild_id: int = None, check_exists=True, check_exists_guild=True):
@@ -28,7 +44,8 @@ class MikoGuild():
         self.log_channel = client.get_channel(1073509692363517962) # miko-logs channel in The Boys Hangout
 
     async def ainit(self, check_exists: bool = True):
-        if check_exists: await self.__exists()
+        async with check_lock(key=self.guild.id):
+            if check_exists: await self.__exists()
 
     def __str__(self):
         return f"{self.guild} | MikoGuild Object"
@@ -378,8 +395,9 @@ class MikoTextChannel(MikoGuild):
         self.channel = channel
 
     async def ainit(self, check_exists: bool = True, check_exists_guild: bool = True):
-        if check_exists_guild: await super().ainit(check_exists=check_exists_guild)
-        if check_exists: await self.__exists()
+        async with check_lock(key=self.channel.id):
+            if check_exists_guild: await super().ainit(check_exists=check_exists_guild)
+            if check_exists: await self.__exists()
 
     @property
     async def is_private(self) -> bool:
@@ -468,8 +486,9 @@ class MikoMember(MikoGuild):
         self.greeting_task = None
     
     async def ainit(self, check_exists: bool = True, check_exists_guild: bool = True):
-        await super().ainit(check_exists=check_exists_guild)
-        if check_exists and not self.user.pending: await self.__exists()
+        async with check_lock(key=self.user.id):
+            await super().ainit(check_exists=check_exists_guild)
+            if check_exists and not self.user.pending: await self.__exists()
 
     def __str__(self):
         return f"{self.user} - {self.guild} | MikoMember Object"
@@ -695,13 +714,15 @@ class MikoMember(MikoGuild):
                 if channel is not None:
                     await asyncio.sleep(1) # To ensure welcome message is sent after join message
                     await channel.send(
-                        f'Hi {self.user.mention}, welcome{" BACK" if not new else ""} to {self.guild}! :tada:\n'
-                        f'> You are unique member `#{await self.member_number}`'
+                        content=(
+                            f'Hi {self.user.mention}, welcome{" BACK" if not new else ""} to {self.guild}! :tada:\n'
+                            f'> You are unique member `#{await self.member_number}`'
+                        ), silent=True
                     )
                 else: print(f"\n\n**************************\nCOULD NOT SEND WELCOME MESSAGE FOR {self.user}\n**************************\n\n")
                 
                 '''
-                As of 12/11/2022, we will no longer assign the 'Bro'
+                As of 12/11/2022, we will no longer assign the 'OG Bro'
                 role to new users at join. [theboyshangout]
                 '''
 
@@ -720,6 +741,15 @@ class MikoMember(MikoGuild):
 
                 lifeguard = self.guild.get_role(1060366318462828574)
                 if not self.user.bot: await self.user.add_roles(lifeguard)
+            
+            case "DEBUG":
+                channel = self.guild.system_channel
+                if channel is not None:
+                    await channel.send(
+                        content=(
+                            f"Welcome {self.user} {await self.member_number}"
+                        ), silent=True
+                    )
 
     # async def handle_member_leave(self) -> None: pass
 
@@ -880,6 +910,7 @@ class MikoMessage():
         self.message = message
     
     async def ainit(self):
+        # No lock because messages are unique
         await self.user.ainit()
         await self.channel.ainit(check_exists_guild=False)
         await self.__exists()
