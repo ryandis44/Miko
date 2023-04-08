@@ -754,11 +754,13 @@ class MikoMember(MikoGuild):
     # async def handle_member_leave(self) -> None: pass
 
     async def __handle_new_member(self) -> None:
-        if self.user.id == self.client.user.id: return
+        if self.user.id == self.client.user.id or \
+            (await self.profile).feature_enabled('GREET_NEW_MEMBERS') != 1: return
         await self.__new_member_greeting()
     
     async def __handle_returning_member(self) -> None:
-        if self.user.id == self.client.user.id: return
+        if self.user.id == self.client.user.id or \
+            (await self.profile).feature_enabled('GREET_NEW_MEMBERS') != 1: return
         await self.__new_member_greeting(new=False)
 
 
@@ -779,22 +781,21 @@ class MikoMember(MikoGuild):
             f"\"{self.user}\")"
         )
         await ago.execute(ins_cmd)
-        await self.__handle_new_member() # new member
         print(f"Added user {self.user.id} ({self.user}) in guild {self.guild} ({self.guild.id}) to database")
 
 
         # Unique number handling
-        sel_cmd = (
+        val = await ago.execute(
             "SELECT unique_number FROM USERS WHERE "
             f"server_id='{self.guild.id}' ORDER BY unique_number DESC LIMIT 1"
         )
-        val = await ago.execute(sel_cmd)
         if val == [] or val is None: return
-        upd_cmd = (
+        await ago.execute(
             f"UPDATE USERS SET unique_number={int(val)+1} WHERE user_id='{self.user.id}' "
             f"AND server_id='{self.guild.id}'"
         )
-        await ago.execute(upd_cmd)
+        
+        await self.__handle_new_member() # new member
     
     async def __settings_exist(self):
         rows = await ago.execute(f"SELECT * FROM USER_SETTINGS WHERE user_id='{self.user.id}'")
