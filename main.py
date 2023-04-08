@@ -27,7 +27,6 @@ from Emojis.emoji_generator import regen_guild_emoji
 from async_processes import heartbeat, set_async_client, MaintenanceThread
 from utils.HandleInterrupt import interrupt, nullify_restore_time
 from Voice.track_voice import fetch_voicetime_sessions, process_voice_state
-from Database.database import username_hist
 from utils.parse_inventory import check_for_karuta, parse_inventory
 from Music.LavalinkClient import AUDIO_SESSIONS
 from Polls.UI import active_polls
@@ -85,7 +84,7 @@ async def leave(guild: discord.Guild):
 
 @console.command()
 async def edit(channel=None, msg_id=None, *msg):
-    usage = "Usage: <channel ID> <msg>"
+    usage = "Usage: <channel ID> <msg ID> <msg>"
     if channel is None or len(msg) == 0 or not channel.isdigit() or msg_id is None or not msg_id.isdigit():
         print(usage)
         return
@@ -147,17 +146,20 @@ async def embed(choice=None, channel=None):
 
 @client.event
 async def on_guild_join(guild: discord.Guild):
+    if not tunables('EVENT_ENABLED_ON_GUILD_JOIN'): return
     g = MikoGuild(guild=guild, client=client)
     await g.ainit()
 
 @client.event
 async def on_member_join(member: discord.Member):
+    if not tunables('EVENT_ENABLED_ON_MEMBER_JOIN'): return
     if not running: return
     u = MikoMember(user=member, client=client)
     await u.ainit()
             
 @client.event
 async def on_raw_message_delete(payload: discord.RawMessageDeleteEvent):
+    if not tunables('EVENT_ENABLED_ON_RAW_MESSAGE_DELETE'): return
     poll = active_polls.get_val(str(payload.message_id))
     if poll is None: return
     poll.terminate()
@@ -165,6 +167,7 @@ async def on_raw_message_delete(payload: discord.RawMessageDeleteEvent):
 # Responsible for handling member leaving guild
 @client.event
 async def on_raw_member_remove(payload: discord.RawMemberRemoveEvent):
+    if not tunables('EVENT_ENABLED_ON_RAW_MEMBER_REMOVE'): return
     if payload.user.id == client.user.id:
         g = MikoGuild(guild=payload.user.guild, client=client)
         await g.handle_leave_guild()
@@ -205,22 +208,16 @@ async def on_raw_member_remove(payload: discord.RawMemberRemoveEvent):
 # Responsible for updating username history
 @client.event
 async def on_member_update(before: discord.Member, cur: discord.Member):
+    if not tunables('EVENT_ENABLED_ON_MEMBER_UPDATE'): return
     if not running: return
     u = MikoMember(user=cur, client=client)
     await u.ainit()
-    await asyncio.sleep(1)
-    if u.greeting_task is not None:
-        if not u.greeting_task.done():
-            print(f"\nGreeting task not complete. Forcing completion... ({cur}) ({cur.guild})")
-            await u.greeting_task
-            print(f"**Greeting task status: {'COMPLETE' if u.greeting_task.done() else 'INCOMPLETE'}**\n")
-
-    await username_hist(cur)
 
 
 # Responsible for keeping guild emojis up-to-date
 @client.event
 async def on_guild_update(before: discord.Guild, after: discord.Guild):
+    if not tunables('EVENT_ENABLED_ON_GUILD_UPDATE'): return
     if not running: return
     g = MikoGuild(guild=after, client=client)
     await g.ainit()
@@ -231,6 +228,7 @@ async def on_guild_update(before: discord.Guild, after: discord.Guild):
 # Playtime
 @client.event
 async def on_presence_update(before: discord.Member, cur: discord.Member):
+    if not tunables('EVENT_ENABLED_ON_PRESENCE_UPDATE'): return
     if not running: return
     u = MikoMember(user=cur, client=client)
     await u.ainit()
@@ -242,6 +240,7 @@ async def on_presence_update(before: discord.Member, cur: discord.Member):
 # Voicetime
 @client.event
 async def on_voice_state_update(member: discord.Member, bef: discord.VoiceState, cur: discord.VoiceState):
+    if not tunables('EVENT_ENABLED_ON_VOICE_STATE_UPDATE'): return
     u = MikoMember(user=member, client=client)
     await u.ainit()
     
@@ -263,6 +262,7 @@ async def on_voice_state_update(member: discord.Member, bef: discord.VoiceState,
 
 @client.event
 async def on_message(message: discord.Message):
+    if not tunables('EVENT_ENABLED_ON_MESSAGE'): return
     if not running: return
     mm = MikoMessage(message=message, client=client)
     await mm.ainit()

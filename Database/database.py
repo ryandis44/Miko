@@ -17,20 +17,6 @@ def if_not_list_create_list(var):
     else:
         users = [item[0] for item in var]
         return users
-
-async def username_hist(user):
-
-    sel_cmd = f"SELECT name FROM USERNAME_HISTORY WHERE user_id={user.id} ORDER BY last_change DESC"
-    name = await db.execute(sel_cmd)
-
-    new = if_not_list_create_list(name)
-    if len(name) == 0:
-        ins1_cmd = f"INSERT INTO USERNAME_HISTORY (user_id,name,last_change) VALUES ('{user.id}',\"{user}\",'{int(user.created_at.timestamp())}')"
-        await db.execute(ins1_cmd)
-    elif str(new[0]) != str(user) or len(name) == 0:
-        ins2_cmd = f"INSERT INTO USERNAME_HISTORY (user_id,name,last_change) VALUES ('{user.id}',\"{user}\",'{int(round(time.time()))}')"
-        await db.execute(ins2_cmd)
-    return
     
 def combine_two_items_list(list):
     temp = []

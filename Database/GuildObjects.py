@@ -483,7 +483,6 @@ class MikoMember(MikoGuild):
         if guild_id is None: super().__init__(guild=user.guild, client=client, check_exists=check_exists, check_exists_guild=check_exists_guild)
         else: super().__init__(guild=None, client=client, guild_id=guild_id, check_exists=check_exists, check_exists_guild=check_exists_guild)
         self.user = user
-        self.greeting_task = None
     
     async def ainit(self, check_exists: bool = True, check_exists_guild: bool = True):
         async with check_lock(key=self.user.id):
@@ -804,14 +803,30 @@ class MikoMember(MikoGuild):
             f"INSERT INTO USER_SETTINGS (user_id) VALUES ('{self.user.id}')"
         )
 
+    async def __username_history(self, old_name: str) -> None:
+        names_len = len(await self.usernames)
+        
+        for i in [0,1]:
+            if names_len != 0 and i > 0: break
+            await ago.execute(
+                "INSERT INTO USERNAME_HISTORY (user_id,name,last_change) VALUES "
+                f"('{self.user.id}', '{old_name if names_len+i == 0 and i == 0 else self.user}', "
+                f"{int(self.user.created_at.timestamp()) if names_len+i == 0 and i == 0 else int(time.time())})"
+            )
+        
+        await ago.execute(
+            f"UPDATE USERS SET cached_username='{self.user}' WHERE "
+            f"user_id='{self.user.id}'"
+        )
+
     async def __update_cache(self, rows) -> None:
         params_temp = []
         params_temp.append("UPDATE USERS SET ")
 
         updating = False
         if str(self.user) != rows[0][0]:
-            updating = True
-            params_temp.append(f"cached_username=\"{self.user}\"")
+            print("Name change detected")
+            await self.__username_history(old_name=rows[0][0])
 
         latest_join_time = int(self.user.joined_at.timestamp())
         if latest_join_time != rows[0][1]:
