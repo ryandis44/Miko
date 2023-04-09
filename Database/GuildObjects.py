@@ -825,7 +825,6 @@ class MikoMember(MikoGuild):
 
         updating = False
         if str(self.user) != rows[0][0]:
-            print("Name change detected")
             await self.__username_history(old_name=rows[0][0])
 
         latest_join_time = int(self.user.joined_at.timestamp())
