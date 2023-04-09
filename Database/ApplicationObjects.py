@@ -1,5 +1,6 @@
 import uuid
 from Database.database_class import AsyncDatabase
+from tunables import *
 db = AsyncDatabase('Database.ApplicationObjects.py')
 
 
@@ -22,6 +23,13 @@ class Application:
     
     def __init__(self, app):
         self.__raw_app = app
+        self.blacklisted_id = False
+        
+        try: l = tunables('BLACKLISTED_APPLICATION_IDS').split(' ')
+        except: l = [tunables('BLACKLISTED_APPLICATION_IDS')]
+        if self.__raw_app['app_id'] in l:
+            self.blacklisted_id = app['app_id']
+            self.__raw_app['app_id'] = None
     
     async def ainit(self) -> None:
         await self.__check_database()
@@ -37,7 +45,7 @@ class Application:
     @property
     async def counts_towards_playtime(self) -> bool:
         val = await db.execute(
-            "SELECT counts_towards_playtime FROM APPLICATIONS "
+            "SELECT counts_towards_playtime FROM APPLICATIONS WHERE "
             f"{self.where} "
             "LIMIT 1"
         )
@@ -49,6 +57,8 @@ class Application:
         self.id: str = self.__val[1]
         self.discord_id: bool = True if self.__val[2] == "TRUE" else False
         self.emoji: str = self.__val[3]
+        if self.blacklisted_id:
+            self.blacklisted_id = f"{self.blacklisted_id} -> {self.id}"
     
     async def __check_database(self) -> None:
         if self.__raw_app['app_id'] is not None:

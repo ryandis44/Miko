@@ -65,14 +65,12 @@ async def heartbeat():
             try: await voice_heartbeat()
             except Exception as e: print(f"some shit stopped working idk [voice heartbeat]: {e}")
             
-            try: await playtime_heartbeat()
-            except Exception as e: print(f"Playtime heartbeat failed: {e}")
-            
         if num % 60 == 0:
             try: await check_notify()
             except Exception as e: print(f"Plex notify check failed, trying again in 60 seconds...: {e}")
             
-
+            try: await playtime_heartbeat()
+            except Exception as e: print(f"Playtime heartbeat failed: {e}")
 
         # Check if miko is still in guilds
         # if num % 3600 == 0:
@@ -144,7 +142,7 @@ async def playtime_heartbeat() -> None:
                 activity: discord.Activity
                 try:
                     if activity.type is discord.ActivityType.playing:
-                        try: app_id = activity.application_id
+                        try: app_id = str(activity.application_id)
                         except: app_id = None
                         a = Application(
                             app={

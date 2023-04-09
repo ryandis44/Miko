@@ -80,7 +80,8 @@ class Debugger(commands.Cog):
                     temp.append(f"> Session ID: `{s.session_id}`\n")
                     temp.append(f"> App name/ID: `{s.app.name}`/`{s.app.id}`\n")
                     temp.append(f"> Restored: `{s.restored}`\n")
-                    temp.append(f"> Resumed: `{s.is_resumed}` { f'<t:{s.resume_time}:R>' if s.is_resumed else '' }")
+                    temp.append(f"> Resumed: `{s.is_resumed}` { f'<t:{s.resume_time}:R>' if s.is_resumed else '' }\n")
+                    temp.append(f"> Blacklisted ID: `{s.app.blacklisted_id}`\n")
 
                 # If active playtime session, print
 
@@ -116,6 +117,7 @@ class Debugger(commands.Cog):
                             f"> App name/ID: `{game.app.name}`/`{game.app.id}`\n"
                             f"> Restored: `{game.restored}`\n"
                             f"> Resumed: `{game.is_resumed}` { f'<t:{game.resume_time}:R>' if game.is_resumed else '' }\n"
+                            f"> Blacklisted ID: `{game.app.blacklisted_id}`\n"
                         )
                 await ctx.channel.send(f"`{len(temp)}` active playtime :video_game: sessions")
                 await ctx.channel.send(''.join(temp))

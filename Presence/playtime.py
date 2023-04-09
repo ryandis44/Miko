@@ -296,11 +296,13 @@ async def playtime_embed(u, limit, updates, playtime=0, avg_session="None", offs
     elif c_len > 0: temp.append("\n_Current Activity:_\n")
     for session in current['sessions']:
         session: GameActivity
+        backslash = "\n" # no \ in if
         temp.append(
             f"{session.app.emoji} "
             f"<t:{session.start_time}:R> "
             f"**{session.app.name}** "
-            f"`{time_elapsed(session.time_elapsed, 'h')}`\n"
+            f"`{time_elapsed(session.time_elapsed, 'h')}`"
+            f"{backslash if await session.app.counts_towards_playtime else f' `[UNLISTED]`{backslash}'}"
         )
 
 
