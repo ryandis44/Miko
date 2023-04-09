@@ -338,7 +338,7 @@ class MikoGuild():
         # If guild does not exist in database, create it
         ins_cmd = (
             "INSERT INTO SERVERS (server_id, latest_join_time, cached_name, owner_name, owner_id, total_members, status) VALUES "
-            f"('{self.guild.id}', '{int(self.guild.me.joined_at.timestamp())}', \"{self.guild.name}\", \"{self.guild.owner.name}\", "
+            f"('{self.guild.id}', '{int(self.guild.me.joined_at.timestamp())}', '{sanitize_name(self.guild.name)}', '{sanitize_name(self.guild.owner.name)}', "
             f"'{self.guild.owner.id}', '{self.guild.member_count}', '{tunables('DEFAULT_GUILD_STATUS')}')"
         )
         await ago.execute(ins_cmd)
@@ -357,12 +357,12 @@ class MikoGuild():
         updating = False
         if self.guild.name != rows[0][0]:
             updating = True
-            params_temp.append(f"cached_name=\"{self.guild.name}\"")
+            params_temp.append(f"cached_name='{sanitize_name(self.guild.name)}'")
         
         if str(self.guild.owner) != rows[0][1]:
             if updating: params_temp.append(",")
             updating = True
-            params_temp.append(f"owner_name=\"{self.guild.owner}\"")
+            params_temp.append(f"owner_name='{sanitize_name(self.guild.owner)}'")
         
         if self.guild.owner.id != rows[0][2]:
             if updating: params_temp.append(",")
@@ -441,7 +441,7 @@ class MikoTextChannel(MikoGuild):
         # If channel does not exist, create it
         ins_cmd = (
             "INSERT INTO CHANNELS (server_id,channel_id,channel_name,created_at) VALUES "
-            f"('{self.guild.id}', '{self.channel.id}', \"{self.channel.name}\", "
+            f"('{self.guild.id}', '{self.channel.id}', '{sanitize_name(self.channel.name)}', "
             f"'{int(self.channel.created_at.timestamp())}')"
         )
         await ago.execute(ins_cmd)
@@ -462,7 +462,7 @@ class MikoTextChannel(MikoGuild):
         updating = False
         if self.channel.name != rows[0][0]:
             updating = True
-            params_temp.append(f"channel_name=\"{self.channel.name}\"")
+            params_temp.append(f"channel_name='{sanitize_name(self.channel.name)}'")
         
         if is_private != rows[0][1]:
             if updating: params_temp.append(",")
@@ -810,12 +810,12 @@ class MikoMember(MikoGuild):
             if names_len != 0 and i > 0: break
             await ago.execute(
                 "INSERT INTO USERNAME_HISTORY (user_id,name,last_change) VALUES "
-                f"('{self.user.id}', '{old_name if names_len+i == 0 and i == 0 else self.user}', "
+                f"('{self.user.id}', '{sanitize_name(old_name) if names_len+i == 0 and i == 0 else sanitize_name(self.user)}', "
                 f"{int(self.user.created_at.timestamp()) if names_len+i == 0 and i == 0 else int(time.time())})"
             )
         
         await ago.execute(
-            f"UPDATE USERS SET cached_username='{self.user}' WHERE "
+            f"UPDATE USERS SET cached_username='{sanitize_name(self.user)}' WHERE "
             f"user_id='{self.user.id}'"
         )
 
@@ -1008,7 +1008,7 @@ class MikoMessage():
     async def __big_emoji_embed(self, auth) -> discord.Embed:
         msg: discord.Message = self.message
         embed = discord.Embed(color=0x2f3136)
-        embed.set_author(icon_url=await self.user.user_avatar, name=f"{await self.user.username}{'' if auth is None else f' → {auth}'}")
+        embed.set_author(icon_url=await self.user.user_avatar, name=f'{sanitize_name(await self.user.username)}{"" if auth is None else f" → {auth}"}')
         url, emoji_name = get_emoji_url(msg.content)
         embed.set_image(url=url)
         embed.set_footer(text=f":{emoji_name}:")

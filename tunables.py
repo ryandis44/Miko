@@ -2,7 +2,7 @@ from discord import Color
 from discord import ButtonStyle, SelectOption
 from json import loads
 from Database.database_class import Database, AsyncDatabase
-from utils.HashTable import HashTable
+from misc.misc import sanitize_name
 db = AsyncDatabase("tunables.py")
 
 GENERIC_CONFIRM_STYLE=ButtonStyle.green

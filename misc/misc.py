@@ -3,6 +3,8 @@ import discord
 import itertools
 from datetime import date, datetime
 
+def sanitize_name(name) -> str:
+    return str(name).replace("'", "''")
 
 def equal_tuples(tuple1, tuple2) -> bool:
     if len(tuple1) != len(tuple2):

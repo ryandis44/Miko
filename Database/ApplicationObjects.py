@@ -33,7 +33,7 @@ class Application:
     
     async def ainit(self) -> None:
         await self.__check_database()
-        self.__assign_attributes()
+        await self.__assign_attributes()
     
     def __str__(self) -> str:
         return f"Application: {self.name} | {self.id} | {self.emoji}"
@@ -52,18 +52,27 @@ class Application:
         if val == "TRUE": return True
         return False
     
-    def __assign_attributes(self) -> None:
+    async def __assign_attributes(self) -> None:
         self.name: str = self.__val[0]
         self.id: str = self.__val[1]
         self.discord_id: bool = True if self.__val[2] == "TRUE" else False
         self.emoji: str = self.__val[3]
         if self.blacklisted_id:
             self.blacklisted_id = f"{self.blacklisted_id} -> {self.id}"
+        
+        if self.__raw_app['app_id'] is None: return
+        
+        if self.name != self.__raw_app['name']:
+            await db.execute(
+                f"UPDATE APPLICATIONS SET name='{sanitize_name(self.__raw_app['name'])}' "
+                f"WHERE app_id='{self.id}'"
+            )
+            self.name = self.__raw_app['name']
     
     async def __check_database(self) -> None:
         if self.__raw_app['app_id'] is not None:
             self.where = f"app_id='{self.__raw_app['app_id']}'"
-        else: self.where = f"name='{self.__raw_app['name']}'"
+        else: self.where = f"name='{sanitize_name(self.__raw_app['name'])}'"
         
         while True:
             self.__val = await db.execute(
