@@ -2,7 +2,7 @@ import asyncio
 import discord
 from discord.ext import commands
 from discord import app_commands
-from Database.GuildObjects import MikoMember
+from Database.GuildObjects import MikoMember, MikoGuild
 from tunables import *
 import os
 from dotenv import load_dotenv
@@ -22,19 +22,19 @@ class dev_cog(commands.Cog):
     @app_commands.command(name="dev", description=f"{os.getenv('APP_CMD_PREFIX')}Development commands")
     @app_commands.guilds(discord.Object(id=890638458211680256))
     @app_commands.guild_only
-    async def dev(self, interaction: discord.Interaction, args: str=None):
+    async def dev(self, interaction: discord.Interaction, mode: str=None, params: str=None):
         msg = await interaction.original_response()
         
         fail = (
             "Possible options: `set_level_roles`, `tunables`, `tabulate_levels`, "
-            "`calculate_member_numbers`"
+            "`calculate_member_numbers`, `re_add_members <guild id>`"
         )
-        if args is None:
+        if mode is None:
             await msg.edit(content=fail)
             return
 
         
-        match args.lower():
+        match mode.lower():
             
             case "tunables": await TunablesView(original_interaction=interaction).ainit()
             
@@ -156,6 +156,20 @@ class dev_cog(commands.Cog):
                 await msg.edit(content=''.join(temp))
                 
             #####################################################################################
+            
+            case 're_add_members':
+                try:
+                    g = MikoGuild(guild_id=params, client=self.client, guild=None)
+                    await msg.edit(content=f"Adding all members of `{g.guild}` to database and calculating member numbers... {tunables('LOADING_EMOJI')}")
+                    await g.add_all_members()
+                    await msg.edit(
+                        content=(
+                            f"**Success!**\nAdded all members of `{g.guild}` "
+                            "to the database and recalculated all member "
+                            "numbers."
+                        )
+                    )
+                except Exception as e: await msg.edit(content=f"Error: {e}")
             
             case _: await msg.edit(content=fail)
     

@@ -344,7 +344,9 @@ class MikoGuild():
         await ago.execute(ins_cmd)
         await self.__handle_new_guild()
         print(f"Added server {self.guild.name} ({self.guild.id}) to database")
-        
+        await self.add_all_members()
+
+    async def add_all_members(self) -> None:
         for member in self.guild.members:
             u = MikoMember(user=member, client=self.client, check_exists_guild=False)
             await u.ainit()
