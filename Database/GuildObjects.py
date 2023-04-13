@@ -430,6 +430,31 @@ class MikoTextChannel(MikoGuild):
         val = await ago.execute(sel_cmd)
         if val == [] or val is None: return 0
         return int(val)
+    @property
+    async def gpt_mode(self) -> str|None:
+        val = await ago.execute(
+            "SELECT chatgpt FROM CHANNELS WHERE "
+            f"channel_id='{self.channel.id}'"
+        )
+        if val is None or val in [[], "DISABLED"]: return None
+        return val
+    @property
+    async def gpt_personality(self) -> str|None:
+        mode = await self.gpt_mode
+        if mode is None: return None
+        
+        role = tunables(f'OPENAI_PERSONALITY_{mode}')
+        if role is None:
+            await self.set_gpt_mode(mode="DISABLED")
+            return
+        
+        return role
+        
+    async def set_gpt_mode(self, mode: str) -> None:
+        await ago.execute(
+            f"UPDATE CHANNELS SET chatgpt='{mode}' WHERE "
+            f"channel_id='{self.channel.id}'"
+        )
 
     async def __exists(self) -> None:
         sel_cmd = f"SELECT * FROM CHANNELS WHERE server_id='{self.guild.id}' AND channel_id='{self.channel.id}'"

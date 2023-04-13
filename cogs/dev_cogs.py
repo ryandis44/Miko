@@ -343,12 +343,12 @@ class TunableModal(discord.ui.Modal):
         try:
             if self.vall.value.lower() == "true": val = "TRUE"
             elif self.vall.value.lower() == "false": val = "FALSE"
-            else: val = self.vall.value
+            else: val = sanitize_name(self.vall.value)
         except: val = None
         if self.keyy.value == self.keyy.default:
             await db.execute(
                 f"UPDATE TUNABLES SET value='{val}' "
-                f"WHERE variable='{self.keyy.value}'"
+                f"WHERE variable='{(self.keyy.value)}'"
             )
             await tunables_refresh()
             await interaction.response.edit_message()
@@ -367,7 +367,7 @@ class TunableModal(discord.ui.Modal):
             await db.execute(
                 "DELETE FROM TUNABLES WHERE "
                 f"variable='{self.keyy.default}' AND "
-                f"value='{self.vall.default}'"
+                f"value='{sanitize_name(self.vall.default)}'"
             )
             await tunables_refresh()
             await interaction.response.edit_message()

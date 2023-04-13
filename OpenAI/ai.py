@@ -4,7 +4,7 @@ import openai
 import discord
 import re
 from tunables import tunables, GLOBAL_EMBED_COLOR
-from Database.GuildObjects import MikoMember, GuildProfile, AsyncDatabase
+from Database.GuildObjects import MikoMember, GuildProfile, AsyncDatabase, MikoTextChannel
 
 db = AsyncDatabase('OpenAI.ai.py')
 
@@ -33,17 +33,18 @@ class MikoGPT:
     '''
     
     
-    async def respond(self, message: discord.Message=None, interaction: discord.Interaction=None) -> None:
+    async def respond(self, message: discord.Message=None, interaction: discord.Interaction=None, client: discord.Client=None) -> None:
         
-        self.mode: str = await db.execute(
-            "SELECT chatgpt FROM CHANNELS WHERE "
-            f"channel_id='{message.channel.id}'"
+        ch = MikoTextChannel(
+            channel=message.channel if message is not None else interaction.channel,
+            client=client if message is not None else interaction.client
         )
-        if self.mode == "DISABLED":
-            await message.reply(
-                content=tunables('OPENAI_NOT_ENABLED_IN_CHANNEL')
-            )
+        
+        self.role = await ch.gpt_personality
+        if self.role is None:
+            await message.reply(content=tunables('OPENAI_NOT_ENABLED_IN_CHANNEL'))
             return
+            
     
         if message is not None:
             msg = await message.reply(content=tunables('LOADING_EMOJI'), mention_author=False, silent=True)
@@ -74,10 +75,9 @@ class MikoGPT:
                     
                     
                     
-                    role = tunables(f'OPENAI_PERSONALITY_{self.mode.upper()}')
                     self.context = []
                     self.context.append(
-                        {"role": "system", "content": role}
+                        {"role": "system", "content": self.role}
                     )
                     for m in refs:
                         if m.content == "" or re.match(r"<@\d{15,30}>", m.content):
@@ -183,11 +183,9 @@ class MikoGPT:
 
         if self.response['type'] != "IMAGE":
             
-            role = tunables(f'OPENAI_PERSONALITY_{self.mode.upper()}')
-            
             if self.context is None:
                 messages = [
-                        {"role": "system", "content": role},
+                        {"role": "system", "content": self.role},
                         {"role": "user", "content": prompt}
                     ]
             else:
