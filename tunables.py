@@ -42,11 +42,13 @@ def assign_tunables(val):
     global TUNABLES
     TUNABLES = {}
     for tunable in val:
-        if tunable[1] == "TRUE": TUNABLES[tunable[0]] = True
-        if tunable[1] == "FALSE": TUNABLES[tunable[0]] = False
-        elif tunable[1] not in ["TRUE", "FALSE"]:
-            if tunable[1] is not None and tunable[1].isdigit(): TUNABLES[tunable[0]] = int(tunable[1])
-            else: TUNABLES[tunable[0]] = tunable[1]
+        try:
+            if tunable[1] == "TRUE": TUNABLES[tunable[0]] = True
+            if tunable[1] == "FALSE": TUNABLES[tunable[0]] = False
+            elif tunable[1] not in ["TRUE", "FALSE"]:
+                if tunable[1] is not None and tunable[1].isdigit(): TUNABLES[tunable[0]] = int(tunable[1])
+                else: TUNABLES[tunable[0]] = tunable[1]
+        except Exception as e: print(f"TUNABLES ERROR: (({e})) Could not ASSIGN: {tunable}")
     configure_tunables()
 
 def configure_tunables() -> None:
@@ -54,27 +56,31 @@ def configure_tunables() -> None:
     TUNABLES['OPENAI_PERSONALITIES'] = []
     temp = []
     for key, val in TUNABLES.items():
-        if 'GUILD_PROFILE_' in key:
-            TUNABLES[key] = GuildProfile(profile=str(key)[14:])
-        
-        if 'OPENAI_PERSONALITY_' in key:
-            d = loads(val)
-            temp.append(d)
+        try:
+            if 'GUILD_PROFILE_' in key:
+                TUNABLES[key] = GuildProfile(profile=str(key)[14:])
             
+            if 'OPENAI_PERSONALITY_' in key:
+                d = loads(val)
+                temp.append(d)
+        except Exception as e: print(f"TUNABLES ERROR: (({e})) Could not CONFIGURE PROFILE {key} {val}")
     
     def srt(d) -> int:
         return d['position']
-    temp.sort(key=srt)
+    try: temp.sort(key=srt)
+    except Exception as e: print(f"TUNABLES ERROR: Could not SORT AI PERSONALITIES: {e}")
     for d in temp:
-        TUNABLES['OPENAI_PERSONALITIES'].append(
-            SelectOption(
-                label=d['label'],
-                description=d['description'],
-                value=d['value'],
-                emoji=d['emoji']
+        try:
+            TUNABLES['OPENAI_PERSONALITIES'].append(
+                SelectOption(
+                    label=d['label'],
+                    description=d['description'],
+                    value=d['value'],
+                    emoji=d['emoji']
+                )
             )
-        )
-        TUNABLES[f"OPENAI_PERSONALITY_{d['value']}"] = d['prompt']
+            TUNABLES[f"OPENAI_PERSONALITY_{d['value']}"] = d['prompt']
+        except Exception as e: print(f"TUNABLES ERROR: (({e})) Could not CONFIGURE PERSONALITY: {d}")
 
 
 
