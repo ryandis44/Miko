@@ -10,8 +10,9 @@ db = AsyncDatabase('OpenAI.ai.py')
 
 openai.api_key = tunables('OPENAI_API_KEY')
 
-class MikoGPT:
+class MikoGPT(discord.ui.View):
     def __init__(self, u: MikoMember, client: discord.Client, prompt: str):
+        super().__init__(timeout=tunables('GLOBAL_VIEW_TIMEOUT'))
         self.u = u
         self.client = client
         self.prompt = prompt
@@ -21,6 +22,11 @@ class MikoGPT:
         }
         self.__sanitize_prompt()
         self.context = None
+    
+    async def on_timeout(self) -> None:
+        self.clear_items()
+        try: await self.msg.edit(view=self)
+        except: pass
     
     
     '''
@@ -35,6 +41,8 @@ class MikoGPT:
     
     async def respond(self, message: discord.Message=None, interaction: discord.Interaction=None, client: discord.Client=None) -> None:
         
+        self.clear_items()
+        # self.msg = message if message is not None else await interaction.original_response()
         ch = MikoTextChannel(
             channel=message.channel if message is not None else interaction.channel,
             client=client if message is not None else interaction.client
@@ -44,14 +52,15 @@ class MikoGPT:
         if self.role is None:
             await message.reply(content=tunables('OPENAI_NOT_ENABLED_IN_CHANNEL'))
             return
-            
+        
+        self.msg = await message.reply(content=tunables('LOADING_EMOJI'), mention_author=False, silent=True) if message is not None else await interaction.original_response()
     
         if message is not None:
-            msg = await message.reply(content=tunables('LOADING_EMOJI'), mention_author=False, silent=True)
+            # await self.msg.reply(content=tunables('LOADING_EMOJI'), mention_author=False, silent=True)
             
             try:
-                if message.reference is not None:
-                    refs = [message.reference.resolved]
+                if self.msg.reference is not None and self.context is not None:
+                    refs = [self.msg.reference.resolved]
                     
                     i = 0
                     while True:
@@ -61,7 +70,7 @@ class MikoGPT:
                             if refs[-1].reference.cached_message is not None:
                                 m: discord.Message = refs[-1].reference.cached_message
                             else:
-                                m: discord.Message = await message.channel.fetch_message(refs[-1].reference.message_id)
+                                m: discord.Message = await self.msg.channel.fetch_message(refs[-1].reference.message_id)
                                 if m is None: continue
 
 
@@ -95,20 +104,17 @@ class MikoGPT:
                                 {"role": "user", "content": mssg}
                             )
             except Exception as e:
-                await message.edit(
+                await self.msg.edit(
                     content=f"An error occurred when referencing previous messages: {e}"
                 )
                 return
                 
-        elif interaction is not None:
-            msg = await interaction.original_response()
         else:
             print("Error [OpenAI.ai.MikoGPT:respond()]: Could not respond because a 'Message' or 'Interaction' object was not passed.")
             return
     
         try:
-            p = await self.u.profile
-            await asyncio.to_thread(self.__openai_interaction, p)
+            await asyncio.to_thread(self.__openai_interaction)
 
             if (len(self.response['data']) >= 750 or self.response['type'] == "IMAGE") and \
                 len(self.response['data']) <= 3999:
@@ -118,7 +124,7 @@ class MikoGPT:
                 embed = None
                 content = self.u.user.mention
                 b = bytes(self.response['data'], 'utf-8')
-                await msg.edit(
+                await self.msg.edit(
                     content=(
                             "The response to your prompt was too long. I have sent it in this "
                             "`response.txt` file. You can view on PC or Web (or Mobile if you "
@@ -131,18 +137,20 @@ class MikoGPT:
                 embed = None
                 content = self.response['data']
 
-            await msg.edit(
+            if await ch.gpt_mode == "NORMAL": self.add_item(RegenerateButton())
+            await self.msg.edit(
                 content=content,
                 embed=embed,
                 allowed_mentions=discord.AllowedMentions(
                     replied_user=True
-                )
+                ),
+                view=self
             )
             await self.u.increment_statistic('REPLY_TO_MENTION_OPENAI')
         except Exception as e:
             print(f">> OpenAI Response Error: {e}")
             await self.u.increment_statistic('REPLY_TO_MENTION_OPENAI_REJECT')
-            await msg.edit(
+            await self.msg.edit(
                 content=f"{tunables('GENERIC_APP_COMMAND_ERROR_MESSAGE')[:-1]}: {e}"
             )
         
@@ -165,20 +173,20 @@ class MikoGPT:
         
         self.prompt = self.__remove_mention(self.prompt.split())
         
-        if re.search('s:', self.prompt[0].lower()):
-            if self.prompt[0].lower() == "s:":
-                self.prompt.pop(0)
-            else:
-                self.prompt[0] = self.prompt[0][2:]
-            self.response['type'] = "SERIOUS"
-        if re.search('i:', self.prompt[0].lower()):
-            if self.prompt[0] == "i:":
-                self.prompt.pop(0)
-            else:
-                self.prompt[0] = self.prompt[0][2:]
-            self.response['type'] = "IMAGE"
+        # if re.search('s:', self.prompt[0].lower()):
+        #     if self.prompt[0].lower() == "s:":
+        #         self.prompt.pop(0)
+        #     else:
+        #         self.prompt[0] = self.prompt[0][2:]
+        #     self.response['type'] = "SERIOUS"
+        # if re.search('i:', self.prompt[0].lower()):
+        #     if self.prompt[0] == "i:":
+        #         self.prompt.pop(0)
+        #     else:
+        #         self.prompt[0] = self.prompt[0][2:]
+        #     self.response['type'] = "IMAGE"
     
-    def __openai_interaction(self, p: GuildProfile) -> None:
+    def __openai_interaction(self) -> None:
         prompt = ' '.join(self.prompt)
 
         if self.response['type'] != "IMAGE":
@@ -248,3 +256,18 @@ class MikoGPT:
                 url=self.response['data']
             )
         return embed
+
+
+class RegenerateButton(discord.ui.Button):
+    def __init__(self) -> None:
+        super().__init__(
+            style=discord.ButtonStyle.green,
+            label=None,
+            emoji=tunables('GENERIC_REDO_BUTTON'),
+            custom_id="redo_button",
+            row=1,
+            disabled=False
+        )
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await interaction.response.edit_message()
+        await self.view.respond(interaction)
