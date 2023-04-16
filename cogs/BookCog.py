@@ -4,7 +4,7 @@ from tunables import *
 from discord.ext import commands
 from discord import app_commands
 from Database.GuildObjects import MikoMember
-from GreenBook.UI import BookView
+from YMCA.GreenBook.UI import BookView
 from dotenv import load_dotenv
 load_dotenv()
         
@@ -18,7 +18,7 @@ class BookCog(commands.Cog):
         self.tree = app_commands.CommandTree(self.client)
 
 
-    @app_commands.command(name="book", description=f"{os.getenv('APP_CMD_PREFIX')}View/Edit the Book")
+    @app_commands.command(name="book", description=f"{os.getenv('APP_CMD_PREFIX')}View/Edit the Book [YMCA Servers Only]")
     @app_commands.guild_only
     async def book(self, interaction: discord.Interaction):
         await BookView(original_interaction=interaction).ainit()

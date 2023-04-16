@@ -1,6 +1,7 @@
 import discord
+from misc.view_misc import ModalTryAgain, check_modal_error
 from tunables import *
-from GreenBook.Objects import GreenBook, Person
+from YMCA.GreenBook.Objects import GreenBook, Person
 from Database.GuildObjects import MikoMember
 from Database.database_class import AsyncDatabase
 db = AsyncDatabase("GreenBook.UI.py")
@@ -8,7 +9,7 @@ db = AsyncDatabase("GreenBook.UI.py")
 
 class BookView(discord.ui.View):
     def __init__(self, original_interaction: discord.Interaction):
-        super().__init__(timeout=tunables('BOOK_VIEW_TIMEOUT'))
+        super().__init__(timeout=tunables('YMCA_VIEW_TIMEOUT'))
         self.original_interaction = original_interaction
         self.u = MikoMember(user=original_interaction.user, client=original_interaction.client, check_exists=False)
         self.book = GreenBook(self.u)
@@ -33,7 +34,7 @@ class BookView(discord.ui.View):
             temp = []
 
             temp.append(
-                "The YMCA Swim Test Book for swim tests.\n"
+                "The YMCA Swim Test Book for keeping track of swim tests.\n"
                 "This book can be accessed any time in this server "
                 f"using {tunables('SLASH_COMMAND_SUGGEST_BOOK')}.\n"
                 ""
@@ -418,41 +419,6 @@ class BackToMainButton(discord.ui.Button):
         await self.bview.respond()
 
 
-def check_modal_error(modal) -> dict:
-    e = {
-        'age': False,
-        'wristband': False,
-        'type': False,
-        'len': False,
-        'channel': None
-    }
-    try: int(modal.age.value)
-    except: e['age'] = True
-
-    try: int(modal.chid.value)
-    except: e['type'] = True
-
-    try:
-        if len(modal.chid.value) < 15: e['len'] = True
-    except: pass
-
-    try:
-        if not e['type'] and not e['len']:
-            e['channel'] = modal.bview.original_interaction.guild.get_channel(int(modal.chid.value))
-    except: pass
-
-    try:
-        if not e['age']:
-            if int(modal.age.value) < 1 or int(modal.age.value) > 100: e['age'] = True
-    except: pass
-
-    try:
-        if modal.wristband.value.upper() not in ['G', 'Y', 'R', '']:
-            e['wristband'] = True
-    except: pass
-
-    return e
-
 async def on_modal_submit(modal, interaction: discord.Interaction, p: Person=None) -> None:
     e = check_modal_error(modal=modal)
     if e['age'] or e['wristband']: raise Exception
@@ -602,25 +568,6 @@ class EditEntry(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.send_modal(self.m)
-
-
-class ModalTryAgain(discord.ui.View):
-    def __init__(self, calling_modal, error_interaction: discord.Interaction):
-        super().__init__(timeout=tunables('BOOK_VIEW_TIMEOUT'))
-        self.calling_modal = calling_modal
-        self.error_interaction = error_interaction
-
-    async def __original_response(self):
-        try: self.original_response = await self.error_interaction.original_response()
-        except: pass
-
-    @discord.ui.button(style=discord.ButtonStyle.blurple, label="Try Again", custom_id="button_try_again")
-    async def try_again(self, interaction: discord.Interaction, button = discord.Button):
-        await interaction.response.send_modal(self.calling_modal)
-        self.stop()
-        await self.__original_response()
-        try: await self.original_response.delete()
-        except: pass
 
 
 class SelectEntries(discord.ui.Select):
@@ -780,7 +727,10 @@ class SelectLogChannel(discord.ui.ChannelSelect):
             row=1,
             custom_id="select_channel",
             disabled=False,
-            channel_types=[discord.ChannelType.text]
+            channel_types=[
+                discord.ChannelType.text,
+                discord.ChannelType.news
+            ]
         )
     
     async def callback(self, interaction: discord.Interaction):
