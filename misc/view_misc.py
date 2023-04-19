@@ -66,10 +66,10 @@ class LogChannel(discord.ui.View):
         self.u = MikoMember(user=original_interaction.user, client=original_interaction.client)
         self.return_view = return_view
         self.typ = typ
+        self.msg: discord.Message = return_view.msg
 
     
     async def ainit(self) -> None:
-        self.msg: discord.Message = self.return_view.msg
         self.log_channel: discord.TextChannel = ...
         match self.typ:
             case 'GREEN_BOOK':
@@ -84,6 +84,8 @@ class LogChannel(discord.ui.View):
                 self.context = None
                 self.column = None
                 self.log_channel = None
+        
+        await self.respond_log_channel(t="INIT")
     
     def __log_channel_description(self) -> list:
         temp = []
@@ -147,7 +149,7 @@ class LogChannel(discord.ui.View):
                         f"UPDATE SERVERS SET {self.column}='{channel.id}' "
                         f"WHERE server_id='{self.original_interaction.guild.id}'"
                     )
-                    log_channel = channel
+                    self.log_channel = channel
                     color = GREEN_BOOK_SUCCESS_COLOR
 
             case 'DESELECT':
@@ -181,7 +183,7 @@ class LogChannel(discord.ui.View):
         self.add_item(self.BackToCallerButton())
         self.add_item(self.UseChannelIDButton())
         d = self.DeselectChannel()
-        if log_channel is not None: d.disabled=False
+        if self.log_channel is not None: d.disabled=False
         self.add_item(d)
 
         await self.msg.edit(
@@ -191,7 +193,7 @@ class LogChannel(discord.ui.View):
         )
     
     class BackToCallerButton(discord.ui.Button):
-        def __init__(self, return_view):
+        def __init__(self):
             super().__init__(
                 style=discord.ButtonStyle.blurple,
                 label="Back",
@@ -199,11 +201,11 @@ class LogChannel(discord.ui.View):
                 custom_id="back_button",
                 row=2
             )
-            self.return_view = return_view
 
         async def callback(self, interaction: discord.Interaction) -> None:
             await interaction.response.edit_message()
-            await self.return_view.respond()
+            try: await self.view.return_view.respond()
+            except Exception as e: print(e)
 
 
     class LogChannelButton(discord.ui.Button):
