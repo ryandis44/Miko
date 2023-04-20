@@ -283,7 +283,6 @@ class MikoGPT(discord.ui.View):
             'personality': "NORMAL", # NORMAL, SERIOUS, IMAGE
             'data': None
         }
-        self.__sanitize_prompt()
     
     async def on_timeout(self) -> None:
         self.clear_items()
@@ -292,16 +291,35 @@ class MikoGPT(discord.ui.View):
     
     
     async def ainit(self) -> None:
-        await self.__fetch_replies()
-        await self.respond()
+        self.response['personality'] = await self.mm.channel.gpt_personality
+        if not await self.__send_reply(): return
+        if not await self.__fetch_replies(): return
+        async with self.mm.channel.channel.typing():
+            await self.__respond()
         
-    async def __send_reply(self) -> None:
+    async def __send_reply(self) -> bool:
+        if self.response['personality'] is None:
+            if self.mm.message.reference is None:
+                await self.mm.message.reply(
+                    content=tunables('OPENAI_NOT_ENABLED_IN_CHANNEL'),
+                    mention_author=True,
+                    silent=True
+                )
+                return False
+            else: return False
+        
         self.msg = await self.mm.message.reply(
-            content=tunables('LOADING_EMOJI')
+            content=tunables('LOADING_EMOJI'),
+            mention_author=False,
+            silent=True
         )
+        return True
     
-    async def __fetch_replies(self) -> None:
+    async def __fetch_replies(self) -> bool:
         try:
+            self.chat.append(
+                {"role": "system", "content": self.response['personality']}
+            )
             
             if self.mm.message.reference is not None:
                 refs = [self.mm.message.reference.resolved]
@@ -320,14 +338,88 @@ class MikoGPT(discord.ui.View):
                     i+=1
                 
                 refs.reverse()
+
+
+                for m in refs:
+                        if m.content == "" or re.match(r"<@\d{15,30}>", m.content):
+                            try:
+                                mssg = m.embeds[0].description
+                            except: continue
+                        else:
+                            mssg = ' '.join(self.__remove_mention(m.content.split()))
+                            
+                        if m.author.id == m.guild.me.id:
+                            self.chat.append(
+                                {"role": "assistant", "content": mssg}
+                            )
+                        else:
+                            
+                            # If message is >4000 tokens, split responses
+                            # into multiple list items. dont know if needed yet
+                            self.chat.append(
+                                {"role": "user", "content": f"From {m.author.mention}: {mssg}"}
+                            )
             
-        except Exception as e:
-            await self.msg.edit(
-                content=f"An error occurred when referencing previous messages: {e}"
+            self.chat.append(
+                {"role": "user", "content": f"From {self.mm.user.user.mention}: {' '.join(self.__remove_mention(self.mm.message.content.split()))}"}
             )
+
+            return True
+        except Exception as e:
+            print(f"Error whilst fetching message replies [ChatGPT]: {e}")
+            return False
+        
+        
+    def __remove_mention(self, msg: list) -> list:
+        for i, word in enumerate(msg):
+            if word in [f"<@{str(self.mm.channel.client.user.id)}>"]:
+                # Remove word mentioning Miko
+                # Mention does not have to be first word
+                msg.pop(i)
+        return msg
     
     
-    async def respond(self) -> None:
+    async def __respond(self) -> None:
         self.clear_items()
         
+        print(self.chat)
+
+        try:
+            await asyncio.to_thread(self.__openai_interaction)
+            
+            
+            
+            
+            
+            
+            
+            await self.msg.edit(
+                content=...,
+                embed=embed,
+                allowed_mentions=discord.AllowedMentions(
+                    replied_user=True
+                )
+            )
+            await self.mm.user.increment_statistic('REPLY_TO_MENTION_OPENAI')
+        except Exception as e:
+            await self.mm.user.increment_statistic('REPLY_TO_MENTION_OPENAI_REJECT')
+            await self.msg.edit(
+                content=f"{tunables('GENERIC_APP_COMMAND_ERROR_MESSAGE')[:-1]}: {e}"
+            )
         
+    
+    
+    def __openai_interaction(self) -> None:
+        resp = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=self.chat
+        )
+        
+        # If ChatGPT response contains original prompt,
+        # put `` around that prompt.
+        r = r"^.+(\n){2}(.|\n)*$"
+        text = resp.choices[0].message.content
+        if re.match(r, text):
+            self.response['data'] = f"`{' '.join(self.__remove_mention(self.mm.message.content))}`\n{text}"
+            
+        else: self.response['data'] = text

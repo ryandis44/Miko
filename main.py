@@ -347,8 +347,7 @@ async def on_message(message: discord.Message):
                 )
                 return
 
-            gpt = MikoGPT(u=mm.user, client=client, prompt=message.content)
-            await gpt.respond(message=message, client=client)
+            await MikoGPT(mm=mm).ainit()
         
         # Basic response
         elif (await mm.channel.profile).feature_enabled('REPLY_TO_MENTION') == 1:
