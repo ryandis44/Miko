@@ -264,13 +264,15 @@ class RegenerateButton(discord.ui.Button):
             style=discord.ButtonStyle.green,
             label="Regenerate",
             emoji=tunables('GENERIC_REFRESH_BUTTON'),
-            custom_id="refresh_button",
+            custom_id="regen_button",
             row=1,
             disabled=False
         )
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.edit_message()
-        await self.view.respond(interaction)
+        await (await interaction.original_response()).delete()
+        async with interaction.channel.typing():
+            await self.view.respond()
         
         
         
@@ -279,8 +281,10 @@ class MikoGPT(discord.ui.View):
         super().__init__(timeout=tunables('GLOBAL_VIEW_TIMEOUT'))
         self.mm = mm
         self.chat = []
+        self.thread = None
+        self.msg: discord.Message = None
         self.response = {
-            'personality': "NORMAL", # NORMAL, SERIOUS, IMAGE
+            'personality': None,
             'data': None
         }
     
@@ -295,7 +299,7 @@ class MikoGPT(discord.ui.View):
         if not await self.__send_reply(): return
         if not await self.__fetch_replies(): return
         async with self.mm.channel.channel.typing():
-            await self.__respond()
+            await self.respond()
         
     async def __send_reply(self) -> bool:
         if self.response['personality'] is None:
@@ -307,14 +311,14 @@ class MikoGPT(discord.ui.View):
                 )
                 return False
             else: return False
-        
-        self.msg = await self.mm.message.reply(
-            content=tunables('LOADING_EMOJI'),
-            mention_author=False,
-            silent=True
-        )
+            
         return True
     
+    
+    '''
+    Take a look at __fetch_replies again. Does not get the
+    very first replied message
+    '''
     async def __fetch_replies(self) -> bool:
         try:
             self.chat.append(
@@ -322,6 +326,7 @@ class MikoGPT(discord.ui.View):
             )
             
             if self.mm.message.reference is not None:
+                print(self.mm.message.reference.resolved.content)
                 refs = [self.mm.message.reference.resolved]
                 
                 i = 0
@@ -357,19 +362,18 @@ class MikoGPT(discord.ui.View):
                             # If message is >4000 tokens, split responses
                             # into multiple list items. dont know if needed yet
                             self.chat.append(
-                                {"role": "user", "content": f"From {m.author.mention}: {mssg}"}
+                                {"role": "user", "content": f"{m.author.mention}: {mssg}"}
                             )
             
             self.chat.append(
-                {"role": "user", "content": f"From {self.mm.user.user.mention}: {' '.join(self.__remove_mention(self.mm.message.content.split()))}"}
+                {"role": "user", "content": f"{self.mm.user.user.mention}: {' '.join(self.__remove_mention(self.mm.message.content.split()))}"}
             )
 
             return True
         except Exception as e:
             print(f"Error whilst fetching message replies [ChatGPT]: {e}")
             return False
-        
-        
+              
     def __remove_mention(self, msg: list) -> list:
         for i, word in enumerate(msg):
             if word in [f"<@{str(self.mm.channel.client.user.id)}>"]:
@@ -379,35 +383,69 @@ class MikoGPT(discord.ui.View):
         return msg
     
     
-    async def __respond(self) -> None:
+    async def respond(self) -> None:
         self.clear_items()
+        # if await self.mm.channel.gpt_mode == "NORMAL":
+        #     self.add_item(RegenerateButton())
         
         print(self.chat)
 
         try:
             await asyncio.to_thread(self.__openai_interaction)
             
+            resp_len = len(self.response['data'])
+            if resp_len >= 750 and resp_len <= 3999:
+                self.thread = True
+                embed = await self.__embed()
+                content = self.mm.user.user.mention
+            elif resp_len >= 4000:
+                b = bytes(self.response['data'], 'utf-8')
+                await self.mm.message.reply(
+                    content=(
+                            "The response to your prompt was too long. I have sent it in this "
+                            "`response.txt` file. You can view on PC or Web (or Mobile if you "
+                            "are able to download the file)."
+                        ),
+                    attachments=[discord.File(BytesIO(b), "response.txt")],
+                )
+                return
+            else:
+                embed = None
+                content = self.response['data']
             
             
-            
-            
-            
-            
-            await self.msg.edit(
-                content=...,
+            await self.mm.message.reply(
+                content=content,
                 embed=embed,
                 allowed_mentions=discord.AllowedMentions(
                     replied_user=True
-                )
+                ),
+                view=self
             )
             await self.mm.user.increment_statistic('REPLY_TO_MENTION_OPENAI')
         except Exception as e:
             await self.mm.user.increment_statistic('REPLY_TO_MENTION_OPENAI_REJECT')
-            await self.msg.edit(
+            await self.mm.message.reply(
                 content=f"{tunables('GENERIC_APP_COMMAND_ERROR_MESSAGE')[:-1]}: {e}"
             )
         
-    
+    async def __embed(self) -> discord.Embed:
+        temp = []
+
+        temp.append(f"{self.response['data']}")
+        
+        embed = discord.Embed(
+            description=''.join(temp),
+            color=GLOBAL_EMBED_COLOR
+        )
+        embed.set_author(
+            icon_url=await self.mm.user.user_avatar,
+            name=f"Generated by {await self.mm.user.username}"
+        )
+        embed.set_footer(
+            text=f"{self.mm.channel.client.user.name} ChatGPT 3.5 Integration [Beta]"
+        )
+        return embed
     
     def __openai_interaction(self) -> None:
         resp = openai.ChatCompletion.create(
