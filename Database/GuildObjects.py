@@ -137,11 +137,11 @@ class MikoGuild():
     @property
     async def profile(self) -> GuildProfile:
         return tunables(f'GUILD_PROFILE_{await self.status}')
-    @property
     
     
     
     # REDO THIS AT SOME POINT
+    @property
     async def renamehell_members(self) -> list:
         val = await ago.execute(
             "SELECT user_id FROM USERS WHERE rename_any_true_false=\"TRUE\" "
@@ -182,13 +182,22 @@ class MikoGuild():
         )
         return [item[0] for item in val] if type(val) is tuple else [val] if val != [] else []
     @property
-    async def ymca_green_book_channel(self) -> discord.TextChannel:
+    async def ymca_green_book_channel(self) -> discord.TextChannel|None:
         val = await ago.execute(
             "SELECT ymca_green_book_channel FROM SERVERS WHERE "
             f"server_id='{self.guild.id}'"
         )
         if val == [] or val is None: return None
         return self.guild.get_channel(int(val))
+    @property
+    async def ymca_supplies_channel(self) -> discord.TextChannel|None:
+        val = await ago.execute(
+            "SELECT ymca_supplies_channel FROM SERVERS WHERE "
+            f"server_id='{self.guild.id}'"
+        )
+        if val == [] or val is None: return None
+        return self.guild.get_channel(int(val))
+
 
     async def set_member_numbers(self) -> None:
         member_ids = await ago.execute(

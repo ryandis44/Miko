@@ -1,6 +1,7 @@
 import discord
+from misc.view_misc import LogChannel, ModalTryAgain, check_modal_error
 from tunables import *
-from GreenBook.Objects import GreenBook, Person
+from YMCA.GreenBook.Objects import GreenBook, Person
 from Database.GuildObjects import MikoMember
 from Database.database_class import AsyncDatabase
 db = AsyncDatabase("GreenBook.UI.py")
@@ -8,7 +9,7 @@ db = AsyncDatabase("GreenBook.UI.py")
 
 class BookView(discord.ui.View):
     def __init__(self, original_interaction: discord.Interaction):
-        super().__init__(timeout=tunables('BOOK_VIEW_TIMEOUT'))
+        super().__init__(timeout=tunables('YMCA_VIEW_TIMEOUT'))
         self.original_interaction = original_interaction
         self.u = MikoMember(user=original_interaction.user, client=original_interaction.client, check_exists=False)
         self.book = GreenBook(self.u)
@@ -33,7 +34,7 @@ class BookView(discord.ui.View):
             temp = []
 
             temp.append(
-                "The YMCA Swim Test Book for swim tests.\n"
+                "The YMCA Swim Test Book for keeping track of swim tests.\n"
                 "This book can be accessed any time in this server "
                 f"using {tunables('SLASH_COMMAND_SUGGEST_BOOK')}.\n"
                 ""
@@ -259,116 +260,6 @@ class BookView(discord.ui.View):
             view=self
         )
 
-
-    def __log_channel_description(self, log_channel: discord.TextChannel = None) -> list:
-        temp = []
-
-        if log_channel is not None:
-            log_channel = log_channel.mention
-        else: log_channel = "`None`"
-
-        temp.append(
-            f"__Current Log channel: {log_channel}\n\n__"
-        )
-
-        temp.append(
-            "Use the dropdown below to set the channel "
-            f"that {self.u.client.user.mention} will send new Swim Test Book entries "
-            "to. Select `Deselect Channel` to remove current channel "
-            "(if any)."
-            "\n\n"
-            "**Note**: If your channel does not appear, it could be "
-            f"because {self.u.client.user.mention} does not have `Send Messages` and/or `View Channel` "
-            "permissions in that channel."
-            "\n\n"
-            "Press the `Use ID` "
-            "button to choose a channel by pasting in its channel ID. To get "
-            "a channel ID, type `#` in chat and begin typing its name. Select "
-            "it from the list of channels that pop up and then put a backslash "
-            "`\\` in front of it. It will give you something that looks like "
-            "`<#1084326524683038880>`. The ID is the numbers and the numbers only."
-        )
-
-        return temp
-
-    async def respond_log_channel(self, t: str, channel: discord.TextChannel = None) -> None:
-        desc = []
-
-        log_channel = await self.u.ymca_green_book_channel
-        # Embed setup
-        match t:
-            
-            case 'SET':
-                send_msg = False
-                read_msg = False
-                er = []
-                try:
-                    send_msg = channel.permissions_for(channel.guild.me).send_messages
-                    read_msg = channel.permissions_for(channel.guild.me).read_messages
-                except: pass
-                if not send_msg or not read_msg:
-                    if not send_msg: er.append('`Send Messages`')
-                    if not read_msg: er.append('`Read Messages`')
-                    desc.append(
-                        f"❗ **Error: Unable to set channel {channel.mention} as log channel. I do not "
-                        f"have {' or '.join(er)} "
-                        "permissions in that channel.**"
-                    )
-                    color = GREEN_BOOK_FAIL_COLOR
-                else:
-                    desc.append(
-                        f"✅ **Success! Set {channel.mention} as the Swim Test Book log channel. "
-                        "To unset this channel, press the `Deselect Channel` button.**"
-                    )
-                    await db.execute(
-                        f"UPDATE SERVERS SET ymca_green_book_channel='{channel.id}' "
-                        f"WHERE server_id='{self.original_interaction.guild.id}'"
-                    )
-                    log_channel = channel
-                    color = GREEN_BOOK_SUCCESS_COLOR
-
-            case 'DESELECT':
-                if log_channel is not None:
-                    desc.append(
-                        f"✅ **Success! {log_channel.mention} will no longer receive "
-                        "Swim Test Book log updates.**"
-                    )
-                    await db.execute(
-                        "UPDATE SERVERS SET ymca_green_book_channel=NULL WHERE "
-                        f"server_id='{self.original_interaction.guild.id}'"
-                    )
-                    log_channel = None
-                    color = GREEN_BOOK_SUCCESS_COLOR
-                else:
-                    desc.append(
-                        "⚠ Error: There is no active log channel."
-                    )
-                    color = GREEN_BOOK_WARN_COLOR
-                
-            case _:
-                color = GREEN_BOOK_NEUTRAL_COLOR
-
-        desc.append("\n\n")
-        desc.append(''.join(self.__log_channel_description(log_channel=log_channel)))
-        embed = discord.Embed(description=''.join(desc), color=color)
-        embed.set_author(icon_url=self.u.guild.icon, name=f"{self.u.guild} Swim Test Book")
-
-        self.clear_items()
-        self.add_item(SelectLogChannel(bview=self))
-        b = BackToMainButton(bview=self)
-        b.row = 2
-        self.add_item(b)
-        self.add_item(UseChannelIDButton(bview=self))
-        d = DeselectChannel(bview=self)
-        if log_channel is not None: d.disabled=False
-        self.add_item(d)
-
-        await self.msg.edit(
-            content=None,
-            embed=embed,
-            view=self
-        )
-
 class SearchButton(discord.ui.Button):
 
     def __init__(self, bview: BookView):
@@ -405,7 +296,7 @@ class BackToMainButton(discord.ui.Button):
 
     def __init__(self, bview: BookView):
         super().__init__(
-            style=discord.ButtonStyle.gray,
+            style=discord.ButtonStyle.blurple,
             label="Back",
             emoji=None,
             custom_id="back_button",
@@ -417,41 +308,6 @@ class BackToMainButton(discord.ui.Button):
         await interaction.response.edit_message()
         await self.bview.respond()
 
-
-def check_modal_error(modal) -> dict:
-    e = {
-        'age': False,
-        'wristband': False,
-        'type': False,
-        'len': False,
-        'channel': None
-    }
-    try: int(modal.age.value)
-    except: e['age'] = True
-
-    try: int(modal.chid.value)
-    except: e['type'] = True
-
-    try:
-        if len(modal.chid.value) < 15: e['len'] = True
-    except: pass
-
-    try:
-        if not e['type'] and not e['len']:
-            e['channel'] = modal.bview.original_interaction.guild.get_channel(int(modal.chid.value))
-    except: pass
-
-    try:
-        if not e['age']:
-            if int(modal.age.value) < 1 or int(modal.age.value) > 100: e['age'] = True
-    except: pass
-
-    try:
-        if modal.wristband.value.upper() not in ['G', 'Y', 'R', '']:
-            e['wristband'] = True
-    except: pass
-
-    return e
 
 async def on_modal_submit(modal, interaction: discord.Interaction, p: Person=None) -> None:
     e = check_modal_error(modal=modal)
@@ -604,25 +460,6 @@ class EditEntry(discord.ui.Button):
         await interaction.response.send_modal(self.m)
 
 
-class ModalTryAgain(discord.ui.View):
-    def __init__(self, calling_modal, error_interaction: discord.Interaction):
-        super().__init__(timeout=tunables('BOOK_VIEW_TIMEOUT'))
-        self.calling_modal = calling_modal
-        self.error_interaction = error_interaction
-
-    async def __original_response(self):
-        try: self.original_response = await self.error_interaction.original_response()
-        except: pass
-
-    @discord.ui.button(style=discord.ButtonStyle.blurple, label="Try Again", custom_id="button_try_again")
-    async def try_again(self, interaction: discord.Interaction, button = discord.Button):
-        await interaction.response.send_modal(self.calling_modal)
-        self.stop()
-        await self.__original_response()
-        try: await self.original_response.delete()
-        except: pass
-
-
 class SelectEntries(discord.ui.Select):
     def __init__(self, bview: BookView, res: list):
         self.bview = bview
@@ -718,91 +555,8 @@ class LogChannelButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.edit_message()
-        await self.bview.respond_log_channel(t='DEFAULT')
-
-
-
-class UseChannelIDButton(discord.ui.Button):
-    def __init__(self, bview: BookView):
-        super().__init__(
-            style=discord.ButtonStyle.gray,
-            label="Use ID",
-            emoji=None,
-            custom_id="id_button",
-            row=2
-        )
-        self.bview = bview
-
-    async def callback(self, interaction: discord.Interaction) -> None:
-        await interaction.response.send_modal(self.ChannelIDModal(bview=self.bview))
-
-    class ChannelIDModal(discord.ui.Modal):
-
-        def __init__(self, bview: BookView):
-            super().__init__(title="Enter Channel ID", custom_id="channel_id_modal")
-            self.bview = bview
-
-        chid = discord.ui.TextInput(
-                label="Enter Channel ID:",
-                placeholder=f"1084326524683038880",
-                min_length=1,
-                max_length=30
-            )
-        async def on_submit(self, interaction: discord.Interaction) -> None:
-            e = check_modal_error(modal=self)
-            if e['type'] or e['len'] or e['channel'] is None: raise Exception
-            await interaction.response.edit_message()
-            await self.bview.respond_log_channel(t='SET', channel=e['channel'])
-        
-        async def on_error(self, interaction: discord.Interaction, error) -> None:
-            e = check_modal_error(modal=self)
-            temp = []
-            if e['type']: temp.append("`Channel ID` must be a number")
-            if e['len']: temp.append("`Channel ID` must be between 15 and 30 numbers in length.")
-            if not e['len'] and not e['type'] and e['channel'] is None:
-                temp.append(f"No channel in this server found with ID `{self.chid.value}`")
-
-            await interaction.response.send_message(
-                content="\n".join(temp),
-                ephemeral=True,
-                view=ModalTryAgain(calling_modal=self, error_interaction=interaction)
-            )
-
-
-class SelectLogChannel(discord.ui.ChannelSelect):
-    def __init__(self, bview: BookView):
-        self.bview = bview
-
-        super().__init__(
-            placeholder="Select a channel",
-            min_values=1,
-            max_values=1,
-            row=1,
-            custom_id="select_channel",
-            disabled=False,
-            channel_types=[discord.ChannelType.text]
-        )
-    
-    async def callback(self, interaction: discord.Interaction):
-        ch: discord.app_commands.AppCommandChannel = self.values[0]
-        try: ch = await ch.fetch()
-        except: pass
-        await interaction.response.edit_message()
-        await self.bview.respond_log_channel(t='SET', channel=ch)
-
-
-class DeselectChannel(discord.ui.Button):
-    def __init__(self, bview: BookView):
-        super().__init__(
-            style=discord.ButtonStyle.red,
-            label="Deselect Channel",
-            emoji=None,
-            custom_id="deselect_button",
-            row=2,
-            disabled=True
-        )
-        self.bview = bview
-
-    async def callback(self, interaction: discord.Interaction) -> None:
-        await interaction.response.edit_message()
-        await self.bview.respond_log_channel(t='DESELECT')
+        await LogChannel(
+                original_interaction=interaction,
+                typ="GREEN_BOOK",
+                return_view=self.view
+            ).ainit()
