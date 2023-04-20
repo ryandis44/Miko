@@ -220,7 +220,8 @@ async def help_embed(u) -> list:
             "permission in that channel]."
             "\n> \n"
             "> Once enabled, @ Miko (the bot itself, not the bot role) in the channel you just edited and ask it "
-            "anything. You can also reply to Miko to continue the conversation."
+            "anything. You can also reply to Miko to continue the conversation. Note: when replying to Miko you do "
+            "not need to @ it. Additionally, if @ing Miko the @ must be the first word in your message."
             "\n\n"
         )
 

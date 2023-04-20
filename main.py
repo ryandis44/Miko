@@ -333,7 +333,7 @@ async def on_message(message: discord.Message):
 
                             
     # Respond to being mentioned
-    if str(client.user.id) in message.content and message.author.id != client.user.id or \
+    if len(message.content) > 0 and str(client.user.id) in message.content.split()[0] and message.author.id != client.user.id or \
         (message.reference is not None and message.reference.resolved is not None and \
             message.reference.resolved.author.id == client.user.id):
         

@@ -120,6 +120,12 @@ async def help(interaction: discord.Interaction, category) -> None:
                 "If a poll's message is deleted beforee the poll ends, the poll will be immediately "
                 "ended and the results will not be sent. It's like it was never there."
             )
+            
+        case "chatgpt":
+            temp.append(
+                f"Is enabled? TRUE"
+                "ChatGPT help"
+            )
 
         case _: # No category specified
             temp.append(''.join(await help_embed(u=u)))

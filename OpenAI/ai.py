@@ -4,13 +4,13 @@ import openai
 import discord
 import re
 from tunables import tunables, GLOBAL_EMBED_COLOR
-from Database.GuildObjects import MikoMember, GuildProfile, AsyncDatabase, MikoTextChannel
+from Database.GuildObjects import MikoMember, GuildProfile, AsyncDatabase, MikoTextChannel, MikoMessage
 
 db = AsyncDatabase('OpenAI.ai.py')
 
 openai.api_key = tunables('OPENAI_API_KEY')
 
-class MikoGPT(discord.ui.View):
+class MikoGPTT(discord.ui.View):
     def __init__(self, u: MikoMember, client: discord.Client, prompt: str):
         super().__init__(timeout=tunables('GLOBAL_VIEW_TIMEOUT'))
         self.u = u
@@ -262,12 +262,72 @@ class RegenerateButton(discord.ui.Button):
     def __init__(self) -> None:
         super().__init__(
             style=discord.ButtonStyle.green,
-            label=None,
-            emoji=tunables('GENERIC_REDO_BUTTON'),
-            custom_id="redo_button",
+            label="Regenerate",
+            emoji=tunables('GENERIC_REFRESH_BUTTON'),
+            custom_id="refresh_button",
             row=1,
             disabled=False
         )
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.edit_message()
         await self.view.respond(interaction)
+        
+        
+        
+class MikoGPT(discord.ui.View):
+    def __init__(self, mm: MikoMessage):
+        super().__init__(timeout=tunables('GLOBAL_VIEW_TIMEOUT'))
+        self.mm = mm
+        self.chat = []
+        self.response = {
+            'personality': "NORMAL", # NORMAL, SERIOUS, IMAGE
+            'data': None
+        }
+        self.__sanitize_prompt()
+    
+    async def on_timeout(self) -> None:
+        self.clear_items()
+        try: await self.msg.edit(view=self)
+        except: pass
+    
+    
+    async def ainit(self) -> None:
+        await self.__fetch_replies()
+        await self.respond()
+        
+    async def __send_reply(self) -> None:
+        self.msg = await self.mm.message.reply(
+            content=tunables('LOADING_EMOJI')
+        )
+    
+    async def __fetch_replies(self) -> None:
+        try:
+            
+            if self.mm.message.reference is not None:
+                refs = [self.mm.message.reference.resolved]
+                
+                i = 0
+                while True:
+                    if refs[-1].reference is not None and i <= tunables('MAX_CONSIDER_REPLIES_OPENAI'):
+                        
+                        if refs[-1].reference.cached_message is not None:
+                            m: discord.Message = refs[-1].reference.cached_message
+                        else:
+                            m: discord.Message = await self.mm.channel.channel.fetch_message(refs[-1].reference.message_id)
+                            if m is None: continue
+                        refs.append(m)
+                    else: break
+                    i+=1
+                
+                refs.reverse()
+            
+        except Exception as e:
+            await self.msg.edit(
+                content=f"An error occurred when referencing previous messages: {e}"
+            )
+    
+    
+    async def respond(self) -> None:
+        self.clear_items()
+        
+        
