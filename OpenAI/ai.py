@@ -326,7 +326,8 @@ class MikoGPT(discord.ui.View):
             )
             
             if self.mm.message.reference is not None:
-                print(self.mm.message.reference.resolved.content)
+                
+                print(self.mm.message.reference.resolved.reference.message_id)
                 refs = [self.mm.message.reference.resolved]
                 
                 i = 0
@@ -342,7 +343,9 @@ class MikoGPT(discord.ui.View):
                     else: break
                     i+=1
                 
+                
                 refs.reverse()
+                print(refs)
 
 
                 for m in refs:
@@ -388,7 +391,7 @@ class MikoGPT(discord.ui.View):
         # if await self.mm.channel.gpt_mode == "NORMAL":
         #     self.add_item(RegenerateButton())
         
-        print(self.chat)
+        # print(self.chat)
 
         try:
             await asyncio.to_thread(self.__openai_interaction)
