@@ -296,8 +296,8 @@ class MikoGPT(discord.ui.View):
     
     async def ainit(self) -> None:
         self.response['personality'] = await self.mm.channel.gpt_personality
+        if not await self.__fetch_chats(): return
         if not await self.__send_reply(): return
-        if not await self.__fetch_replies(): return
         await self.respond()
         
     async def __send_reply(self) -> bool:
@@ -319,16 +319,83 @@ class MikoGPT(discord.ui.View):
         return True
     
     
-    '''
-    Take a look at __fetch_replies again. Does not get the
-    very first replied message
-    '''
-    async def __fetch_replies(self) -> bool:
+    async def __check_attachments(self, message: discord.Message) -> str|None:
+        if len(message.attachments) == 0: return None
+        if message.attachments[0].filename != "message.txt": return None
+        return (await message.attachments[0].read()).decode()
+    
+    
+    async def __fetch_chats(self) -> bool:
+        
+        # If not in thread, do this
+        refs = await self.__fetch_replies()
+        
+        # If in thread, do this
+        # refs = await self.__fetch thread messages
+        
         try:
             self.chat.append(
                 {"role": "system", "content": self.response['personality']}
             )
             
+    
+            # Determine the string to append to chat or
+            # cancel interaction if any replied messages
+            # cannot be read.
+            refs.reverse()                
+            for m in refs:
+                m: discord.Message
+                mssg = None
+                if m.content == "" and len(m.attachments) == 0:# or re.match(r"<@\d{15,30}>", m.content):
+                    try:
+                        mssg = m.embeds[0].description
+                        if mssg == "" or mssg is None or mssg == []: raise Exception
+                    except: return False
+                else:
+                    try: mssg = ' '.join(self.__remove_mention(m.content.split()))
+                    except: pass
+                
+                
+                # Decode message.txt, if applicable
+                if len(m.attachments) > 0:
+                    val = await self.__check_attachments(message=m)
+                    if val is not None:
+                        mssg = f"{mssg} (A file is attached, it has been decoded so you can read it:) {val}"
+                    elif mssg == "" or mssg is None or mssg == []: return False # Could cause issues. Replace with continue if so
+                
+                
+                # Add message to chat list
+                if m.author.id == m.guild.me.id:
+                    self.chat.append(
+                        {"role": "assistant", "content": mssg}
+                    )
+                else:
+                    # If message is >4000 tokens, split responses
+                    # into multiple list items. dont know if needed yet
+                    self.chat.append(
+                        {"role": "user", "content": f"{m.author.mention}: {mssg}"}
+                    )
+        
+            # Add latest message to end of chat list
+            mssg = f"{self.mm.user.user.mention}: {' '.join(self.__remove_mention(self.mm.message.content.split()))}"
+            if len(self.mm.message.attachments) > 0:
+                val = await self.__check_attachments(message=self.mm.message)
+                if val is not None:
+                    mssg = f"{mssg} (A file is attached, it has been decoded so you can read it:) {val}"
+            self.chat.append(
+                {"role": "user", "content": mssg}
+            )
+
+            return True
+        except Exception as e:
+            print(f"Error whilst fetching chats [ChatGPT]: {e}")
+            return False
+    
+    
+    
+    async def __fetch_replies(self) -> list:
+        try:
+            refs = []
             if self.mm.message.reference is not None:
                 
                 refs = [self.mm.message.reference.resolved]
@@ -346,47 +413,10 @@ class MikoGPT(discord.ui.View):
                     else: break
                     i+=1
                 
-                
-                refs.reverse()
-                for ref in refs:
-                    print(ref.id, ref.content)
-
-
-                for m in refs:
-                        if m.content == "" or re.match(r"<@\d{15,30}>", m.content):
-                            print("Inside first if")
-                            try:
-                                mssg = m.embeds[0].description
-                            except: continue
-                        else:
-                            mssg = ' '.join(self.__remove_mention(m.content.split()))
-                            
-                        if m.author.id == m.guild.me.id:
-                            self.chat.append(
-                                {"role": "assistant", "content": mssg}
-                            )
-                        else:
-                            
-                            # If message is >4000 tokens, split responses
-                            # into multiple list items. dont know if needed yet
-                            self.chat.append(
-                                {"role": "user", "content": f"{m.author.mention}: {mssg}"}
-                            )
-                        print(mssg)
-            
-            self.chat.append(
-                {"role": "user", "content": f"{self.mm.user.user.mention}: {' '.join(self.__remove_mention(self.mm.message.content.split()))}"}
-            )
-
-            print("**************")
-            for c in self.chat:
-                print(f">> {c}")
-            print("**************")
-
-            return True
+            return refs
         except Exception as e:
             print(f"Error whilst fetching message replies [ChatGPT]: {e}")
-            return False
+            return []
               
     def __remove_mention(self, msg: list) -> list:
         for i, word in enumerate(msg):
@@ -402,16 +432,34 @@ class MikoGPT(discord.ui.View):
         # if await self.mm.channel.gpt_mode == "NORMAL":
         #     self.add_item(RegenerateButton())
         
-        # print(self.chat)
+        print("*************")
+        for c in self.chat:
+            print(f">> {c}")
+        print("*************")
 
         try:
             await asyncio.to_thread(self.__openai_interaction)
             
             resp_len = len(self.response['data'])
             if resp_len >= 750 and resp_len <= 3999:
-                self.thread = True
                 embed = await self.__embed()
                 content = self.mm.user.user.mention
+                await self.msg.delete()
+                self.thread = await self.mm.message.create_thread(
+                    name="ChatGPT Thread Test",
+                    auto_archive_duration=60,
+                    slowmode_delay=2,
+                    reason="ChatGPT"
+                )
+                await self.thread.send(
+                    content=self.response['data'],
+                    silent=True,
+                    allowed_mentions=discord.AllowedMentions(
+                        replied_user=True,
+                        users=True
+                    )
+                )
+                return
             elif resp_len >= 4000:
                 b = bytes(self.response['data'], 'utf-8')
                 await self.msg.edit(
@@ -477,6 +525,6 @@ class MikoGPT(discord.ui.View):
         r = r"^.+(\n){2}(.|\n)*$"
         text = resp.choices[0].message.content
         if re.match(r, text):
-            self.response['data'] = f"`{' '.join(self.__remove_mention(self.mm.message.content))}`\n{text}"
+            self.response['data'] = f"`{''.join(self.__remove_mention(self.mm.message.content))}`\n{text}"
             
         else: self.response['data'] = text
