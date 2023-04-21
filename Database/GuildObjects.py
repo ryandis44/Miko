@@ -35,6 +35,11 @@ def check_lock(key) -> asyncio.Lock:
         val['at'] = int(time.time())
         return val['lock']
 
+def lock_status(key) -> bool:
+    val = CHECK_LOCK.get(key)
+    if val is None: return False
+    return val['lock'].locked()
+
 class MikoGuild():
 
     def __init__(self, guild: discord.Guild, client: discord.Client, guild_id: int = None, check_exists=True, check_exists_guild=True):
@@ -43,9 +48,11 @@ class MikoGuild():
         self.client = client
         self.log_channel = client.get_channel(1073509692363517962) # miko-logs channel in The Boys Hangout
 
-    async def ainit(self, check_exists: bool = True):
-        async with check_lock(key=self.guild.id):
-            if check_exists: await self.__exists()
+    async def ainit(self, check_exists: bool = True, skip_if_locked: bool = False):
+        if check_exists and \
+            not (skip_if_locked and lock_status(key=self.guild.id)):
+            async with check_lock(key=self.guild.id):
+                await self.__exists()
 
     def __str__(self):
         return f"{self.guild} | MikoGuild Object"
@@ -405,10 +412,12 @@ class MikoTextChannel(MikoGuild):
         super().__init__(guild=channel.guild, client=client)
         self.channel = channel
 
-    async def ainit(self, check_exists: bool = True, check_exists_guild: bool = True):
-        async with check_lock(key=self.channel.id):
-            if check_exists_guild: await super().ainit(check_exists=check_exists_guild)
-            if check_exists: await self.__exists()
+    async def ainit(self, check_exists: bool = True, check_exists_guild: bool = True, skip_if_locked: bool = False):
+        if check_exists and \
+            not (skip_if_locked and lock_status(key=self.channel.id)):
+            async with check_lock(key=self.channel.id):
+                await super().ainit(check_exists=check_exists_guild)
+                await self.__exists()
 
     @property
     async def is_private(self) -> bool:
@@ -520,10 +529,12 @@ class MikoMember(MikoGuild):
         else: super().__init__(guild=None, client=client, guild_id=guild_id, check_exists=check_exists, check_exists_guild=check_exists_guild)
         self.user = user
     
-    async def ainit(self, check_exists: bool = True, check_exists_guild: bool = True):
-        async with check_lock(key=self.user.id):
-            await super().ainit(check_exists=check_exists_guild)
-            if check_exists and not self.user.pending: await self.__exists()
+    async def ainit(self, check_exists: bool = True, check_exists_guild: bool = True, skip_if_locked: bool = False):
+        if (check_exists and not self.user.pending) and \
+            not (skip_if_locked and lock_status(key=self.user.id)):
+            async with check_lock(key=self.user.id):
+                await self.__exists()
+                await super().ainit(check_exists=check_exists_guild)
 
     def __str__(self):
         return f"{self.user} - {self.guild} | MikoMember Object"
