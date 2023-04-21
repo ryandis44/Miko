@@ -298,8 +298,7 @@ class MikoGPT(discord.ui.View):
         self.response['personality'] = await self.mm.channel.gpt_personality
         if not await self.__send_reply(): return
         if not await self.__fetch_replies(): return
-        async with self.mm.channel.channel.typing():
-            await self.respond()
+        await self.respond()
         
     async def __send_reply(self) -> bool:
         if self.response['personality'] is None:
@@ -311,7 +310,12 @@ class MikoGPT(discord.ui.View):
                 )
                 return False
             else: return False
-            
+        
+        self.msg = await self.mm.message.reply(
+            content=tunables('LOADING_EMOJI'),
+            silent=True,
+            mention_author=False
+        )
         return True
     
     
@@ -327,7 +331,6 @@ class MikoGPT(discord.ui.View):
             
             if self.mm.message.reference is not None:
                 
-                print(self.mm.message.reference.resolved.reference.message_id)
                 refs = [self.mm.message.reference.resolved]
                 
                 i = 0
@@ -345,11 +348,13 @@ class MikoGPT(discord.ui.View):
                 
                 
                 refs.reverse()
-                print(refs)
+                for ref in refs:
+                    print(ref.id, ref.content)
 
 
                 for m in refs:
                         if m.content == "" or re.match(r"<@\d{15,30}>", m.content):
+                            print("Inside first if")
                             try:
                                 mssg = m.embeds[0].description
                             except: continue
@@ -367,10 +372,16 @@ class MikoGPT(discord.ui.View):
                             self.chat.append(
                                 {"role": "user", "content": f"{m.author.mention}: {mssg}"}
                             )
+                        print(mssg)
             
             self.chat.append(
                 {"role": "user", "content": f"{self.mm.user.user.mention}: {' '.join(self.__remove_mention(self.mm.message.content.split()))}"}
             )
+
+            print("**************")
+            for c in self.chat:
+                print(f">> {c}")
+            print("**************")
 
             return True
         except Exception as e:
@@ -403,7 +414,7 @@ class MikoGPT(discord.ui.View):
                 content = self.mm.user.user.mention
             elif resp_len >= 4000:
                 b = bytes(self.response['data'], 'utf-8')
-                await self.mm.message.reply(
+                await self.msg.edit(
                     content=(
                             "The response to your prompt was too long. I have sent it in this "
                             "`response.txt` file. You can view on PC or Web (or Mobile if you "
@@ -417,19 +428,24 @@ class MikoGPT(discord.ui.View):
                 content = self.response['data']
             
             
-            await self.mm.message.reply(
+            await self.msg.edit(
                 content=content,
                 embed=embed,
                 allowed_mentions=discord.AllowedMentions(
-                    replied_user=True
+                    replied_user=True,
+                    users=True
                 ),
                 view=self
             )
             await self.mm.user.increment_statistic('REPLY_TO_MENTION_OPENAI')
         except Exception as e:
             await self.mm.user.increment_statistic('REPLY_TO_MENTION_OPENAI_REJECT')
-            await self.mm.message.reply(
-                content=f"{tunables('GENERIC_APP_COMMAND_ERROR_MESSAGE')[:-1]}: {e}"
+            await self.msg.edit(
+                content=f"{tunables('GENERIC_APP_COMMAND_ERROR_MESSAGE')[:-1]}: {e}",
+                allowed_mentions=discord.AllowedMentions(
+                    replied_user=False,
+                    users=False
+                )
             )
         
     async def __embed(self) -> discord.Embed:
