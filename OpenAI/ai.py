@@ -105,17 +105,15 @@ class MikoGPT(discord.ui.View):
         return True
     
     
-    async def __check_attachments(self, message: discord.Message) -> str|None:
+    async def __check_attachments(self, message: discord.Message|CachedMessage) -> str|None:
         if len(message.attachments) == 0: return None
         if message.attachments[0].filename != "message.txt": return None
-        return (await message.attachments[0].read()).decode()
+        try: return (await message.attachments[0].read()).decode()
+        except:
+            try: return message.attachments[0].data
+            except: return None
     
-    
-    
-    
-    '''
-    Add caching for file content
-    '''
+
     async def __fetch_chats(self) -> bool:
         
         # If not in thread, do this
@@ -135,7 +133,11 @@ class MikoGPT(discord.ui.View):
             # cannot be read.
             refs.reverse()                
             for m in refs:
-                m: discord.Message
+                # if type(m) == discord.Message:
+                #     print(f">>> DISCORD: {m.content}")
+                # else:
+                #     print(f">>> REDIS: {m.content} {None if len(m.attachments) == 0 else m.attachments[0].data}")
+                m: discord.Message|CachedMessage
                 mssg = None
                 if m.content == "" and len(m.attachments) == 0:# or re.match(r"<@\d{15,30}>", m.content):
                     try:
@@ -156,7 +158,7 @@ class MikoGPT(discord.ui.View):
                 
                 
                 # Add message to chat list
-                if m.author.id == self.mm.channel.guild.me:
+                if m.author.id == self.mm.channel.guild.me.id:
                     self.chat.append(
                         {"role": "assistant", "content": mssg}
                     )
@@ -199,7 +201,7 @@ class MikoGPT(discord.ui.View):
                         await cmsg.ainit()
                         if refs[-1].reference.cached_message is not None:
                             m: discord.Message = refs[-1].reference.cached_message
-                        elif cmsg.content is not None and cmsg.content != "":
+                        elif cmsg.content is not None and (cmsg.content != "" or len(cmsg.attachments) != 0):
                             m = cmsg
                         else:
                             m: discord.Message = await self.channel.fetch_message(refs[-1].reference.message_id)

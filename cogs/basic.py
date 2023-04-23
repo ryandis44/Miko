@@ -166,11 +166,11 @@ class Basic(commands.Cog):
         try: user = ctx.message.mentions[0]
         except: user = ctx.author
 
-        m = CachedMessage(message_id=1099588416376688650)
+        m = CachedMessage(message_id=1099799502409433088)
         await m.ainit()
 
         await ctx.send(
-            content=f"{m.guild.owner.mention}"
+            content=f"{m.content}"
         )
         
         await r.set(

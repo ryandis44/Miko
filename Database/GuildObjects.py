@@ -1000,6 +1000,10 @@ class CachedMessage:
         self.author = CachedUser(name=m['author']['name'], id=int(m['author']['id']))
         if m['reference_id'] is not None:
             self.reference = CachedReference(message_id=int(m['reference_id']))
+        for attachment in m['attachments']:
+            self.attachments.append(
+                CachedAttachment(attachment=attachment)
+            )
         if m['thread'] is not None:
             self.thread = CachedChannel(
                 name=m['thread']['name'],
@@ -1043,6 +1047,11 @@ class CachedReference:
     def __init__(self, message_id: int) -> None:
         self.message_id=message_id
         self.cached_message = None
+
+class CachedAttachment:
+    def __init__(self, attachment: dict):
+        self.data = attachment['data']
+        self.filename = attachment['filename']
         
 
 class MikoMessage():
@@ -1084,6 +1093,10 @@ class MikoMessage():
                     'id': str(self.message.id),
                     'content': self.message.content,
                     'reference_id': ref_id,
+                    'attachments': [] if len(self.message.attachments) == 0 or self.message.attachments[0].filename != "message.txt" else [{
+                            'filename': "message.txt",
+                            'data': (await self.message.attachments[0].read()).decode()
+                        }],
                     'author': {
                         'name': str(self.message.author),
                         'id': str(self.message.author.id)
