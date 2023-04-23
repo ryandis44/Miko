@@ -22,12 +22,13 @@ from dpyConsole import Console
 from discord.utils import get
 from discord.ext import commands
 from dotenv import load_dotenv
-from Database.GuildObjects import MikoGuild, MikoMember, MikoMessage, fetch_playtime_sessions
+from Database.GuildObjects import MikoGuild, MikoMember, MikoMessage, RawMessageUpdate, fetch_playtime_sessions
 from Emojis.emoji_generator import regen_guild_emoji
 from async_processes import heartbeat, set_async_client, MaintenanceThread
 from utils.HandleInterrupt import interrupt, nullify_restore_time
 from Voice.track_voice import fetch_voicetime_sessions, process_voice_state
 from utils.parse_inventory import check_for_karuta, parse_inventory
+from Database.RedisCache import connect_redis
 from Music.LavalinkClient import AUDIO_SESSIONS
 from Polls.UI import active_polls
 
@@ -259,13 +260,17 @@ async def on_voice_state_update(member: discord.Member, bef: discord.VoiceState,
     if member.bot: return # do not track bots
     await process_voice_state(u=u, bef=bef, cur=cur)
 
+@client.event
+async def on_raw_message_edit(payload: discord.RawMessageUpdateEvent) -> None:
+    await RawMessageUpdate(payload=payload).ainit()
 
 @client.event
 async def on_message(message: discord.Message):
     if not tunables('EVENT_ENABLED_ON_MESSAGE'): return
     if not running: return
     mm = MikoMessage(message=message, client=client)
-    await mm.ainit()
+    try: await mm.ainit()
+    except: return
     if (await mm.channel.profile).feature_enabled('MESSAGE_HANDLING') != 1:
         await client.process_commands(message)
         return
@@ -331,30 +336,36 @@ async def on_message(message: discord.Message):
                         break
     '''
 
-    
-    # Respond to being mentioned
-    if len(message.content) > 0 and str(client.user.id) in message.content.split()[0] and message.author.id != client.user.id or \
-        (message.reference is not None and message.reference.resolved is not None and \
-            message.reference.resolved.author.id == client.user.id):
-        
-        if (await mm.channel.profile).feature_enabled('CHATGPT') == 1:
-
-            # Send help menu if only @ ing Miko
-            if len(message.content.split()) <= 1 and message.content == f"<@{str(client.user.id)}>":
-                await message.reply(
-                    content=f"Please use {tunables('SLASH_COMMAND_SUGGEST_HELP')} for help.",
-                    silent=True
-                )
-                return
-
-            await MikoGPT(mm=mm).ainit()
-        
-        # Basic response
-        elif (await mm.channel.profile).feature_enabled('REPLY_TO_MENTION') == 1:
+    if (await mm.channel.profile).feature_enabled('CHATGPT') == 1: await MikoGPT(mm=mm).ainit()
+    elif (await mm.channel.profile).feature_enabled('REPLY_TO_MENTION') == 1:
             await message.reply(
                 content=f"Please use {tunables('SLASH_COMMAND_SUGGEST_HELP')} for help.",
                 silent=True
             )
+    
+    # # Respond to being mentioned
+    # if len(message.content) > 0 and str(client.user.id) in message.content.split()[0] and message.author.id != client.user.id or \
+    #     (message.reference is not None and message.reference.resolved is not None and \
+    #         message.reference.resolved.author.id == client.user.id):
+        
+    #     if (await mm.channel.profile).feature_enabled('CHATGPT') == 1:
+
+    #         # Send help menu if only @ ing Miko
+    #         if len(message.content.split()) <= 1 and message.content == f"<@{str(client.user.id)}>":
+    #             await message.reply(
+    #                 content=f"Please use {tunables('SLASH_COMMAND_SUGGEST_HELP')} for help.",
+    #                 silent=True
+    #             )
+    #             return
+
+
+        
+    #     # Basic response
+    #     elif (await mm.channel.profile).feature_enabled('REPLY_TO_MENTION') == 1:
+    #         await message.reply(
+    #             content=f"Please use {tunables('SLASH_COMMAND_SUGGEST_HELP')} for help.",
+    #             silent=True
+    #         )
 
     return
 
@@ -377,6 +388,7 @@ async def load_extensions_console():
 async def main():
     print('bot online')
     await connect_pool()
+    await connect_redis()
     asyncio.create_task(heartbeat())
     async with client:
         await load_extensions()

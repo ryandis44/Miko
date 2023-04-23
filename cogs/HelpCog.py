@@ -125,6 +125,7 @@ async def help(interaction: discord.Interaction, category) -> None:
             temp.append(
                 f"Is enabled? TRUE"
                 "ChatGPT help"
+                "Do not need @ in thread"
             )
 
         case _: # No category specified

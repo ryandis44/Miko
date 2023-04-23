@@ -4,8 +4,9 @@ from discord.ext import commands
 from discord.utils import get
 import random
 import time
-from Database.GuildObjects import MikoGuild, MikoMember, MikoTextChannel
+from Database.GuildObjects import CachedMessage, MikoGuild, MikoMember, MikoTextChannel
 from Database.database_class import Database, AsyncDatabase
+from Database.RedisCache import RedisCache
 from Plex.embeds import plex_update_2_2
 from Database.database import add_bot, add_react_all_to_user, add_react_to_user, add_rename_any_user, del_bot, del_react_all_to_user, del_react_to_user, del_rename_any_user, generic_list_embed, top_channels_embed_server, top_users_embed_server, user_info_embed
 from Presence.Objects import PRESENCE_UPDATES
@@ -18,6 +19,7 @@ from tunables import *
 
 b = Database("basic.py")
 ab = AsyncDatabase("cogs.basic.py")
+r = RedisCache("cogs.basic.py")
 
 running = 0
 
@@ -164,8 +166,20 @@ class Basic(commands.Cog):
         try: user = ctx.message.mentions[0]
         except: user = ctx.author
 
+        m = CachedMessage(message_id=1099588416376688650)
+        await m.ainit()
+
         await ctx.send(
-            content=f"{PRESENCE_UPDATES}"
+            content=f"{m.guild.owner.mention}"
+        )
+        
+        await r.set(
+            key=user.id,
+            value={
+                    'message_id': 12345,
+                    'content': "hello"
+                },
+            type="JSON"
         )
 
 

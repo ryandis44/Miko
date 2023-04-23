@@ -8,6 +8,7 @@ import discord
 from Database.UserAttributes import Playtime
 from Music.LavalinkClient import AUDIO_SESSIONS
 from Database.database_class import AsyncDatabase
+from Database.RedisCache import RedisCache
 from Leveling.LevelClass import LevelClass
 # from Pets.PetClass import PetOwner
 # from Tokens.TokenClass import Token
@@ -18,6 +19,7 @@ from misc.holiday_roles import get_holiday
 from misc.misc import generate_nickname, react_all_emoji_list, today
 from tunables import *
 ago = AsyncDatabase("Database.GuildObjects.py")
+r = RedisCache('Database.GuildObjects.py')
 
 CHECK_LOCK = {}
 
@@ -520,8 +522,7 @@ class MikoTextChannel(MikoGuild):
             await ago.execute(upd_cmd)
         return
 
-
-
+    
 
 class MikoMember(MikoGuild):
     def __init__(self, user: discord.Member, client: discord.Client, guild_id: int = None, check_exists=True, check_exists_guild=True):
@@ -964,18 +965,154 @@ class MikoMember(MikoGuild):
         if val is None or val == []: return 0
         return int(val)
         
+class RawMessageUpdate():
+    def __init__(self, payload: discord.RawMessageUpdateEvent) -> None:
+        self.payload = payload
+    
+    async def ainit(self) -> None:
+        m = await r.get(key=f"m:{self.payload.message_id}", type="JSON")
+        if m is None: return
+        await r.set(
+            key=f"m:{self.payload.message_id}",
+            type="JSON",
+            path="$.content",
+            value=self.payload.data['content']
+        )
+
+class CachedMessage:
+    def __init__(self, message_id: int) -> None:
+        self.message_id = message_id
+        self.id: int = None
+        self.content: str = None
+        self.author: CachedUser = None
+        self.thread: CachedChannel = None
+        self.channel: CachedChannel = None
+        self.guild: CachedGuild = None
+        self.reference: CachedReference = None
+        self.attachments = []
+    
+    async def ainit(self):
+        m = await r.get(key=f"m:{self.message_id}", type="JSON")
+        if m is None: return
+        
+        self.id = m['id']
+        self.content = m['content']
+        self.author = CachedUser(name=m['author']['name'], id=int(m['author']['id']))
+        if m['reference_id'] is not None:
+            self.reference = CachedReference(message_id=int(m['reference_id']))
+        if m['thread'] is not None:
+            self.thread = CachedChannel(
+                name=m['thread']['name'],
+                type=m['thread']['type'],
+                id=m['thread']['id']
+            )
+        self.channel = CachedChannel(
+            name=m['channel']['name'],
+            type=m['channel']['type'],
+            id=m['channel']['id']
+        )
+        self.guild = CachedGuild(
+            name=m['guild']['name'],
+            id=m['guild']['id'],
+            owner=CachedUser(name=m['guild']['owner']['name'], id=int(m['guild']['owner']['id']))
+        )
+    
+    
+class CachedUser:
+    def __init__(self, name: str, id: int):
+        self.name=name
+        self.id=id
+        self.mention = f"<@{id}>"
+    def __str__(self) -> str: return self.name
+
+class CachedChannel:
+    def __init__(self, name: str, type: str, id: int):
+        self.name=name,
+        self.type=type,
+        self.id=id
+    def __str__(self) -> str: return self.name
+
+class CachedGuild:
+    def __init__(self, name: str, id: int, owner: CachedUser):
+        self.name=name
+        self.id=id
+        self.owner = owner
+    def __str__(self) -> str: return self.name
+
+class CachedReference:
+    def __init__(self, message_id: int) -> None:
+        self.message_id=message_id
+        self.cached_message = None
+        
 
 class MikoMessage():
     def __init__(self, message: discord.Message, client: discord.Client):
         self.user = MikoMember(user=message.author, client=client)
-        self.channel = MikoTextChannel(channel=message.channel, client=client)
+        
+        self.t = discord.ChannelType
+        self.threads = [self.t.public_thread, self.t.private_thread, self.t.news_thread]
+        match message.channel.type:
+            case self.t.text | self.t.voice | self.t.news | self.t.forum | self.t.stage_voice:
+                self.channel = MikoTextChannel(channel=message.channel, client=client)
+            
+            case self.t.public_thread | self.t.private_thread | self.t.news_thread:
+                self.channel = MikoTextChannel(channel=message.channel.parent, client=client)
+            
+            case _: return
+        
         self.message = message
     
-    async def ainit(self):
+    async def ainit(self, check_exists=True):
+        await self.__cache_message()
         # No lock because messages are unique
-        await self.user.ainit()
-        await self.channel.ainit(check_exists_guild=False)
-        await self.__exists()
+        if check_exists:
+            await self.user.ainit()
+            await self.channel.ainit(check_exists_guild=False)
+            await self.__exists()
+    
+    async def __cache_message(self) -> None:
+        m = await r.get(key=f"m:{self.message.id}", type="JSON")
+        if m is None:
+            
+            if self.message.reference is not None:
+                ref_id = str(self.message.reference.message_id)
+            else: ref_id = None
+            await r.set(
+                key=f"m:{self.message.id}",
+                type="JSON",
+                value={
+                    'id': str(self.message.id),
+                    'content': self.message.content,
+                    'reference_id': ref_id,
+                    'author': {
+                        'name': str(self.message.author),
+                        'id': str(self.message.author.id)
+                    },
+                    'thread': {
+                        'name': str(self.message.channel.name),
+                        'type': str(self.message.channel.type),
+                        'id': str(self.message.channel.id),
+                    } if self.message.channel.type in self.threads else None,
+                    'channel': {
+                        'name': str(self.message.channel.id),
+                        'type': str(self.message.channel.type),
+                        'id': str(self.message.channel.id)
+                    } if self.message.channel.type not in self.threads else {
+                        'name': str(self.message.channel.parent.name),
+                        'type': str(self.message.channel.parent.type),
+                        'id': str(self.message.channel.parent_id)
+                    },
+                    'guild': {
+                        'name': str(self.message.guild),
+                        'id': str(self.message.guild.id),
+                        'owner': {
+                            'name': str(self.message.guild.owner),
+                            'id': str(self.message.guild.owner.id)
+                        }
+                    }
+                }
+            )
+        else: pass
     
     async def __exists(self) -> None:
         row = await ago.execute(

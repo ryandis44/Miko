@@ -47,12 +47,12 @@ class MaintenanceThread(threading.Thread):
             num += 1
             time.sleep(1)
 
-def lock_table_cleanup(table: dict) -> None:
+def lock_table_cleanup(table: dict, interval: int = 15) -> None:
         if len(table) == 0: return
         t = int(time.time())
         del_list = []
         for key, update in table.items():
-            if update['at'] < t - 15:
+            if update['at'] < t - interval:
                 del_list.append(key)
         
         for key in del_list:
