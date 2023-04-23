@@ -133,10 +133,10 @@ class MikoGPT(discord.ui.View):
             # cannot be read.
             refs.reverse()                
             for m in refs:
-                # if type(m) == discord.Message:
-                #     print(f">>> DISCORD: {m.content}")
-                # else:
-                #     print(f">>> REDIS: {m.content} {None if len(m.attachments) == 0 else m.attachments[0].data}")
+                if type(m) == discord.Message:
+                    print(f">>> DISCORD: {m.content}")
+                else:
+                    print(f">>> REDIS: {m.content} {None if len(m.attachments) == 0 else m.attachments[0].data}")
                 m: discord.Message|CachedMessage
                 mssg = None
                 if m.content == "" and len(m.attachments) == 0:# or re.match(r"<@\d{15,30}>", m.content):
