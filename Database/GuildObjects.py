@@ -980,8 +980,9 @@ class RawMessageUpdate():
         )
 
 class CachedMessage:
-    def __init__(self, message_id: int) -> None:
+    def __init__(self, message_id: int=None, m: dict=None) -> None:
         self.message_id = message_id
+        self.m = m
         self.id: int = None
         self.content: str = None
         self.author: CachedUser = None
@@ -990,36 +991,39 @@ class CachedMessage:
         self.guild: CachedGuild = None
         self.reference: CachedReference = None
         self.attachments = []
+        if m is not None: self.__assign_attributes()
     
     async def ainit(self):
-        m = await r.get(key=f"m:{self.message_id}", type="JSON")
-        if m is None: return
-        
-        self.id = m['id']
-        self.content = m['content']
-        self.author = CachedUser(name=m['author']['name'], id=int(m['author']['id']))
-        self.created_at = m['created_at']
-        if m['reference_id'] is not None:
-            self.reference = CachedReference(message_id=int(m['reference_id']))
-        for attachment in m['attachments']:
+        self.m = await r.get(key=f"m:{self.message_id}", type="JSON")
+        if self.m is None: return
+        self.__assign_attributes()
+    
+    def __assign_attributes(self):
+        self.id = int(self.m['id'])
+        self.content = self.m['content']
+        self.author = CachedUser(name=self.m['author']['name'], id=int(self.m['author']['id']))
+        self.created_at = self.m['created_at']
+        if self.m['reference_id'] is not None:
+            self.reference = CachedReference(message_id=int(self.m['reference_id']))
+        for attachment in self.m['attachments']:
             self.attachments.append(
                 CachedAttachment(attachment=attachment)
             )
-        if m['thread'] is not None:
+        if self.m['thread'] is not None:
             self.thread = CachedChannel(
-                name=m['thread']['name'],
-                type=m['thread']['type'],
-                id=m['thread']['id']
+                name=self.m['thread']['name'],
+                type=self.m['thread']['type'],
+                id=self.m['thread']['id']
             )
         self.channel = CachedChannel(
-            name=m['channel']['name'],
-            type=m['channel']['type'],
-            id=m['channel']['id']
+            name=self.m['channel']['name'],
+            type=self.m['channel']['type'],
+            id=self.m['channel']['id']
         )
         self.guild = CachedGuild(
-            name=m['guild']['name'],
-            id=m['guild']['id'],
-            owner=CachedUser(name=m['guild']['owner']['name'], id=int(m['guild']['owner']['id']))
+            name=self.m['guild']['name'],
+            id=self.m['guild']['id'],
+            owner=CachedUser(name=self.m['guild']['owner']['name'], id=int(self.m['guild']['owner']['id']))
         )
     
     

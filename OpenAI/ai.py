@@ -4,7 +4,7 @@ import time
 import openai
 import discord
 import re
-from tunables import tunables, GLOBAL_EMBED_COLOR
+from tunables import *
 from Database.GuildObjects import CachedMessage, MikoMember, GuildProfile, AsyncDatabase, RedisCache, MikoTextChannel, MikoMessage
 
 db = AsyncDatabase('OpenAI.ai.py')
@@ -62,8 +62,10 @@ class MikoGPT(discord.ui.View):
         
         self.response['personality'] = await self.mm.channel.gpt_personality
         
+        
+        self.t = discord.ChannelType
         match self.ctype:
-            case discord.ChannelType.text:
+            case self.t.text | self.t.voice | self.t.news | self.t.forum | self.t.stage_voice:
                 if len(self.mm.message.content) > 0 and str(self.mm.channel.client.user.id) in self.mm.message.content.split()[0] and self.mm.message.author.id != self.mm.channel.client.user.id or \
                     (self.mm.message.reference is not None and self.mm.message.reference.resolved is not None and \
                         self.mm.message.reference.resolved.author.id == self.mm.channel.client.user.id):
@@ -79,7 +81,9 @@ class MikoGPT(discord.ui.View):
                     return
                 
                 
-            case discord.ChannelType.public_thread: pass
+            case self.t.public_thread | self.t.private_thread | self.t.news_thread:
+                if (len(self.mm.message.content) == 0 and len(self.mm.message.attachments) == 0) or \
+                    self.response['personality'] is None: return
             case _: return
         
         if not await self.__fetch_chats(): return
@@ -118,7 +122,9 @@ class MikoGPT(discord.ui.View):
         
         # If not in thread, do this
         refs = await self.__fetch_replies()
-        
+        if len(refs) == 0:
+            if self.ctype in self.thread_types:
+                refs = await self.__fetch_thread_messages()
         
         try:
             self.chat.append(
@@ -131,10 +137,10 @@ class MikoGPT(discord.ui.View):
             # cannot be read.
             refs.reverse()                
             for m in refs:
-                if type(m) == discord.Message:
-                    print(f">>> DISCORD: {m.content}")
-                else:
-                    print(f">>> REDIS: {m.content} {None if len(m.attachments) == 0 else m.attachments[0].data}")
+                # if type(m) == discord.Message:
+                #     print(f">>> DISCORD: {m.content}")
+                # else:
+                #     print(f">>> REDIS: {m.content} {None if len(m.attachments) == 0 else m.attachments[0].data}")
                 m: discord.Message|CachedMessage
                 mssg = None
                 if m.content == "" and len(m.attachments) == 0:# or re.match(r"<@\d{15,30}>", m.content):
@@ -183,6 +189,21 @@ class MikoGPT(discord.ui.View):
             return False
     
     
+    async def __fetch_thread_messages(self) -> list:
+        messages = await r.search(
+            query=self.channel.id,
+            type="JSON_THREAD_ID",
+            index="by_thread_id",
+            limit=tunables('CHATGPT_THREAD_MESSAGE_LIMIT')
+        )
+        
+        refs = []
+        for m in messages:
+            m = CachedMessage(m=loads(m['json']))
+            if (m.content != "" or len(m.attachments) > 0) and m.id != self.mm.message.id:
+                refs.append(m)
+        return refs
+    
     
     async def __fetch_replies(self) -> list:
         try:
@@ -193,7 +214,7 @@ class MikoGPT(discord.ui.View):
                 
                 i = 0
                 while True:
-                    if refs[-1].reference is not None and i <= tunables('MAX_CONSIDER_REPLIES_OPENAI'):
+                    if refs[-1].reference is not None and i <= tunables('CHATGPT_MAX_REPLIES_CHAIN'):
                         
                         cmsg = CachedMessage(message_id=refs[-1].reference.message_id)
                         await cmsg.ainit()
@@ -251,7 +272,8 @@ class MikoGPT(discord.ui.View):
                     reason="ChatGPT"
                 )
                 await self.thread.send(
-                    content=self.response['data'],
+                    content=None,
+                    embed=embed,
                     silent=True,
                     allowed_mentions=discord.AllowedMentions(
                         replied_user=True,

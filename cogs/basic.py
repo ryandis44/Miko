@@ -171,10 +171,12 @@ class Basic(commands.Cog):
             query=1099507241293451334,
             type="JSON_THREAD_ID",
             index="by_thread_id",
-            limit=tunables('MAX_CONSIDER_REPLIES_OPENAI')
+            limit=tunables('CHATGPT_MAX_REPLIES_CHAIN')
         )
-
-        print(val)
+        val.reverse()
+        for m in val:
+            m = CachedMessage(m=loads(m['json']))
+            print(m.content)
 
         # m = CachedMessage(message_id=1099799502409433088)
         # await m.ainit()

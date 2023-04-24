@@ -89,13 +89,15 @@ class RedisCache:
             print(f"[REDIS] Error retriving value from key {key}:\n{e}")
             return None
 
-    async def search(self, query: str, type: str, index: str, limit: int = 10) -> dict|list|str|None:
+    async def search(self, query: str, type: str, index: str, offset: int = 0, limit: int = 10) -> dict|list|str|None:
         try:
             match type:
                 case "STRING": ...
                 case "JSON_THREAD_ID":
-                    q = Query(query).sort_by(field="created_at", asc=False)
-                    return await connection.ft(index_name=index).search(q)
+                    q = Query(query)
+                    q.paging(offset, limit)
+                    q.sort_by(field="created_at", asc=False)
+                    return (await connection.ft(index_name=index).search(q)).docs
         except Exception as e:
             print(f"[REDIS] Error retriving value from SEARCH BY QUERY {query} {type} {index}:\n{e}")
             return None
