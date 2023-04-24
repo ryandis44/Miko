@@ -530,7 +530,7 @@ class MikoMember(MikoGuild):
         self.user = user
     
     async def ainit(self, check_exists: bool = True, check_exists_guild: bool = True, skip_if_locked: bool = False):
-        if (check_exists and not self.user.pending) and \
+        if (check_exists and not (self.user.pending or (await self.profile).feature_enabled('SKIP_VERIFICATION') == 1)) and \
             not (skip_if_locked and lock_status(key=self.user.id)):
             async with check_lock(key=self.user.id):
                 await self.__exists()
