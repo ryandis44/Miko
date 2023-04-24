@@ -985,6 +985,7 @@ class CachedMessage:
         self.m = m
         self.id: int = None
         self.content: str = None
+        self.embeds = []
         self.author: CachedUser = None
         self.thread: CachedChannel = None
         self.channel: CachedChannel = None
@@ -1003,13 +1004,15 @@ class CachedMessage:
         self.content = self.m['content']
         self.author = CachedUser(name=self.m['author']['name'], id=int(self.m['author']['id']))
         self.created_at = self.m['created_at']
+        if self.m['embeds'] is not None:
+            ...
         if self.m['reference_id'] is not None:
             self.reference = CachedReference(message_id=int(self.m['reference_id']))
         for attachment in self.m['attachments']:
             self.attachments.append(
                 CachedAttachment(attachment=attachment)
             )
-        if self.m['thread'] is not None:
+        if self.m['thread'] is not None and self.m['thread'] != "null":
             self.thread = CachedChannel(
                 name=self.m['thread']['name'],
                 type=self.m['thread']['type'],
@@ -1052,6 +1055,10 @@ class CachedReference:
     def __init__(self, message_id: int) -> None:
         self.message_id=message_id
         self.cached_message = None
+
+class CachedEmbed:
+    def __init__(self, description: str) -> None:
+        self.description = description
 
 class CachedAttachment:
     def __init__(self, attachment: dict):
@@ -1107,11 +1114,11 @@ class MikoMessage():
                         'name': str(self.message.author),
                         'id': str(self.message.author.id)
                     },
-                    'thread': {
-                        'name': str(self.message.channel.name),
-                        'type': str(self.message.channel.type),
-                        'id': str(self.message.channel.id),
-                    } if self.message.channel.type in self.threads else None,
+                    # 'thread': None if self.message.channel.type not in self.threads else {
+                    #     'name': str(self.message.channel.name),
+                    #     'type': str(self.message.channel.type),
+                    #     'id': str(self.message.channel.id),
+                    # },
                     'channel': {
                         'name': str(self.message.channel.id),
                         'type': str(self.message.channel.type),

@@ -135,7 +135,7 @@ class MikoGPT(discord.ui.View):
             # Determine the string to append to chat or
             # cancel interaction if any replied messages
             # cannot be read.
-            refs.reverse()                
+            refs.reverse()
             for m in refs:
                 # if type(m) == discord.Message:
                 #     print(f">>> DISCORD: {m.content}")
@@ -157,7 +157,7 @@ class MikoGPT(discord.ui.View):
                 if len(m.attachments) > 0:
                     val = await self.__check_attachments(message=m)
                     if val is not None:
-                        mssg = f"{mssg} (A file is attached, it has been decoded so you can read it:) {val}"
+                        mssg = f"{mssg} {val}"
                     elif mssg == "" or mssg is None or mssg == []: return False # Could cause issues. Replace with continue if so
                 
                 
@@ -178,7 +178,7 @@ class MikoGPT(discord.ui.View):
             if len(self.mm.message.attachments) > 0:
                 val = await self.__check_attachments(message=self.mm.message)
                 if val is not None:
-                    mssg = f"{mssg} (A file is attached, it has been decoded so you can read it:) {val}"
+                    mssg = f"{mssg} {val}"
             self.chat.append(
                 {"role": "user", "content": mssg}
             )
