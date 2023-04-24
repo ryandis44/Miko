@@ -1,9 +1,11 @@
 import asyncio
 import datetime
+from io import BytesIO
 import random
 import re
 import copy
 import time
+import aiohttp
 import discord
 from Database.UserAttributes import Playtime
 from Music.LavalinkClient import AUDIO_SESSIONS
@@ -969,14 +971,56 @@ class RawMessageUpdate():
     def __init__(self, payload: discord.RawMessageUpdateEvent) -> None:
         self.payload = payload
     
+    async def __get_attachments(self) -> list:
+        attachments = []
+        if len(self.payload.data['attachments']) > 0:
+            for attachment in self.payload.data['attachments']:
+                if attachment['filename'] != "message.txt": continue
+                async with aiohttp.ClientSession() as ses:
+                    async with ses.get(attachment['url']) as r:
+                        if r.status in range(200, 299):
+                            data = BytesIO(await r.read())
+                            try: data = data.getvalue().decode()
+                            except: return []
+                            attachments.append(data)
+                break
+            return attachments
+        return []
+    
     async def ainit(self) -> None:
         m = await r.get(key=f"m:{self.payload.message_id}", type="JSON")
         if m is None: return
+        
+        # Update message content
         await r.set(
             key=f"m:{self.payload.message_id}",
             type="JSON",
             path="$.content",
             value=self.payload.data['content']
+        )
+        
+        # Update attachments
+        attachments = await self.__get_attachments()
+        await r.set(
+            key=f"m:{self.payload.message_id}",
+            type="JSON",
+            path="$.attachments",
+            value=attachments
+        )
+        
+        # Update embed description
+        embeds = []
+        if len(self.payload.data['embeds']) > 0:
+            for embed in self.payload.data['embeds']:
+                if embed['description'] is None or embed['description'] == "": continue
+                embeds.append({
+                    'description': embed['description']
+                })
+        await r.set(
+            key=f"m:{self.payload.message_id}",
+            type="JSON",
+            path="$.embeds",
+            value=embeds
         )
 
 class CachedMessage:
@@ -985,13 +1029,13 @@ class CachedMessage:
         self.m = m
         self.id: int = None
         self.content: str = None
-        self.embeds = []
+        self.embeds: CachedEmbed = []
         self.author: CachedUser = None
         self.thread: CachedChannel = None
         self.channel: CachedChannel = None
         self.guild: CachedGuild = None
         self.reference: CachedReference = None
-        self.attachments = []
+        self.attachments: CachedAttachment = []
         if m is not None: self.__assign_attributes()
     
     async def ainit(self):
@@ -1004,9 +1048,12 @@ class CachedMessage:
         self.content = self.m['content']
         self.author = CachedUser(name=self.m['author']['name'], id=int(self.m['author']['id']))
         self.created_at = self.m['created_at']
-        if self.m['embeds'] is not None:
-            ...
-        if self.m['reference_id'] is not None:
+        if self.m['embeds'] is not None and self.m['embeds'] != "null":
+            for embed in self.m['embeds']:
+                self.embeds.append(
+                    CachedEmbed(embed=embed)
+                )
+        if self.m['reference_id'] is not None and self.m['reference_id'] != "null":
             self.reference = CachedReference(message_id=int(self.m['reference_id']))
         for attachment in self.m['attachments']:
             self.attachments.append(
@@ -1057,8 +1104,8 @@ class CachedReference:
         self.cached_message = None
 
 class CachedEmbed:
-    def __init__(self, description: str) -> None:
-        self.description = description
+    def __init__(self, embed: dict) -> None:
+        self.description = embed['description']
 
 class CachedAttachment:
     def __init__(self, attachment: dict):
@@ -1095,9 +1142,23 @@ class MikoMessage():
         m = await r.get(key=f"m:{self.message.id}", type="JSON")
         if m is None:
             
-            if self.message.reference is not None:
-                ref_id = str(self.message.reference.message_id)
-            else: ref_id = None
+            embeds = []
+            if len(self.message.embeds) > 0:
+                for embed in self.message.embeds:
+                    if embed.description is None or embed.description == "": continue
+                    embeds.append({
+                        'description': embed.description
+                    })
+            
+            attachments = []
+            if len(self.message.attachments) > 0 and self.message.attachments[0].filename == "message.txt":
+                try:
+                    attachments.append({
+                        'filename': "message.txt",
+                        'data': (await self.message.attachments[0].read()).decode()
+                    })
+                except: pass
+            
             await r.set(
                 key=f"m:{self.message.id}",
                 type="JSON",
@@ -1105,20 +1166,18 @@ class MikoMessage():
                     'id': str(self.message.id),
                     'content': self.message.content,
                     'created_at': int(self.message.created_at.timestamp()),
-                    'reference_id': ref_id,
-                    'attachments': [] if len(self.message.attachments) == 0 or self.message.attachments[0].filename != "message.txt" else [{
-                            'filename': "message.txt",
-                            'data': (await self.message.attachments[0].read()).decode()
-                        }],
+                    'reference_id': None if self.message.reference is None else str(self.message.reference.message_id),
+                    'attachments': attachments,
+                    'embeds': embeds,
                     'author': {
                         'name': str(self.message.author),
                         'id': str(self.message.author.id)
                     },
-                    # 'thread': None if self.message.channel.type not in self.threads else {
-                    #     'name': str(self.message.channel.name),
-                    #     'type': str(self.message.channel.type),
-                    #     'id': str(self.message.channel.id),
-                    # },
+                    'thread': None if self.message.channel.type not in self.threads else {
+                        'name': str(self.message.channel.name),
+                        'type': str(self.message.channel.type),
+                        'id': str(self.message.channel.id),
+                    },
                     'channel': {
                         'name': str(self.message.channel.id),
                         'type': str(self.message.channel.type),
@@ -1138,7 +1197,7 @@ class MikoMessage():
                     }
                 }
             )
-        else: pass
+        else: pass # update cache?
     
     async def __exists(self) -> None:
         row = await ago.execute(

@@ -167,23 +167,25 @@ class Basic(commands.Cog):
         except: user = ctx.author
 
 
-        val = await r.search(
-            query=1099507241293451334,
-            type="JSON_THREAD_ID",
-            index="by_thread_id",
-            limit=tunables('CHATGPT_MAX_REPLIES_CHAIN')
-        )
-        val.reverse()
-        for m in val:
-            m = CachedMessage(m=loads(m['json']))
-            print(m.content)
-
-        # m = CachedMessage(message_id=1099799502409433088)
-        # await m.ainit()
-
-        # await ctx.send(
-        #     content=f"{m.content}"
+        # val = await r.search(
+        #     query=1099507241293451334,
+        #     type="JSON_THREAD_ID",
+        #     index="by_thread_id",
+        #     limit=tunables('CHATGPT_MAX_REPLIES_CHAIN')
         # )
+        # val.reverse()
+        # for m in val:
+        #     m = CachedMessage(m=loads(m['json']))
+        #     print(m.content)
+
+        m = CachedMessage(message_id=1100187124071927838)
+
+        try:
+            await m.ainit()
+            await ctx.send(
+                content=f"{m.content}"
+            )
+        except Exception as e: print(e)
         
         # await r.set(
         #     key=user.id,
