@@ -998,6 +998,7 @@ class CachedMessage:
         self.id = m['id']
         self.content = m['content']
         self.author = CachedUser(name=m['author']['name'], id=int(m['author']['id']))
+        self.created_at = m['created_at']
         if m['reference_id'] is not None:
             self.reference = CachedReference(message_id=int(m['reference_id']))
         for attachment in m['attachments']:
@@ -1092,6 +1093,7 @@ class MikoMessage():
                 value={
                     'id': str(self.message.id),
                     'content': self.message.content,
+                    'created_at': int(self.message.created_at.timestamp()),
                     'reference_id': ref_id,
                     'attachments': [] if len(self.message.attachments) == 0 or self.message.attachments[0].filename != "message.txt" else [{
                             'filename': "message.txt",

@@ -119,8 +119,6 @@ class MikoGPT(discord.ui.View):
         # If not in thread, do this
         refs = await self.__fetch_replies()
         
-        # If in thread, do this
-        # refs = await self.__fetch thread messages
         
         try:
             self.chat.append(

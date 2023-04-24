@@ -166,21 +166,31 @@ class Basic(commands.Cog):
         try: user = ctx.message.mentions[0]
         except: user = ctx.author
 
-        m = CachedMessage(message_id=1099799502409433088)
-        await m.ainit()
 
-        await ctx.send(
-            content=f"{m.content}"
+        val = await r.search(
+            query=1099507241293451334,
+            type="JSON_THREAD_ID",
+            index="by_thread_id",
+            limit=tunables('MAX_CONSIDER_REPLIES_OPENAI')
         )
+
+        print(val)
+
+        # m = CachedMessage(message_id=1099799502409433088)
+        # await m.ainit()
+
+        # await ctx.send(
+        #     content=f"{m.content}"
+        # )
         
-        await r.set(
-            key=user.id,
-            value={
-                    'message_id': 12345,
-                    'content': "hello"
-                },
-            type="JSON"
-        )
+        # await r.set(
+        #     key=user.id,
+        #     value={
+        #             'message_id': 12345,
+        #             'content': "hello"
+        #         },
+        #     type="JSON"
+        # )
 
 
         # await ctx.channel.send(f"{playtimeContentMessage()}")

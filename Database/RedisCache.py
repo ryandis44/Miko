@@ -2,6 +2,7 @@ import asyncio
 import os
 import redis.asyncio as redis
 from redis.commands.json.path import Path
+from redis.commands.search.query import Query
 from tunables import *
 from Database.database_class import ip
 
@@ -77,7 +78,7 @@ class RedisCache:
     
     
     
-    async def get(self, key: str, type: str):
+    async def get(self, key: str, type: str) -> dict|str|None:
         global connection
         # async with connection.pipeline(transaction=True) as pipe:
         try:
@@ -86,4 +87,15 @@ class RedisCache:
                 case "JSON": return await connection.json().get(key)
         except Exception as e:
             print(f"[REDIS] Error retriving value from key {key}:\n{e}")
+            return None
+
+    async def search(self, query: str, type: str, index: str, limit: int = 10) -> dict|list|str|None:
+        try:
+            match type:
+                case "STRING": ...
+                case "JSON_THREAD_ID":
+                    q = Query(query).sort_by(field="created_at", asc=False)
+                    return await connection.ft(index_name=index).search(q)
+        except Exception as e:
+            print(f"[REDIS] Error retriving value from SEARCH BY QUERY {query} {type} {index}:\n{e}")
             return None
