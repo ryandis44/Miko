@@ -1029,13 +1029,13 @@ class CachedMessage:
         self.m = m
         self.id: int = None
         self.content: str = None
-        self.embeds: CachedEmbed = []
+        self.embeds = []
         self.author: CachedUser = None
         self.thread: CachedChannel = None
         self.channel: CachedChannel = None
         self.guild: CachedGuild = None
         self.reference: CachedReference = None
-        self.attachments: CachedAttachment = []
+        self.attachments = []
         if m is not None: self.__assign_attributes()
     
     async def ainit(self):

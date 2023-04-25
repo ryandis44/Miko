@@ -31,6 +31,8 @@ from utils.parse_inventory import check_for_karuta, parse_inventory
 from Database.RedisCache import connect_redis
 from Music.LavalinkClient import AUDIO_SESSIONS
 from Polls.UI import active_polls
+from Database.RedisCache import RedisCache
+r = RedisCache('main.py')
 
 
 msg_count = 0
@@ -161,6 +163,7 @@ async def on_member_join(member: discord.Member):
 @client.event
 async def on_raw_message_delete(payload: discord.RawMessageDeleteEvent):
     if not tunables('EVENT_ENABLED_ON_RAW_MESSAGE_DELETE'): return
+    await r.delete(key=f"m:{payload.message_id}")
     poll = active_polls.get_val(str(payload.message_id))
     if poll is None: return
     poll.terminate()
@@ -262,6 +265,7 @@ async def on_voice_state_update(member: discord.Member, bef: discord.VoiceState,
 
 @client.event
 async def on_raw_message_edit(payload: discord.RawMessageUpdateEvent) -> None:
+    if not tunables('EVENT_ENABLED_ON_RAW_MESSAGE_EDIT'): return
     await RawMessageUpdate(payload=payload).ainit()
 
 @client.event

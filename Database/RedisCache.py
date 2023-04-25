@@ -101,3 +101,8 @@ class RedisCache:
         except Exception as e:
             print(f"[REDIS] Error retriving value from SEARCH BY QUERY {query} {type} {index}:\n{e}")
             return None
+    
+    async def delete(self, key: str) -> None:
+        global connection
+        try: await connection.delete(key)
+        except: pass

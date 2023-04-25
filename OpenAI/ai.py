@@ -62,7 +62,6 @@ class MikoGPT(discord.ui.View):
         
         self.response['personality'] = await self.mm.channel.gpt_personality
         
-        
         self.t = discord.ChannelType
         match self.ctype:
             case self.t.text | self.t.voice | self.t.news | self.t.forum | self.t.stage_voice:
@@ -84,6 +83,8 @@ class MikoGPT(discord.ui.View):
             case self.t.public_thread | self.t.private_thread | self.t.news_thread:
                 if (len(self.mm.message.content) == 0 and len(self.mm.message.attachments) == 0) or \
                     self.response['personality'] is None: return
+                
+                # if 
             case _: return
         
         if not await self.__fetch_chats(): return
@@ -149,7 +150,12 @@ class MikoGPT(discord.ui.View):
                         if mssg == "" or mssg is None or mssg == []: raise Exception
                     except: return False
                 else:
-                    try: mssg = ' '.join(self.__remove_mention(m.content.split()))
+                    try:
+                        mssg = ' '.join(self.__remove_mention(m.content.split()))
+                        if mssg == tunables('LOADING_EMOJI'): continue
+                        for embed in m.embeds:
+                            if embed.description == "" or embed.description is None: continue
+                            mssg += " " + embed.description
                     except: pass
                 
                 
@@ -200,7 +206,7 @@ class MikoGPT(discord.ui.View):
         refs = []
         for m in messages:
             m = CachedMessage(m=loads(m['json']))
-            if (m.content != "" or len(m.attachments) > 0) and m.id != self.mm.message.id:
+            if (m.content != "" or len(m.attachments) > 0 or len(m.embeds) > 0) and m.id != self.mm.message.id:
                 refs.append(m)
         return refs
     
@@ -220,7 +226,7 @@ class MikoGPT(discord.ui.View):
                         await cmsg.ainit()
                         if refs[-1].reference.cached_message is not None:
                             m: discord.Message = refs[-1].reference.cached_message
-                        elif cmsg.content is not None and (cmsg.content != "" or len(cmsg.attachments) != 0):
+                        elif cmsg.content != "" or len(cmsg.attachments) > 0 or len(cmsg.embeds) > 0:
                             m = cmsg
                         else:
                             m: discord.Message = await self.channel.fetch_message(refs[-1].reference.message_id)
@@ -263,33 +269,57 @@ class MikoGPT(discord.ui.View):
             resp_len = len(self.response['data'])
             if resp_len >= 750 and resp_len <= 3999:
                 embed = await self.__embed()
-                content = self.mm.user.user.mention
-                await self.msg.delete()
-                self.thread = await self.mm.message.create_thread(
-                    name=f"{await self.mm.user.username} ChatGPT Session",
-                    auto_archive_duration=60,
-                    slowmode_delay=2,
-                    reason="ChatGPT"
+                
+                
+                thread_content = (
+                    f"Hello {self.mm.message.author.mention}! I created a private thread that only you and "
+                    "I can see so I can better help answer your questions.\n\n"
+                    "Private threads are similar to a regular Group DM. If you would like to invite someone "
+                    "to this thread, just @ mention them and they will appear. They will be able to invite anyone else from "
+                    "this server once added. You and anyone else in this thread can leave it by right-clicking (or long pressing) "
+                    "on the thread in the channels side menu."
+                    "\n\n"
+                    "Please see my response below:"
                 )
-                await self.thread.send(
-                    content=None,
-                    embed=embed,
-                    silent=True,
-                    allowed_mentions=discord.AllowedMentions(
-                        replied_user=True,
-                        users=True
+                if await self.__create_thread(content=thread_content, embed=self.__embed(), attachments=None): return
+                
+                await self.msg.edit(
+                        content=None,
+                        embed=embed,
+                        allowed_mentions=discord.AllowedMentions(
+                            replied_user=True,
+                            users=True
+                        )
                     )
-                )
-                return
+                
             elif resp_len >= 4000:
                 b = bytes(self.response['data'], 'utf-8')
+                attachments = [discord.File(BytesIO(b), "response.txt")]
+                
+                if await self.__create_thread(
+                        content=(
+                            f"Hello {self.mm.message.author.mention}! I created a private thread that only you and "
+                            "I can see so I can better help answer your questions.\n\n"
+                            "Private threads are similar to a regular Group DM. If you would like to invite someone "
+                            "to this thread, just @ mention them and they will appear. They will be able to invite anyone else from "
+                            "this server once added. You and anyone else in this thread can leave it by right-clicking (or long pressing) "
+                            "on the thread in the channels side menu."
+                            "\n\n"
+                            "The response to your prompt was too long. I have sent it in this "
+                            "`response.txt` file. You can view on PC or Web (or Mobile if you "
+                            "are able to download the file)."
+                        ),
+                        embed=None,
+                        attachments=attachments
+                    ): return
+                
                 await self.msg.edit(
                     content=(
                             "The response to your prompt was too long. I have sent it in this "
                             "`response.txt` file. You can view on PC or Web (or Mobile if you "
                             "are able to download the file)."
                         ),
-                    attachments=[discord.File(BytesIO(b), "response.txt")],
+                    attachments=attachments,
                 )
                 return
             else:
@@ -316,6 +346,61 @@ class MikoGPT(discord.ui.View):
                     users=False
                 )
             )
+            
+    async def __create_thread(self, content: str, embed: discord.Embed, attachments: list) -> bool:
+
+        '''
+        Miko will create a thread if:
+            - It has private thread creation permission
+            - AND it has manage threads permission
+            - AND FINALLY the user interacting with Miko is able to
+            send messages in threads.
+        '''
+        create = self.channel.permissions_for(self.channel.guild.me).create_private_threads
+        manage = self.channel.permissions_for(self.channel.guild.me).manage_threads
+        user = self.channel.permissions_for(self.mm.message.author).send_messages_in_threads
+        # if self.ctype not in self.thread_types and (create and manage):# and len(self.chat) <= 2:
+        if self.ctype == discord.ChannelType.text and (create and manage and user):# and len(self.chat) <= 2:
+            if len(self.mm.message.content) > 90:
+                name = ' '.join(self.__remove_mention(self.mm.message.content.split()))
+            else:
+                name = self.__remove_mention(self.mm.message.content.split())
+                if len(name) > 1: name = ' '.join(name)
+                else: name = ''.join(name)
+            
+            # self.thread = await self.mm.message.create_thread(
+            #     name=name,
+            #     auto_archive_duration=60,
+            #     slowmode_delay=tunables('CHATGPT_THREAD_SLOWMODE_DELAY'),
+            #     reason=f"User requested ChatGPT response"
+            # )
+            self.thread = await self.channel.create_thread(
+                name=name,
+                auto_archive_duration=60,
+                slowmode_delay=tunables('CHATGPT_THREAD_SLOWMODE_DELAY'),
+                reason=f"User requested ChatGPT response",
+                invitable=True
+            )
+            await self.thread.send(
+                content=content,
+                embed=embed,
+                files=attachments,
+                silent=True,
+                allowed_mentions=discord.AllowedMentions(
+                    replied_user=True,
+                    users=True
+                )
+            )
+            await self.msg.edit(
+                embed=None,
+                view=None,
+                content=(
+                    f"I created a private thread that only you and I can access, {self.mm.message.author.mention}.\n"
+                    f"→ Jump to that thread: {self.thread.jump_url}"
+                )
+            )
+            return True
+        return False
         
     async def __embed(self) -> discord.Embed:
         temp = []
@@ -343,9 +428,10 @@ class MikoGPT(discord.ui.View):
         
         # If ChatGPT response contains original prompt,
         # put `` around that prompt.
-        r = r"^.+(\n){2}(.|\n)*$"
+        # r = r"^.+(\n){2}(.|\n)*$"
         text = resp.choices[0].message.content
-        if re.match(r, text):
-            self.response['data'] = f"`{''.join(self.__remove_mention(self.mm.message.content))}`\n{text}"
+        self.response['data'] = text
+        # if re.match(r, text):
+        #     self.response['data'] = f"`{''.join(self.__remove_mention(self.mm.message.content))}`\n{text}"
             
-        else: self.response['data'] = text
+        # else: self.response['data'] = text
