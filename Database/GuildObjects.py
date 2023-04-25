@@ -1188,7 +1188,7 @@ class MikoMessage():
                         'id': str(self.message.channel.id),
                     },
                     'channel': {
-                        'name': str(self.message.channel.id),
+                        'name': str(self.message.channel.name),
                         'type': str(self.message.channel.type),
                         'id': str(self.message.channel.id)
                     } if self.message.channel.type not in self.threads else {
