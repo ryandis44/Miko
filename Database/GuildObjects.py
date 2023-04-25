@@ -993,6 +993,7 @@ class RawMessageUpdate():
         return []
     
     async def ainit(self) -> None:
+        if not tunables('MESSAGE_CACHING'): return
         m = await r.get(key=f"m:{self.payload.message_id}", type="JSON")
         if m is None: return
         
@@ -1049,6 +1050,7 @@ class CachedMessage:
             except Exception as e: print(f"Cached error {e}")
     
     async def ainit(self):
+        if not tunables('MESSAGE_CACHING'): return
         self.m = await r.get(key=f"m:{self.message_id}", type="JSON")
         if self.m is None: return
         self.__assign_attributes()
@@ -1148,6 +1150,8 @@ class MikoMessage():
             await self.__exists()
     
     async def __cache_message(self) -> None:
+        if not tunables('MESSAGE_CACHING'): return
+        
         m = await r.get(key=f"m:{self.message.id}", type="JSON")
         if m is None:
             

@@ -84,6 +84,7 @@ class MikoGPT(discord.ui.View):
                 
                 
             case self.t.public_thread | self.t.private_thread | self.t.news_thread:
+                if not tunables('MESSAGE_CACHING'): return
                 if (len(self.mm.message.content) == 0 and len(self.mm.message.attachments) == 0) or \
                     self.response['personality'] is None: return
                 
@@ -107,7 +108,7 @@ class MikoGPT(discord.ui.View):
         
         
         
-        if self.gpt_threads == "ALWAYS":
+        if self.gpt_threads == "ALWAYS" and tunables('MESSAGE_CACHING'):
             if await self.__create_thread(
                 content=(
                         self.__thread_info() +
@@ -233,6 +234,7 @@ class MikoGPT(discord.ui.View):
     
     
     async def __fetch_thread_messages(self) -> list:
+        if not tunables('MESSAGE_CACHING'): return
         messages = await r.search(
             query=self.channel.id,
             type="JSON_THREAD_ID",
@@ -373,6 +375,7 @@ class MikoGPT(discord.ui.View):
     async def __create_thread(self, content: str, embed: discord.Embed, attachments) -> bool:
 
         if self.gpt_threads is None or (self.msg is not None and self.msg.channel.type in THREAD_TYPES): return False
+        if (await self.mm.channel.profile).feature_enabled('CHATGPT_THREADS') != 1: return False
 
         '''
         Miko will create a thread if:
