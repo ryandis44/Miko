@@ -1,5 +1,6 @@
 from discord import Color
 from discord import ButtonStyle, SelectOption
+from discord import ChannelType
 from json import loads
 from Database.database_class import Database, AsyncDatabase
 from misc.misc import sanitize_name
@@ -14,6 +15,7 @@ GREEN_BOOK_FAIL_COLOR=0xFF0000
 GLOBAL_EMBED_COLOR=Color.magenta()
 PLEX_EMBED_COLOR=0xE5A00D
 TUNABLES_REFRESH_INTERVAL=300
+THREAD_TYPES = [ChannelType.public_thread, ChannelType.private_thread, ChannelType.news_thread]
 
 TUNABLES = {}
 def tunables(s):

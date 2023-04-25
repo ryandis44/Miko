@@ -35,7 +35,11 @@ class SettingsCog(commands.Cog):
         await SettingsView(original_interaction=interaction).ainit()
 
     async def interaction_check(self, interaction: discord.Interaction):
-        await MikoTextChannel(channel=interaction.channel, client=interaction.client).ainit()
+        
+        await MikoTextChannel(
+                channel=interaction.channel if interaction.channel.type not in THREAD_TYPES else interaction.channel.parent,
+                client=interaction.client
+            ).ainit()
         await interaction.response.send_message(content=tunables('LOADING_EMOJI'), ephemeral=True)
         return True
 

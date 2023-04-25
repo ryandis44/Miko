@@ -16,8 +16,12 @@ class SettingsView(discord.ui.View):
 
     @property
     def channel(self) -> discord.TextChannel:
-        return self.original_interaction.channel if \
-            self.scope['type'] == "CHANNELS" else None
+        c = self.original_interaction.channel
+        if c.type in [discord.ChannelType.public_thread, discord.ChannelType.private_thread, discord.ChannelType.news_thread]:
+            c = c.parent
+
+        return c if self.scope['type'] == "CHANNELS" else None
+    
     @property
     def channel_id(self) -> int:
         if self.channel is None: return None
@@ -70,7 +74,7 @@ class SettingsView(discord.ui.View):
                 self.scope['len'] = len(self.scope['data'])
             
             case 'CHANNELS':
-                if not await self.u.manage_channel(channel=interaction.channel):
+                if not await self.u.manage_channel(channel=self.channel):
                     await interaction.response.send_message(
                         content=tunables('SETTINGS_UI_NO_PERMISSION_CHANNEL'), ephemeral=True
                     )

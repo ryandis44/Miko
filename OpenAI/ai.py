@@ -51,9 +51,9 @@ class MikoGPT(discord.ui.View):
         ]
     
     async def on_timeout(self) -> None:
-        self.clear_items()
-        try: await self.msg.edit(view=self)
-        except: pass
+        # self.clear_items()
+        # try: await self.msg.edit(view=self)
+        # except: pass
         self.stop()
     
     
@@ -84,7 +84,7 @@ class MikoGPT(discord.ui.View):
                 if (len(self.mm.message.content) == 0 and len(self.mm.message.attachments) == 0) or \
                     self.response['personality'] is None: return
                 
-                # if 
+                if re.match(r"^((<@\d{15,22}>)\s*)+$", self.mm.message.content): return
             case _: return
         
         if not await self.__fetch_chats(): return
@@ -151,6 +151,7 @@ class MikoGPT(discord.ui.View):
                     except: return False
                 else:
                     try:
+                        if re.match(r"^((<@\d{15,22}>)\s*)+$", m.content): continue
                         mssg = ' '.join(self.__remove_mention(m.content.split()))
                         if mssg == tunables('LOADING_EMOJI'): continue
                         for embed in m.embeds:
@@ -248,7 +249,6 @@ class MikoGPT(discord.ui.View):
         for i, word in enumerate(msg):
             if word in [f"<@{str(self.mm.channel.client.user.id)}>"]:
                 # Remove word mentioning Miko
-                # Mention does not have to be first word
                 msg.pop(i)
         return msg
     
@@ -281,7 +281,7 @@ class MikoGPT(discord.ui.View):
                     "\n\n"
                     "Please see my response below:"
                 )
-                if await self.__create_thread(content=thread_content, embed=self.__embed(), attachments=None): return
+                if await self.__create_thread(content=thread_content, embed=await self.__embed(), attachments=None): return
                 
                 await self.msg.edit(
                         content=None,
@@ -294,7 +294,7 @@ class MikoGPT(discord.ui.View):
                 
             elif resp_len >= 4000:
                 b = bytes(self.response['data'], 'utf-8')
-                attachments = [discord.File(BytesIO(b), "response.txt")]
+                attachments = [discord.File(BytesIO(b), "message.txt")]
                 
                 if await self.__create_thread(
                         content=(
@@ -306,7 +306,7 @@ class MikoGPT(discord.ui.View):
                             "on the thread in the channels side menu."
                             "\n\n"
                             "The response to your prompt was too long. I have sent it in this "
-                            "`response.txt` file. You can view on PC or Web (or Mobile if you "
+                            "`message.txt` file. You can view on PC or Web (or Mobile if you "
                             "are able to download the file)."
                         ),
                         embed=None,
@@ -316,7 +316,7 @@ class MikoGPT(discord.ui.View):
                 await self.msg.edit(
                     content=(
                             "The response to your prompt was too long. I have sent it in this "
-                            "`response.txt` file. You can view on PC or Web (or Mobile if you "
+                            "`message.txt` file. You can view on PC or Web (or Mobile if you "
                             "are able to download the file)."
                         ),
                     attachments=attachments,
@@ -347,7 +347,7 @@ class MikoGPT(discord.ui.View):
                 )
             )
             
-    async def __create_thread(self, content: str, embed: discord.Embed, attachments: list) -> bool:
+    async def __create_thread(self, content: str, embed: discord.Embed, attachments) -> bool:
 
         '''
         Miko will create a thread if:
@@ -375,7 +375,7 @@ class MikoGPT(discord.ui.View):
             #     reason=f"User requested ChatGPT response"
             # )
             self.thread = await self.channel.create_thread(
-                name=name,
+                name=name[0:90] if len(name) < 89 else name[0:90] + "...",
                 auto_archive_duration=60,
                 slowmode_delay=tunables('CHATGPT_THREAD_SLOWMODE_DELAY'),
                 reason=f"User requested ChatGPT response",

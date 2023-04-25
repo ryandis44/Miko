@@ -471,6 +471,14 @@ class MikoTextChannel(MikoGuild):
             return
         
         return role
+    @property
+    async def gpt_threads(self) -> str|None:
+        val = await ago.execute(
+            "SELECT chatgpt_threads FROM CHANNELS WHERE "
+            f"channel_id='{self.channel.id}'"
+        )
+        if val is None or val in [[], "DISABLED"]: return None
+        return val
         
     async def set_gpt_mode(self, mode: str) -> None:
         await ago.execute(
