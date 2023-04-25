@@ -340,9 +340,7 @@ async def on_message(message: discord.Message):
                         break
     '''
 
-    if (await mm.channel.profile).feature_enabled('CHATGPT') == 1:
-        try: await MikoGPT(mm=mm).ainit()
-        except Exception as e: print(e)
+    if (await mm.channel.profile).feature_enabled('CHATGPT') == 1: await MikoGPT(mm=mm).ainit()
     elif (await mm.channel.profile).feature_enabled('REPLY_TO_MENTION') == 1:
             await message.reply(
                 content=f"Please use {tunables('SLASH_COMMAND_SUGGEST_HELP')} for help.",

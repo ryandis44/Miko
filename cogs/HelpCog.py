@@ -31,6 +31,7 @@ class HelpCog(commands.Cog):
     category=[
         app_commands.Choice(name='Playtime/Voicetime', value='ptvt'),
         app_commands.Choice(name='Polls', value='polls'),
+        app_commands.Choice(name='ChatGPT', value='chatgpt'),
     ])
     async def h(self, interaction: discord.Interaction, category: app_commands.Choice[str] = None):
         await help(interaction=interaction, category=category)
@@ -45,6 +46,7 @@ class HelpCog(commands.Cog):
     category=[
         app_commands.Choice(name='Playtime/Voicetime', value='ptvt'),
         app_commands.Choice(name='Polls', value='polls'),
+        app_commands.Choice(name='ChatGPT', value='chatgpt'),
     ])
     async def mh(self, interaction: discord.Interaction, category: app_commands.Choice[str] = None):
         await help(interaction=interaction, category=category)
@@ -123,9 +125,20 @@ async def help(interaction: discord.Interaction, category) -> None:
             
         case "chatgpt":
             temp.append(
-                f"Is enabled? TRUE"
-                "ChatGPT help"
-                "Do not need @ in thread"
+                f"There are a few ways you can interact with ChatGPT through {interaction.client.user.mention}:\n"
+                f"> - **@ mention** Miko in a channel with ChatGPT enabled (change with {tunables('SLASH_COMMAND_SUGGEST_SETTINGS')}) "
+                "and type your response. Miko will send your message to ChatGPT and will respond back with ChatGPT's response."
+                "\n> \n"
+                "> - **Reply** to a message sent by Miko and Miko will respond. Some exceptions: Unreadable embeds or files. You can "
+                "also reply to a message not sent by Miko and @ mention Miko and Miko will read the original message."
+                "\n> \n"
+                "> - **Threads** (private group chat within this server). By default, Miko will determine when to create a thread "
+                f"based off of the length of the reply from ChatGPT. This can be changed in {tunables('SLASH_COMMAND_SUGGEST_SETTINGS')}. "
+                "In threads, you do not have to mention or reply to Miko to get a response, just type your message and Miko will "
+                "respond."
+                "\n\n"
+                "Miko can also read very long messages (i.e. when you paste in a long message and `message.txt` appears). Miko can read `message.txt` "
+                "files and can reply with them just like they are regular messages."
             )
 
         case _: # No category specified
