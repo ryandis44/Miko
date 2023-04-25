@@ -339,13 +339,12 @@ async def on_message(message: discord.Message):
                         await message.add_reaction('<:verifiedblue:963658235628359710>')
                         break
     '''
-
-    if (await mm.channel.profile).feature_enabled('CHATGPT') == 1: await MikoGPT(mm=mm).ainit()
-    elif (await mm.channel.profile).feature_enabled('REPLY_TO_MENTION') == 1:
-            await message.reply(
-                content=f"Please use {tunables('SLASH_COMMAND_SUGGEST_HELP')} for help.",
-                silent=True
-            )
+    await MikoGPT(mm=mm).ainit()
+    # elif (await mm.channel.profile).feature_enabled('REPLY_TO_MENTION') == 1:
+    #         await message.reply(
+    #             content=f"Please use {tunables('SLASH_COMMAND_SUGGEST_HELP')} for help.",
+    #             silent=True
+    #         )
     
     # # Respond to being mentioned
     # if len(message.content) > 0 and str(client.user.id) in message.content.split()[0] and message.author.id != client.user.id or \

@@ -70,7 +70,8 @@ class MikoGPT(discord.ui.View):
                 if len(self.mm.message.content) > 0 and str(self.mm.channel.client.user.id) in self.mm.message.content.split()[0] and self.mm.message.author.id != self.mm.channel.client.user.id or \
                     (self.mm.message.reference is not None and self.mm.message.reference.resolved is not None and \
                         self.mm.message.reference.resolved.author.id == self.mm.channel.client.user.id):
-                            if len(self.mm.message.content.split()) <= 1 and self.mm.message.content == f"<@{str(self.mm.channel.client.user.id)}>":
+                            if (len(self.mm.message.content.split()) <= 1 and self.mm.message.content == f"<@{str(self.mm.channel.client.user.id)}>") or \
+                                (await self.mm.channel.profile).feature_enabled('CHATGPT') != 1:
                                 await self.mm.message.reply(
                                     content=f"Please use {tunables('SLASH_COMMAND_SUGGEST_HELP')} for help.",
                                     silent=True
