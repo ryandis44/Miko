@@ -979,8 +979,7 @@ class RawMessageUpdate():
     def __init__(self, payload: discord.RawMessageUpdateEvent) -> None:
         self.payload = payload
     
-    async def __get_attachments(self) -> list:
-        attachments = []
+    async def __get_attachments(self) -> str:
         if len(self.payload.data['attachments']) > 0:
             for attachment in self.payload.data['attachments']:
                 if attachment['filename'] != "message.txt": continue
@@ -990,9 +989,7 @@ class RawMessageUpdate():
                             data = BytesIO(await r.read())
                             try: data = data.getvalue().decode()
                             except: return []
-                            attachments.append(data)
-                break
-            return attachments
+                            return data
         return []
     
     async def ainit(self) -> None:
@@ -1008,12 +1005,15 @@ class RawMessageUpdate():
         )
         
         # Update attachments
-        attachments = await self.__get_attachments()
+        data = await self.__get_attachments()
         await r.set(
             key=f"m:{self.payload.message_id}",
             type="JSON",
             path="$.attachments",
-            value=attachments
+            value=[{
+                'filename': "message.txt",
+                'data': data
+            }]
         )
         
         # Update embed description
@@ -1044,7 +1044,9 @@ class CachedMessage:
         self.guild: CachedGuild = None
         self.reference: CachedReference = None
         self.attachments = []
-        if m is not None: self.__assign_attributes()
+        if m is not None:
+            try: self.__assign_attributes()
+            except Exception as e: print(f"Cached error {e}")
     
     async def ainit(self):
         self.m = await r.get(key=f"m:{self.message_id}", type="JSON")
@@ -1056,11 +1058,10 @@ class CachedMessage:
         self.content = self.m['content']
         self.author = CachedUser(name=self.m['author']['name'], id=int(self.m['author']['id']))
         self.created_at = self.m['created_at']
-        if self.m['embeds'] is not None and self.m['embeds'] != "null":
-            for embed in self.m['embeds']:
-                self.embeds.append(
-                    CachedEmbed(embed=embed)
-                )
+        for embed in self.m['embeds']:
+            self.embeds.append(
+                CachedEmbed(embed=embed)
+            )
         if self.m['reference_id'] is not None and self.m['reference_id'] != "null":
             self.reference = CachedReference(message_id=int(self.m['reference_id']))
         for attachment in self.m['attachments']:

@@ -4,18 +4,21 @@ import redis.asyncio as redis
 from redis.commands.json.path import Path
 from redis.commands.search.query import Query
 from tunables import *
-from Database.database_class import ip
+from Database.database_class import ip, AsyncDatabase
+db = AsyncDatabase('Database.RedisCache.py')
 
 connection = None
 async def connect_redis():
     global connection
+    
+    port = await db.execute("SELECT value FROM PERSISTENT_VALUES WHERE variable='REDIS_PORT'")
     
     try:
         print("\n\n[REDIS] Attempting local connection...")
         if os.getenv('CONNECTION') == "REMOTE": raise Exception
         connection = redis.Redis(
             host='192.168.0.12',
-            port=6380,
+            port=int(port),
             password=tunables('REDIS_PASSWORD'),
             decode_responses=True,
             socket_timeout=2
@@ -28,7 +31,7 @@ async def connect_redis():
         try:
             connection = redis.Redis(
                 host=ip,
-                port=6380,
+                port=int(port),
                 password=tunables('REDIS_PASSWORD'),
                 decode_responses=True
             )
