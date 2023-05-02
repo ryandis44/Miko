@@ -270,8 +270,8 @@ class GreenBook:
             "SELECT * FROM YMCA_GREEN_BOOK_ENTRIES WHERE "
             f"server_id='{self.u.guild.id}' AND "
             f"first_name='{first.upper()}' AND "
-            f"last_name='{last.upper()}' AND "
-            f"age='{age}'"
+            f"last_name='{last.upper()}'"
+            # f"age='{age}'"
         )
 
         # This line could cause issues in the future.
