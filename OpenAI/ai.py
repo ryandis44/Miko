@@ -85,7 +85,11 @@ class MikoGPT(discord.ui.View):
                 
                 
             case self.t.public_thread | self.t.private_thread | self.t.news_thread:
-                if not tunables('MESSAGE_CACHING') or tunables('FEATURE_ENABLED_CHATGPT_THREADS'): return
+                if not tunables('MESSAGE_CACHING') or not tunables('FEATURE_ENABLED_CHATGPT_THREADS'): return
+                
+                try: await self.channel.fetch_member(self.mm.user.client.user.id)
+                except: return
+                
                 if (len(self.mm.message.content) == 0 and len(self.mm.message.attachments) == 0) or \
                     self.response['personality'] is None: return
                 
