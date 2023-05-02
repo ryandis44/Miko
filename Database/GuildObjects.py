@@ -1014,7 +1014,7 @@ class RawMessageUpdate():
             value=[{
                 'filename': "message.txt",
                 'data': data
-            }]
+            }] if data != [] else []
         )
         
         # Update embed description
