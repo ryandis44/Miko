@@ -339,6 +339,8 @@ async def on_message(message: discord.Message):
                         await message.add_reaction('<:verifiedblue:963658235628359710>')
                         break
     '''
+    # if message.channel.type == discord.ChannelType.private_thread:
+        
     await MikoGPT(mm=mm).ainit()
     # elif (await mm.channel.profile).feature_enabled('REPLY_TO_MENTION') == 1:
     #         await message.reply(

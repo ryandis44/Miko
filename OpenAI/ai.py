@@ -85,7 +85,7 @@ class MikoGPT(discord.ui.View):
                 
                 
             case self.t.public_thread | self.t.private_thread | self.t.news_thread:
-                if not tunables('MESSAGE_CACHING'): return
+                if not tunables('MESSAGE_CACHING') or tunables('FEATURE_ENABLED_CHATGPT_THREADS'): return
                 if (len(self.mm.message.content) == 0 and len(self.mm.message.attachments) == 0) or \
                     self.response['personality'] is None: return
                 
@@ -142,7 +142,9 @@ class MikoGPT(discord.ui.View):
             "Private threads are similar to a regular Group DM. If you would like to invite someone "
             "to this thread, just @ mention them and they will appear. They will be able to invite anyone else from "
             "this server once added. You and anyone else in this thread can leave it by right-clicking (or long pressing) "
-            "on the thread in the channels side menu."
+            "on the thread in the channels side menu.\n\n"
+            "Also, __**no need to @ mention me in this thread**__. I will respond to all messages that are not just an @ mention "
+            "(for adding people to this thread)."
             "\n\n"
         )
     
@@ -470,5 +472,5 @@ class MikoGPT(discord.ui.View):
         self.response['data'] = text
         # if re.match(r, text):
         #     self.response['data'] = f"`{''.join(self.__remove_mention(self.mm.message.content))}`\n{text}"
-            
+        
         # else: self.response['data'] = text
