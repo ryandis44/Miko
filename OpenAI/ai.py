@@ -2,6 +2,7 @@ import asyncio
 from io import BytesIO
 import time
 import openai
+import tiktoken
 import discord
 import re
 from tunables import *
@@ -39,6 +40,7 @@ class MikoGPT(discord.ui.View):
         self.response_extra_content = ""
         self.channel = mm.message.channel
         self.ctype = self.channel.type
+        self.model = "gpt-3.5-turbo"
 
         self.msg: discord.Message = None
         self.response = {
@@ -171,15 +173,25 @@ class MikoGPT(discord.ui.View):
                 refs = await self.__fetch_thread_messages()
         
         try:
-            self.chat.append(
-                {"role": "system", "content": self.response['personality']}
-            )
+            cnt = 0
+            
+            # Add latest message to end of chat list
+            mssg = f"{self.mm.user.user.mention}: {' '.join(self.__remove_mention(self.mm.message.content.split()))}"
+            if len(self.mm.message.attachments) > 0:
+                val = await self.__check_attachments(message=self.mm.message)
+                if val is not None:
+                    mssg = f"{mssg} {val}"
+            
+            system_personality = {"role": "system", "content": self.response['personality']}
+            user_current_content = {"role": "user", "content": mssg}
+            cnt += self.__num_tokens_from_messages(messages=[system_personality, user_current_content])
+            
+            self.chat.append(user_current_content)
             
     
             # Determine the string to append to chat or
             # cancel interaction if any replied messages
             # cannot be read.
-            refs.reverse()
             for m in refs:
                 # if type(m) == discord.Message:
                 #     print(f">>> DISCORD: {m.content}")
@@ -211,29 +223,24 @@ class MikoGPT(discord.ui.View):
                         mssg = f"{mssg} {val}"
                     elif mssg == "" or mssg is None or mssg == []: return False # Could cause issues. Replace with continue if so
                 
+
                 
                 # Add message to chat list
                 if m.author.id == self.mm.channel.guild.me.id:
-                    self.chat.append(
-                        {"role": "assistant", "content": mssg}
-                    )
+                    ct = {"role": "assistant", "content": mssg}
                 else:
                     # If message is >4000 tokens, split responses
                     # into multiple list items. dont know if needed yet
-                    self.chat.append(
-                        {"role": "user", "content": f"{m.author.mention}: {mssg}"}
-                    )
+                    ct = {"role": "user", "content": f"{m.author.mention}: {mssg}"}
+                    
+                    
+                cnt += self.__num_tokens_from_messages(messages=[ct])
+                if cnt >= tunables('CHATGPT_MAX_CONTEXT_LENGTH'): break 
+                self.chat.append(ct)
         
-            # Add latest message to end of chat list
-            mssg = f"{self.mm.user.user.mention}: {' '.join(self.__remove_mention(self.mm.message.content.split()))}"
-            if len(self.mm.message.attachments) > 0:
-                val = await self.__check_attachments(message=self.mm.message)
-                if val is not None:
-                    mssg = f"{mssg} {val}"
-            self.chat.append(
-                {"role": "user", "content": mssg}
-            )
 
+            self.chat.append(system_personality)
+            self.chat.reverse()
             return True
         except Exception as e:
             print(f"Error whilst fetching chats [ChatGPT]: {e}")
@@ -296,6 +303,26 @@ class MikoGPT(discord.ui.View):
                 # Remove word mentioning Miko
                 msg.pop(i)
         return msg
+    
+    def __num_tokens_from_messages(self, messages: list):
+        """Returns the number of tokens used by a list of messages."""
+        try:
+            encoding = tiktoken.encoding_for_model(self.model)
+        except KeyError:
+            encoding = tiktoken.get_encoding("cl100k_base")
+        if self.model == "gpt-3.5-turbo":  # note: future models may deviate from this
+            num_tokens = 0
+            for message in messages:
+                num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+                for key, value in message.items():
+                    num_tokens += len(encoding.encode(value))
+                    if key == "name":  # if there's a name, the role is omitted
+                        num_tokens += -1  # role is always required and always 1 token
+            num_tokens += 2  # every reply is primed with <im_start>assistant
+            return num_tokens
+        else:
+            raise NotImplementedError(f"""num_tokens_from_messages() is not presently implemented for model {self.model}.
+        See https://github.com/openai/openai-python/blob/main/chatml.md for information on how messages are converted to tokens.""")
     
     
     async def respond(self) -> None:
