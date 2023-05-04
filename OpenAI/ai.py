@@ -325,7 +325,7 @@ class MikoGPT(discord.ui.View):
         See https://github.com/openai/openai-python/blob/main/chatml.md for information on how messages are converted to tokens.""")
     
     
-    async def respond(self) -> None:
+    async def respond(self, retries=0) -> None:
         self.clear_items()
         # if await self.mm.channel.gpt_mode == "NORMAL":
         #     self.add_item(RegenerateButton())
@@ -397,6 +397,11 @@ class MikoGPT(discord.ui.View):
             )
             await self.mm.user.increment_statistic('REPLY_TO_MENTION_OPENAI')
         except Exception as e:
+            print(type(Exception))
+            if retries <= 2:
+                await asyncio.sleep(1)
+                await self.respond(retries + 1)
+                return
             await self.mm.user.increment_statistic('REPLY_TO_MENTION_OPENAI_REJECT')
             await self.msg.edit(
                 content=f"{tunables('GENERIC_APP_COMMAND_ERROR_MESSAGE')[:-1]}: {e}",
