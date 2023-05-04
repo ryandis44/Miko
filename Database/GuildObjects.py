@@ -1258,6 +1258,9 @@ class MikoMessage():
             if self.message.author != self.user.client.user or (self.message.embeds == [] and self.message.author == self.user.client.user):
                 await sesh.reposition()
     
+    def __should_interact(self) -> bool:
+        return self.message.channel.type not in self.threads
+    
     async def handle_rename_hell(self) -> None:
         if await self.channel.guild_messages % 20 == 0 and self.message.channel.id != 963928489248063539:
             users = await self.user.renamehell_members
@@ -1297,27 +1300,28 @@ class MikoMessage():
         return embed
 
     async def handle_big_emojis(self) -> bool:
-        if await self.user.do_big_emojis and not self.message.author.bot:
-            if len(self.message.content.split()) == 1 and self.message.author.id != self.user.client.user.id:
-                if self.message.content.startswith("<") and self.message.content[1] not in ['@', '#']:
-                    try:
-                        auth = None
-                        if self.message.reference is not None:
-                            ref = self.message.reference.resolved
-                            if ref.author.id == self.user.client.user.id:
-                                try:
-                                    embed = ref.embeds[0]
-                                    auth = embed.author.name.split("→")[0]
-                                except: pass
-                            else: auth = await MikoMember(user=ref.author, client=self.user.client).username
+        if (not await self.user.do_big_emojis or self.message.author.bot) or \
+            not self.__should_interact(): return False
+        if len(self.message.content.split()) == 1 and self.message.author.id != self.user.client.user.id:
+            if self.message.content.startswith("<") and self.message.content[1] not in ['@', '#']:
+                try:
+                    auth = None
+                    if self.message.reference is not None:
+                        ref = self.message.reference.resolved
+                        if ref.author.id == self.user.client.user.id:
+                            try:
+                                embed = ref.embeds[0]
+                                auth = embed.author.name.split("→")[0]
+                            except: pass
+                        else: auth = await MikoMember(user=ref.author, client=self.user.client).username
 
-                        await self.message.delete()
-                        e = await self.__big_emoji_embed(auth)
-                        if auth is not None: await ref.reply(embed=e, silent=True)
-                        else: await self.message.channel.send(embed=e, silent=True)
-                        await self.user.increment_statistic('BIG_EMOJIS_SENT')
-                        return True
-                    except Exception as e: print(f"Big emoji error: {e}")
+                    await self.message.delete()
+                    e = await self.__big_emoji_embed(auth)
+                    if auth is not None: await ref.reply(embed=e, silent=True)
+                    else: await self.message.channel.send(embed=e, silent=True)
+                    await self.user.increment_statistic('BIG_EMOJIS_SENT')
+                    return True
+                except Exception as e: print(f"Big emoji error: {e}")
         return False
     
     async def handle_bruh_react(self) -> None:
