@@ -173,7 +173,13 @@ class MikoGPT(discord.ui.View):
                 refs = await self.__fetch_thread_messages()
         
         try:
-            cnt = 0
+            
+            '''
+            The CHATGPT_BUFFER_CONTEXT_AMOUNT is used to ensure ChatGPT's entire
+            response is sent. ChatGPT 3.5 has a max context length of 4097 tokens
+            and this buffer allocates x amount of tokens to the response itself.
+            '''
+            cnt = tunables('CHATGPT_BUFFER_CONTEXT_AMOUNT')
             
             # Add latest message to end of chat list
             mssg = f"{self.mm.user.user.mention}: {' '.join(self.__remove_mention(self.mm.message.content.split()))}"
