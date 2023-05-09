@@ -16,6 +16,7 @@ from Leveling.LevelClass import LevelClass
 # from Tokens.TokenClass import Token
 from Emojis.emoji_generator import get_emoji_url, get_guild_emoji
 from Presence.Objects import PresenceUpdate
+from YMCA.Checklist.Objects import Checklist
 from misc.embeds import help_embed
 from misc.holiday_roles import get_holiday
 from misc.misc import generate_nickname, react_all_emoji_list, today
@@ -208,6 +209,20 @@ class MikoGuild():
         )
         if val == [] or val is None: return None
         return self.guild.get_channel(int(val))
+    @property
+    async def checklists(self) -> list[Checklist]:
+        val = await ago.execute(
+            "SELECT checklist_id FROM CHECKLISTS WHERE "
+            f"server_id='{self.guild.id}'"
+        )
+        if val is None or val == []: return []
+        temp = []
+        for cid in val:
+            c = Checklist(id=cid[0])
+            await c.ainit()
+            temp.append(c)
+            
+        return temp
 
 
     async def set_member_numbers(self) -> None:
