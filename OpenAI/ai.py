@@ -29,7 +29,20 @@ class RegenerateButton(discord.ui.Button):
         await (await interaction.original_response()).delete()
         async with interaction.channel.typing():
             await self.view.respond()
-        
+
+class CancelButton(discord.ui.Button):
+    def __init__(self) -> None:
+        super().__init__(
+            style=discord.ButtonStyle.red,
+            label="Cancel",
+            emoji="❌",
+            custom_id="cancel_button",
+            row=1,
+            disabled=False
+        )
+    
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await self.view.cancel(interaction)
         
         
 class MikoGPT(discord.ui.View):
@@ -52,12 +65,23 @@ class MikoGPT(discord.ui.View):
             discord.ChannelType.private_thread,
             discord.ChannelType.news_thread
         ]
+        self.add_item(CancelButton())
     
     async def on_timeout(self) -> None:
         # self.clear_items()
         # try: await self.msg.edit(view=self)
         # except: pass
         self.stop()
+    
+    
+    async def cancel(self, interaction: discord.Interaction) -> None:
+        cancel_test = (interaction.user.id == self.mm.user.user.id) or \
+            (interaction.channel.permissions_for(interaction.user).manage_messages)
+        
+        if not cancel_test: return
+        
+        await self.msg.delete()
+        await self.openai_response.close()
     
     
     async def ainit(self) -> None:
@@ -131,7 +155,8 @@ class MikoGPT(discord.ui.View):
         self.msg = await self.mm.message.reply(
             content=tunables('LOADING_EMOJI'),
             silent=True,
-            mention_author=False
+            mention_author=False,
+            view=self
         )
         return True
     
@@ -343,7 +368,8 @@ class MikoGPT(discord.ui.View):
         # print("*************")
 
         try:
-            await asyncio.to_thread(self.__openai_interaction)
+            self.openai_response = asyncio.to_thread(self.__openai_interaction)
+            await self.openai_response
             
             resp_len = len(self.response['data'])
             if resp_len >= 750 and resp_len <= 3999:
@@ -361,7 +387,8 @@ class MikoGPT(discord.ui.View):
                         allowed_mentions=discord.AllowedMentions(
                             replied_user=True,
                             users=True
-                        )
+                        ),
+                        view=self
                     )
                 return
                 
@@ -386,6 +413,7 @@ class MikoGPT(discord.ui.View):
                             "are able to download the file)."
                         ),
                     attachments=attachments,
+                    view=self
                 )
                 return
             else:
@@ -403,19 +431,22 @@ class MikoGPT(discord.ui.View):
             )
             await self.mm.user.increment_statistic('REPLY_TO_MENTION_OPENAI')
         except Exception as e:
-            print(type(Exception))
-            if retries <= 2:
-                await asyncio.sleep(1)
-                await self.respond(retries + 1)
-                return
+            print(f">>> OpenAI response error: {type(Exception)}: {print(e)}")
+            # if retries <= 2:
+            #     await asyncio.sleep(1)
+            #     await self.respond(retries + 1)
+            #     return
             await self.mm.user.increment_statistic('REPLY_TO_MENTION_OPENAI_REJECT')
-            await self.msg.edit(
-                content=f"{tunables('GENERIC_APP_COMMAND_ERROR_MESSAGE')[:-1]}: {e}",
-                allowed_mentions=discord.AllowedMentions(
-                    replied_user=False,
-                    users=False
+            try:
+                await self.msg.edit(
+                    content=f"{tunables('GENERIC_APP_COMMAND_ERROR_MESSAGE')[:-1]}: {e}",
+                    allowed_mentions=discord.AllowedMentions(
+                        replied_user=False,
+                        users=False
+                    ),
+                    view=None
                 )
-            )
+            except: pass
             
     async def __create_thread(self, content: str, embed: discord.Embed, attachments) -> bool:
 
@@ -432,9 +463,9 @@ class MikoGPT(discord.ui.View):
         '''
         create = self.channel.permissions_for(self.channel.guild.me).create_private_threads
         manage = self.channel.permissions_for(self.channel.guild.me).manage_threads
-        user = self.channel.permissions_for(self.mm.message.author).send_messages_in_threads
+        user_can_send_messages = self.channel.permissions_for(self.mm.message.author).send_messages_in_threads
         # if self.ctype not in self.thread_types and (create and manage):# and len(self.chat) <= 2:
-        if self.ctype == discord.ChannelType.text and (create and manage and user):# and len(self.chat) <= 2:
+        if self.ctype == discord.ChannelType.text and (create and manage and user_can_send_messages):# and len(self.chat) <= 2:
             if len(self.mm.message.content) > 90:
                 name = ' '.join(self.__remove_mention(self.mm.message.content.split()))
             else:
@@ -463,7 +494,8 @@ class MikoGPT(discord.ui.View):
                 allowed_mentions=discord.AllowedMentions(
                     replied_user=True,
                     users=True
-                )
+                ),
+                view=self
             )
             
             if self.msg is None:
