@@ -35,7 +35,7 @@ class CancelButton(discord.ui.Button):
         super().__init__(
             style=discord.ButtonStyle.red,
             label="Cancel",
-            emoji="❌",
+            emoji="✖",
             custom_id="cancel_button",
             row=1,
             disabled=False
