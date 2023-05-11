@@ -19,7 +19,8 @@ class ChecklistCog(commands.Cog):
     @app_commands.command(name="checklist", description=f"{os.getenv('APP_CMD_PREFIX')}Open the Checklist [YMCA Servers Only]")
     @app_commands.guild_only
     async def book(self, interaction: discord.Interaction):
-        await ChecklistView(original_interaction=interaction).ainit()
+        try: await ChecklistView(original_interaction=interaction).ainit()
+        except Exception as e: print(e)
 
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:

@@ -1,6 +1,5 @@
 import discord
-from YMCA.Checklist.Objects import Checklist
-from misc.misc import emojis_1to10
+from YMCA.Checklist.Objects import Checklist, ChecklistItem
 from tunables import *
 from Database.GuildObjects import MikoMember
 
@@ -10,10 +9,12 @@ class ChecklistView(discord.ui.View):
         super().__init__(timeout=tunables('YMCA_VIEW_TIMEOUT'))
         self.original_interaction = original_interaction
         self.u = MikoMember(user=original_interaction.user, client=original_interaction.client, check_exists=False)
+        self.checklists: list[Checklist] = []
     
     async def ainit(self):
         try: self.msg = await self.original_interaction.original_response()
         except: return
+        await self.get_checklists()
         await self.respond()
     
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -23,76 +24,118 @@ class ChecklistView(discord.ui.View):
         try: await self.msg.delete()
         except: return
     
+    async def get_checklists(self) -> None:
+        for list in await self.u.checklists:
+            if list.visible:
+                self.checklists.append(list)
+        
+        self.__calculate_total_items()
+        self.active_checklists = []
     
-    # /checklist and back button response
+    def __calculate_total_items(self) -> None:
+        self.total_items = 0
+        for checklist in self.checklists:
+            for item in checklist.items:
+                self.total_items += 1
+    
+    @property
+    def SelectItems(self):
+        if self.active_checklists == []: return SelectList(items=self.checklists)
+        
+        l = SelectList(items=self.checklists)
+        for i, option in enumerate(l.options):
+            if i == 0:
+                option.default = False
+                continue
+            if str(i) in self.active_checklists:
+                option.default = True
+        
+        return l
+    
+    @property
+    def listed_checklists(self) -> list[Checklist]:
+        if self.active_checklists == []: return self.checklists
+        
+        temp = []
+        for i, list in enumerate(self.checklists):
+            if str(i+1) in self.active_checklists:
+                temp.append(list)
+        return temp
+    
+    # /checklist and home button response
     async def respond(self) -> None:
         temp = []
         temp.append(
-            "Select a checklist below"
+            "__**Active checklists**__:\n\n"
         )
+        
+        
+        items_on_page = []
+        completed_items = []
+        for checklist in self.listed_checklists:
+            temp.append(f"{checklist.emoji} **{checklist.name}**:")
+            for item in checklist.items:
+                if item.completed:
+                    completed_items.append(item)
+                    continue
+                temp.append(f"\n> :white_medium_small_square: __{item.name}__")
+                
+                if item.description is not None:
+                    temp.append(f"\n> \u200b \u200b​└─{item.description}")
+                
+                items_on_page.append(item)
+            
+            temp.append("\n\n")
+        
+        
+        
+        
         
         embed = discord.Embed(description=''.join(temp), color=GREEN_BOOK_NEUTRAL_COLOR)
         embed.set_author(
             icon_url=self.u.guild.icon,
             name=f"{self.u.guild} Checklist"
         )
+        embed.set_footer(text=f"Items on this page: {len(items_on_page)}")
         
         self.clear_items()
-        self.add_item(SelectList(items=await self.u.checklists))
+        self.add_item(self.SelectItems)
+        self.add_item(ItemList(items=items_on_page))
         
-        
-        await self.msg.edit(
-            content=None,
-            embed=embed,
-            view=self
-        )
+        await self.msg.edit(content=None, embed=embed, view=self)
     
-    async def respond_list_selected(self, list: Checklist) -> None:
-        temp = []
-        
-        temp.append("Items in this checklist:\n\n")
-        
-        
-        
-        
-        i = 0
-        completed = []
-        for item in list.items:
-            
-            if item.completed():
-                completed.append(f"~~{item.name}~~\n")
-                continue
-            
-            temp.append(f"{emojis_1to10(i)} **{item.name}**")
-            if item.description is not None:
-                temp.append(f":\n\u200b \u200b​└─ {item.description}")
-            
-            temp.append("\n")
-            i+=1
-        
-        if completed != []:
-            temp.append("\n")
-            temp.append(''.join(completed))
-        
-        
-        
-        embed = discord.Embed(description=''.join(temp), color=GREEN_BOOK_NEUTRAL_COLOR)
-        embed.set_author(
-            icon_url=self.u.guild.icon,
-            name=f"{list.name} Checklist"
-        )
-        
-        
-        self.clear_items()
-        
-        
-        await self.msg.edit(
-            content=None,
-            embed=embed,
-            view=self
-        )
 
 
+
+class ItemList(discord.ui.Select):
+    
+    def __init__(self, items: list):
+        self.items = items
+
+        options = []
+        for i, item in enumerate(items):
+            item: ChecklistItem
+            options.append(
+                discord.SelectOption(
+                    label=f"{item.name} {item.id}",
+                    description=f"From list {item.checklist.name.upper()}",
+                    value=i,
+                    emoji=item.checklist.emoji
+                )
+            )
+
+        super().__init__(
+            placeholder="Check off an item",
+            min_values=1,
+            max_values=len(options),
+            options=options,
+            row=2,
+            custom_id="select_item",
+            disabled=False
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        pass
 
 class SelectList(discord.ui.Select):
 
@@ -101,21 +144,31 @@ class SelectList(discord.ui.Select):
 
         options = []
 
+        options.append(
+            discord.SelectOption(
+                label=f"All Checklists",
+                description=None,
+                value="0",
+                emoji="*️⃣",
+                default=True
+            )
+        )
+
         for i, item in enumerate(items):
             item: Checklist
             options.append(
                 discord.SelectOption(
                     label=f"{item.name}",
                     description=f"ID {item.id}",
-                    value=i,
-                    emoji=emojis_1to10(i)
+                    value=i+1,
+                    emoji=item.emoji
                 )
             )
 
         super().__init__(
             placeholder="Select a list",
             min_values=1,
-            max_values=1,
+            max_values=len(options),
             options=options,
             row=1,
             custom_id="select_entry",
@@ -124,5 +177,14 @@ class SelectList(discord.ui.Select):
     
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.edit_message()
-        l = self.items[int(self.values[0])]
-        await self.view.respond_list_selected(l)
+        
+        prev = self.view.active_checklists
+        self.view.active_checklists = []
+        for val in self.values:
+            if val == "0":
+                if prev == []: continue
+                self.view.active_checklists = []
+                break
+            self.view.active_checklists.append(val)
+        
+        await self.view.respond()

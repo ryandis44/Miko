@@ -19,7 +19,7 @@ from Presence.Objects import PresenceUpdate
 from YMCA.Checklist.Objects import Checklist
 from misc.embeds import help_embed
 from misc.holiday_roles import get_holiday
-from misc.misc import generate_nickname, react_all_emoji_list, today
+from misc.misc import emojis_1to10, generate_nickname, react_all_emoji_list, today
 from tunables import *
 ago = AsyncDatabase("Database.GuildObjects.py")
 r = RedisCache('Database.GuildObjects.py')
@@ -216,9 +216,15 @@ class MikoGuild():
             f"server_id='{self.guild.id}'"
         )
         if val is None or val == []: return []
+        
+        if type(val) == str:
+            c = Checklist(id=val, emoji="1️⃣")
+            await c.ainit()
+            return [c]
+        
         temp = []
-        for cid in val:
-            c = Checklist(id=cid[0])
+        for i, cid in enumerate(val):
+            c = Checklist(id=cid[0], emoji=emojis_1to10(i))
             await c.ainit()
             temp.append(c)
             
