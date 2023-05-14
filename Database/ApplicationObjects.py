@@ -83,7 +83,7 @@ class Application:
                 "LIMIT 1"
             )
             if self.__val is None or self.__val == []:
-                await self.__create_application(self)
+                await self.__create_application()
             else:
                 self.__val = self.__val[0]
                 break
