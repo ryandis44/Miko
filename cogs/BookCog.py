@@ -27,8 +27,11 @@ class BookCog(commands.Cog):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         u = MikoMember(user=interaction.user, client=interaction.client)
         await u.ainit()
-        if (await u.profile).cmd_enabled('GREEN_BOOK') != 1:
-            await interaction.response.send_message(content=tunables('GENERIC_BOT_DISABLED_MESSAGE'), ephemeral=True)
+        if (await u.profile).cmd_enabled('GREEN_BOOK') == 0:
+            await interaction.response.send_message(content=tunables('COMMAND_DISABLED_GUILD'), ephemeral=True)
+            return False
+        elif (await u.profile).cmd_enabled('GREEN_BOOK') == 2:
+            await interaction.response.send_message(content=tunables('COMMAND_DISABLED_TUNABLES'), ephemeral=True)
             return False
 
         await interaction.response.send_message(content=f"{tunables('LOADING_EMOJI')}", ephemeral=True)

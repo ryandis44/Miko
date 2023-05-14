@@ -74,7 +74,8 @@ class SuppliesView(discord.ui.View):
 
 
 class NewRequestModal(discord.ui.Modal):
-    def __init__(self, supply_channel: discord.TextChannel):
+    def __init__(self, supply_channel: discord.TextChannel, u: MikoMember):
+        self.u = u
         super().__init__(
             title="What do we need to get/replace for the pool?",
             custom_id="supplyyy_modal"
@@ -99,7 +100,7 @@ class NewRequestModal(discord.ui.Modal):
         
         await self.supply_channel.send(
             content=(
-                f"New supply request from {interaction.user.mention}:\n"
+                f"New supply request from {interaction.user.mention} (`{await self.u.username}`):\n"
                 "```yaml\n"
                 f"{''.join(items)}"
                 "```"
@@ -119,7 +120,7 @@ class NewRequestButton(discord.ui.Button):
         )
     
     async def callback(self, interaction: discord.Interaction) -> None:
-        await interaction.response.send_modal(NewRequestModal(supply_channel=self.view.supply_channel))
+        await interaction.response.send_modal(NewRequestModal(supply_channel=self.view.supply_channel, u=self.view.u))
 
 class LogChannelButton(discord.ui.Button):
     def __init__(self):
