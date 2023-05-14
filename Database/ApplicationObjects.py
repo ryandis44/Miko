@@ -22,6 +22,7 @@ class PartialApplication:
 class Application:
     
     def __init__(self, app):
+        print(f"Inside app {app}")
         self.__raw_app = app
         self.blacklisted_id = False
         
