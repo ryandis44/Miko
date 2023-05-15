@@ -234,7 +234,7 @@ class GreenBook:
                 f"server_id='{self.u.guild.id}' AND "
                 f"first_name='{query[0]}' AND "
                 f"last_name='{query[1]}' "
-                "ORDER BY last_name ASC LIMIT 10"
+                "ORDER BY last_name,pass_time DESC LIMIT 10"
             )
 
         if val == [] or val is None:
@@ -244,7 +244,7 @@ class GreenBook:
                 f"(first_name LIKE '%{query[0]}%' OR "
                 f"last_name LIKE '%{query[0]}%' OR "
                 f"entry_id LIKE '%{query[0]}%') {s}"
-                "ORDER BY last_name ASC LIMIT 10"
+                "ORDER BY last_name,pass_time DESC LIMIT 10"
             )
 
         if val == [] or val is None: return []
