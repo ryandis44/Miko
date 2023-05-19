@@ -27,8 +27,11 @@ class SuppliesCog(commands.Cog):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         u = MikoMember(user=interaction.user, client=interaction.client)
         await u.ainit()
-        if (await u.profile).cmd_enabled('SUPPLIES') != 1:
-            await interaction.response.send_message(content=tunables('GENERIC_BOT_DISABLED_MESSAGE'), ephemeral=True)
+        if (await u.profile).cmd_enabled('SUPPLIES') == 0:
+            await interaction.response.send_message(content=tunables('COMMAND_DISABLED_GUILD'), ephemeral=True)
+            return False
+        elif (await u.profile).cmd_enabled('SUPPLIES') == 2:
+            await interaction.response.send_message(content=tunables('COMMAND_DISABLED_TUNABLES'), ephemeral=True)
             return False
 
         await u.increment_statistic('YMCA_SUPPLIES_COMMAND_RUN')

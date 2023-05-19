@@ -82,7 +82,7 @@ class Application:
                 "LIMIT 1"
             )
             if self.__val is None or self.__val == []:
-                await self.__create_application(self)
+                await self.__create_application()
             else:
                 self.__val = self.__val[0]
                 break
@@ -94,7 +94,7 @@ class Application:
         await db.execute(
             "INSERT INTO APPLICATIONS "
             "(name, app_id, has_discord_id) VALUES "
-            f"('{self.__raw_app['name']}', "
+            f"('{sanitize_name(self.__raw_app['name'])}', "
             f"'{aid}', "
             f"'{'FALSE' if self.__raw_app['app_id'] is None else 'TRUE'}')"
         )

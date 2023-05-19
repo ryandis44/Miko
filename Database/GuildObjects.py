@@ -817,6 +817,17 @@ class MikoMember(MikoGuild):
             
             case "YMCA":
 
+                # Log channel [temporary, ensure skipping verification]
+                try:
+                    if self.guild.id != 1060357911483797704 or not self.user.pending: raise Exception
+                    channel = self.guild.get_channel(1060371116310401034)
+                    await channel.send(
+                        content=f"Bypassing Community Verification for {self.user.mention}",
+                        allowed_mentions=discord.AllowedMentions(users=False),
+                        silent=True
+                    )
+                except: pass
+
                 lifeguard = discord.utils.get(self.guild.roles, name="Lifeguard")
                 if not self.user.bot: await self.user.add_roles(lifeguard)
             
