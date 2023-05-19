@@ -34,7 +34,7 @@ class ChecklistCog(commands.Cog):
             await interaction.response.send_message(content=tunables('COMMAND_DISABLED_GUILD'))
             return False
 
-        await interaction.response.send_message(content=f"{tunables('LOADING_EMOJI')}", ephemeral=True)
+        await interaction.response.send_message(content=f"{tunables('LOADING_EMOJI')}", ephemeral=False)
         await u.increment_statistic('CHECKLIST_OPENED')
         return True
 

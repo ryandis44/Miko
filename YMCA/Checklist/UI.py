@@ -72,13 +72,18 @@ class ChecklistView(discord.ui.View):
         
         items_on_page = []
         completed_items = []
+        
+        # Design 1
         for checklist in self.listed_checklists:
             temp.append(f"{checklist.emoji} **{checklist.name}**:")
             for item in checklist.items:
                 if item.completed:
-                    completed_items.append(item)
+                    # completed_items.append(item)
+                    # continue
+                    temp.append(f"\n> :black_medium_small_square: ~~{item.name}~~")
                     continue
-                temp.append(f"\n> :white_medium_small_square: __{item.name}__")
+                else:
+                    temp.append(f"\n> :white_medium_small_square: __{item.name}__")
                 
                 if item.description is not None:
                     temp.append(f"\n> \u200b \u200b​└─{item.description}")
@@ -86,6 +91,22 @@ class ChecklistView(discord.ui.View):
                 items_on_page.append(item)
             
             temp.append("\n\n")
+        
+        # Design 2
+        # for checklist in self.listed_checklists:
+        #     for item in checklist.items:
+        #         item: ChecklistItem
+                
+        #         temp.append(
+        #             f"{':green_square:' if item.completed else ':red_square:'} __{item.name}__"
+        #         )
+        #         temp.append(f"\n\u200b \u200b​{'├' if item.description is not None else '└'}─ List: {checklist.name}")
+        #         if item.description is not None:
+        #             temp.append(f"\n\u200b \u200b​└─{item.description}")
+            
+        #         temp.append("\n")
+                
+        #         items_on_page.append(item)
         
         
         
@@ -100,7 +121,7 @@ class ChecklistView(discord.ui.View):
         
         self.clear_items()
         self.add_item(self.SelectItems)
-        self.add_item(ItemList(items=items_on_page))
+        # self.add_item(ItemList(items=items_on_page))
         
         await self.msg.edit(content=None, embed=embed, view=self)
     

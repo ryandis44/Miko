@@ -11,8 +11,7 @@ class ChecklistItem:
         id: str,
         creator_id: int,
         name: str,
-        description: str,
-        completed_at: int,
+        description: str
     ) -> None:
         
         self.checklist = checklist
@@ -20,10 +19,24 @@ class ChecklistItem:
         self.creator_id = creator_id
         self.name = name
         self.description = description
-        self.completed_at = completed_at
+        self.completed_at: int = None
+        self.actor_id: int = None
+    
+    async def ainit(self) -> None:
+        await self.__get_last_history()
+        
+    async def __get_last_history(self) -> None:
+        val = await db.execute(
+            "SELECT actor_id,completed_at FROM CHECKLIST_HISTORY WHERE "
+            f"item_id='{self.id}'"
+        )
+        if val == [] or val is None: return
+        self.actor_id = val[0][0]
+        self.completed_at = val[0][1]
     
     @property
     def completed(self) -> bool:
+        # return False
         return True if self.id == "df0c3220672b4ab99b970d82b3f58fce" else False
     
     async def complete(self) -> None:
@@ -73,21 +86,20 @@ class Checklist:
     
     async def __get_items(self) -> None:
         val = await db.execute(
-            "SELECT checklist_id,item_id,creator_id,name,description,completed_at FROM "
+            "SELECT checklist_id,item_id,creator_id,name,description FROM "
             f"CHECKLIST_ITEMS WHERE checklist_id='{self.id}'"
         )
         if val is None or val == []:
             self.visible = False # ignore database visibility if no items in list
             return
         for item in val:
-            self.items.append(
-                ChecklistItem(
+            i = ChecklistItem(
                     checklist=self,
                     id=item[1],
                     creator_id=item[2],
                     name=item[3],
-                    description=item[4],
-                    completed_at=item[5]
-                )
+                    description=item[4]
             )
+            await i.ainit()
+            self.items.append(i)
 
