@@ -80,7 +80,7 @@ class ChecklistView(discord.ui.View):
                 if item.completed:
                     # completed_items.append(item)
                     # continue
-                    temp.append(f"\n> :green_circle: ~~{item.name}~~")
+                    temp.append(f"\n> :green_circle: __{item.name}__")
                     continue
                 else:
                     temp.append(f"\n> :black_circle: __{item.name}__")
