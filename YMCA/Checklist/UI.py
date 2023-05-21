@@ -74,6 +74,28 @@ class ChecklistView(discord.ui.View):
         if self.offset + tunables('MAX_CHECKLIST_ITEMS_PER_PAGE') <= self.total_items: self.pos = self.offset
         elif self.offset > 0: self.pos = self.offset = self.total_items - tunables('MAX_CHECKLIST_ITEMS_PER_PAGE')
     
+    
+    async def item_update_callback(self, items: list[ChecklistItem]) -> None:
+        if items == []: print("No items")
+        '''
+        Add stats
+        '''
+        temp = {}
+        for item in self.items_on_page: temp[item.id] = item
+        
+        # Complete all items in the 'items' list
+        for item in items:
+            del temp[item.id]
+            await item.complete(user_id=self.u.user.id)
+        
+        # Any item not in 'items' list, uncomplete
+        for key, value in temp.items():
+            value: ChecklistItem
+            await value.uncomplete()
+        
+        await self.respond()
+        
+    
     # /checklist and home button response
     async def respond(self) -> None:
         temp = []
@@ -81,37 +103,39 @@ class ChecklistView(discord.ui.View):
             "__**Active checklists**__:\n\n"
         )
         
-        
-        items_on_page = []
-        
-        
         self.__calculate_total_items()
         self.__determine_pos()
         
-        
-        
-        
         '''
-        In these loops, 'i' is the total number of iterations 
+        In these loops, 'i' is the total number of successful iterations
+        and 'j' is the total number of iterations.
+        
+        'i' is used to determine when do stop appending items to the current
+        page and 'j' is used to determine when to start appending items
+        to the current page.
         '''
         # Design 1
         i = 0
         j = 0
+        self.items_on_page: list[ChecklistItem] = []
         for checklist in self.listed_checklists:
-            temp.append(f"{checklist.emoji} **{checklist.name}**")
+            
+            if checklist.resets != "DISABLED": resets_in = f" - Resets <t:{checklist.resets_in}:R>"
+            else: resets_in = ""
+            temp.append(f"{checklist.emoji} **{checklist.name}**{resets_in}")
             for item in checklist.items:
                 if j < self.pos:
                     j+=1
                     continue
                 if i >= tunables('MAX_CHECKLIST_ITEMS_PER_PAGE'): break
                 
-                items_on_page.append(item)
+                self.items_on_page.append(item)
                 if item.completed:
-                    temp.append(f"\n> {i} :green_circle: __{item.name}__")
+                    temp.append(f"\n> :green_circle: __{item.name}__")
                     i+=1
                     continue
                 else:
-                    temp.append(f"\n> {i} :black_circle: __{item.name}__")
+                    temp.append(f"\n> :black_circle: __{item.name}__")
                 
                 if item.description is not None:
                     temp.append(f"\n> \u200b \u200b​└─{item.description}")
@@ -131,10 +155,9 @@ class ChecklistView(discord.ui.View):
             icon_url=self.u.guild.icon,
             name=f"{self.u.guild} Checklist"
         )
-        # embed.set_footer(text=f"Items on this page: {len(items_on_page)}")
         embed.set_footer(
             text=(
-                f"Showing items {self.pos+1} - {self.pos+len(items_on_page)} of "
+                f"Showing items {self.pos+1} - {self.pos+len(self.items_on_page)} of "
                 f"{self.total_items}"
             )
         )
@@ -153,10 +176,20 @@ class ChecklistView(discord.ui.View):
             self.add_item(p)
             self.add_item(n)
             self.add_item(l)
-        # self.add_item(ItemList(items=items_on_page))
+            
+            
+        '''
+        Add permissions allowing ONLY supervisors to modify
+        completion status of an item
+        '''
+        self.add_item(ItemList(items=self.items_on_page))
         
         await self.msg.edit(content=None, embed=embed, view=self)
-    
+
+
+PAGE_BUTTONS_ROW = 1
+SELECT_CHECKLISTS_ROW = 2
+SELECT_ITEM_ROW = 3
 
 class FirstButton(discord.ui.Button):
 
@@ -166,7 +199,7 @@ class FirstButton(discord.ui.Button):
             label=None,
             emoji=tunables('GENERIC_FIRST_BUTTON'),
             custom_id="first_button",
-            row=2
+            row=PAGE_BUTTONS_ROW
         )
     
     async def callback(self, interaction: discord.Interaction) -> None:
@@ -182,7 +215,7 @@ class PrevButton(discord.ui.Button):
             label=None,
             emoji=tunables('GENERIC_PREV_BUTTON'),
             custom_id="prev_button",
-            row=2
+            row=PAGE_BUTTONS_ROW
         )
     
     async def callback(self, interaction: discord.Interaction) -> None:
@@ -198,7 +231,7 @@ class NextButton(discord.ui.Button):
             label=None,
             emoji=tunables('GENERIC_NEXT_BUTTON'),
             custom_id="next_button",
-            row=2
+            row=PAGE_BUTTONS_ROW
         )
     
     async def callback(self, interaction: discord.Interaction) -> None:
@@ -214,7 +247,7 @@ class LastButton(discord.ui.Button):
             label=None,
             emoji=tunables('GENERIC_LAST_BUTTON'),
             custom_id="last_button",
-            row=2
+            row=PAGE_BUTTONS_ROW
         )
     
     async def callback(self, interaction: discord.Interaction) -> None:
@@ -232,25 +265,32 @@ class ItemList(discord.ui.Select):
             item: ChecklistItem
             options.append(
                 discord.SelectOption(
-                    label=f"{item.name} {item.id}",
-                    description=f"From list {item.checklist.name.upper()}",
+                    label=f"{item.name}",
+                    description=(
+                            f"{item.checklist.name} - "
+                            f"{'Incomplete' if not item.completed else 'Complete'}"
+                        ),
                     value=i,
-                    emoji=item.checklist.emoji
+                    emoji=item.checklist.emoji,
+                    default=item.completed
                 )
             )
 
         super().__init__(
             placeholder="Check off an item",
-            min_values=1,
+            min_values=0,
             max_values=len(options),
             options=options,
-            row=2,
+            row=SELECT_ITEM_ROW,
             custom_id="select_item",
             disabled=False
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        pass
+        await interaction.response.edit_message()
+        temp = []
+        for val in self.values: temp.append(self.view.items_on_page[int(val)])
+        await self.view.item_update_callback(temp)
 
 class SelectList(discord.ui.Select):
 
@@ -285,7 +325,7 @@ class SelectList(discord.ui.Select):
             min_values=1,
             max_values=len(options),
             options=options,
-            row=1,
+            row=SELECT_CHECKLISTS_ROW,
             custom_id="select_entry",
             disabled=False
         )

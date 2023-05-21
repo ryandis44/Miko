@@ -1,3 +1,5 @@
+from datetime import date, datetime, timedelta, timezone
+import time
 from Database.database_class import AsyncDatabase
 db = AsyncDatabase("YMCA.Checklist.Objects.py")
 
@@ -22,6 +24,9 @@ class ChecklistItem:
         self.completed_at: int = None
         self.actor_id: int = None
     
+    def __str__(self) -> str:
+        return f"{self.name} ({self.id}) [{self.checklist.name}]"
+    
     async def ainit(self) -> None:
         await self.__get_last_history()
         
@@ -36,11 +41,34 @@ class ChecklistItem:
     
     @property
     def completed(self) -> bool:
-        # return False
-        return True if self.id == "0c91c88dcb9d4887afbf6afa01e743a4" else False
+        
+        last_reset = self.checklist.last_reset
+        if type(last_reset) != int: last_reset = int(last_reset.timestamp())
+        if self.name == "mop n stuff":
+            print(last_reset)
+        
+        if self.completed_at is not None and self.completed_at >= last_reset: return True
+        return False
     
-    async def complete(self) -> None:
-        pass
+    async def __delete_history_entry(self) -> None:
+        await db.execute(
+            "DELETE FROM CHECKLIST_HISTORY WHERE "
+            f"item_id='{self.id}' AND completed_at>='{int(self.checklist.last_reset.timestamp())}'"
+        )
+    
+    async def complete(self, user_id: int) -> None:
+        if self.completed: return
+        print(f"Completed {self}")
+        await self.__delete_history_entry()
+        await db.execute(
+            "INSERT INTO CHECKLIST_HISTORY (item_id,actor_id,completed_at) VALUES "
+            f"('{self.id}', '{user_id}', '{int(time.time())}')"
+        )
+        
+    
+    async def uncomplete(self) -> None:
+        if not self.completed: return
+        print(f"Uncompleted {self}")
 
     async def delete(self) -> None:
         pass
@@ -102,4 +130,55 @@ class Checklist:
             )
             await i.ainit()
             self.items.append(i)
+    
+    @property
+    def resets_in(self) -> int|None:
+        match self.resets:
+            case "DAILY": return int((self.last_reset + timedelta(days=1)).timestamp())
+            case "WEEKLY": return int((self.last_reset + timedelta(days=7)).timestamp())
+            case "MONTHLY":                
+                r = self.last_reset + timedelta(days=32)
+                r = r.replace(day=1)
+                return int((r).timestamp())
+            case _: return None
 
+    @property
+    def last_reset(self) -> datetime:
+        day = f"{date.today()}"
+        day = f"2023-05-17"
+        match self.resets:
+            
+            case "DAILY":
+                dt = datetime.strptime(day, '%Y-%m-%d')
+                dt = dt + timedelta(days=1)
+                dt = dt.replace(tzinfo=timezone.utc)
+                start = dt - timedelta(days=dt.weekday() + 1) # was set to 1 for Plex, double check later
+                end = start + timedelta(days=6)
+                end = str(end).split()
+                val = datetime.strptime(end[0], "%Y-%m-%d")
+                return val
+                
+            case "WEEKLY":
+                dt = datetime.strptime(day, '%Y-%m-%d')
+                dt = dt + timedelta(days=1)
+                dt = dt.replace(tzinfo=timezone.utc)
+                start = dt - timedelta(days=dt.weekday() + 0) # was set to 1 for Plex, double check later
+                end = start + timedelta(days=7)
+                start = str(start).split()
+                end = str(end).split()
+                val = datetime.strptime(start[0], "%Y-%m-%d")
+                return val
+                
+            case "MONTHLY":
+                
+                dt = datetime.strptime(day, '%Y-%m-%d')
+                dt = dt.replace(tzinfo=timezone.utc)
+                dt = dt.replace(day=1)
+                start = dt - timedelta(days=dt.weekday() + 0) # was set to 1 for Plex, double check later
+                end = start + timedelta(days=0)
+                start = str(start).split()
+                end = str(end).split()
+                val = datetime.strptime(end[0], "%Y-%m-%d")
+                return val
+                
+            case _: return 0

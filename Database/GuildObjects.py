@@ -213,7 +213,8 @@ class MikoGuild():
     async def checklists(self) -> list[Checklist]:
         val = await ago.execute(
             "SELECT checklist_id FROM CHECKLISTS WHERE "
-            f"server_id='{self.guild.id}'"
+            f"server_id='{self.guild.id}' "
+            "ORDER BY pos ASC"
         )
         if val is None or val == []: return []
         
