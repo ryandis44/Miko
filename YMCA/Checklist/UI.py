@@ -26,6 +26,7 @@ class ChecklistView(discord.ui.View):
         except: return
     
     async def get_checklists(self) -> None:
+        self.checklists.clear()
         for list in await self.u.checklists:
             if list.visible:
                 self.checklists.append(list)
@@ -86,13 +87,14 @@ class ChecklistView(discord.ui.View):
         # Complete all items in the 'items' list
         for item in items:
             del temp[item.id]
-            await item.complete(user_id=self.u.user.id)
+            await item.complete(u=self.u)
         
         # Any item not in 'items' list, uncomplete
         for key, value in temp.items():
             value: ChecklistItem
-            await value.uncomplete()
+            await value.uncomplete(u=self.u)
         
+        await self.get_checklists()
         await self.respond()
         
     
@@ -266,10 +268,11 @@ class ItemList(discord.ui.Select):
             options.append(
                 discord.SelectOption(
                     label=f"{item.name}",
-                    description=(
-                            f"{item.checklist.name} - "
-                            f"{'Incomplete' if not item.completed else 'Complete'}"
-                        ),
+                    # description=(
+                    #         f"{item.checklist.name} - "
+                    #         f"{'Incomplete' if not item.completed else 'Complete'}"
+                    #     ),
+                    description=f"{item.id}",
                     value=i,
                     emoji=item.checklist.emoji,
                     default=item.completed
@@ -290,7 +293,8 @@ class ItemList(discord.ui.Select):
         await interaction.response.edit_message()
         temp = []
         for val in self.values: temp.append(self.view.items_on_page[int(val)])
-        await self.view.item_update_callback(temp)
+        try: await self.view.item_update_callback(temp)
+        except Exception as e: print(e)
 
 class SelectList(discord.ui.Select):
 

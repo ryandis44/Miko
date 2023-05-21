@@ -33,7 +33,8 @@ class ChecklistItem:
     async def __get_last_history(self) -> None:
         val = await db.execute(
             "SELECT actor_id,completed_at FROM CHECKLIST_HISTORY WHERE "
-            f"item_id='{self.id}'"
+            f"item_id='{self.id}' "
+            "ORDER BY completed_at DESC"
         )
         if val == [] or val is None: return
         self.actor_id = val[0][0]
@@ -44,31 +45,43 @@ class ChecklistItem:
         
         last_reset = self.checklist.last_reset
         if type(last_reset) != int: last_reset = int(last_reset.timestamp())
-        if self.name == "mop n stuff":
-            print(last_reset)
+        # if self.id == "7226c22844f7416c911cd6aca607efcf":
+        #     print(last_reset)
+        #     print(0, self.completed_at)
         
         if self.completed_at is not None and self.completed_at >= last_reset: return True
         return False
     
-    async def __delete_history_entry(self) -> None:
+    async def __delete_latest_history_entry(self) -> None:
+        if self.checklist.resets == "DISABLED":
+            await db.execute(
+                "DELETE FROM CHECKLIST_HISTORY WHERE "
+                f"item_id='{self.id}' AND completed_at>='0' "
+                "LIMIT 1"
+            )
+            return
+        
         await db.execute(
             "DELETE FROM CHECKLIST_HISTORY WHERE "
             f"item_id='{self.id}' AND completed_at>='{int(self.checklist.last_reset.timestamp())}'"
         )
     
-    async def complete(self, user_id: int) -> None:
+    async def complete(self, u) -> None:
         if self.completed: return
+        await u.increment_statistic('CHECKLIST_ITEMS_COMPLETED')
         print(f"Completed {self}")
-        await self.__delete_history_entry()
+        await self.__delete_latest_history_entry()
         await db.execute(
             "INSERT INTO CHECKLIST_HISTORY (item_id,actor_id,completed_at) VALUES "
-            f"('{self.id}', '{user_id}', '{int(time.time())}')"
+            f"('{self.id}', '{u.user.id}', '{int(time.time())}')"
         )
         
     
-    async def uncomplete(self) -> None:
+    async def uncomplete(self, u) -> None:
         if not self.completed: return
+        await u.increment_statistic('CHECKLIST_ITEMS_UNCOMPLETED')
         print(f"Uncompleted {self}")
+        await self.__delete_latest_history_entry()
 
     async def delete(self) -> None:
         pass
@@ -144,41 +157,19 @@ class Checklist:
 
     @property
     def last_reset(self) -> datetime:
-        day = f"{date.today()}"
-        day = f"2023-05-17"
+        day = date.today()
+        day = datetime.combine(day, datetime.min.time())
+        
+        
         match self.resets:
             
-            case "DAILY":
-                dt = datetime.strptime(day, '%Y-%m-%d')
-                dt = dt + timedelta(days=1)
-                dt = dt.replace(tzinfo=timezone.utc)
-                start = dt - timedelta(days=dt.weekday() + 1) # was set to 1 for Plex, double check later
-                end = start + timedelta(days=6)
-                end = str(end).split()
-                val = datetime.strptime(end[0], "%Y-%m-%d")
-                return val
+            case "DAILY": return day
                 
             case "WEEKLY":
-                dt = datetime.strptime(day, '%Y-%m-%d')
-                dt = dt + timedelta(days=1)
-                dt = dt.replace(tzinfo=timezone.utc)
-                start = dt - timedelta(days=dt.weekday() + 0) # was set to 1 for Plex, double check later
-                end = start + timedelta(days=7)
-                start = str(start).split()
-                end = str(end).split()
-                val = datetime.strptime(start[0], "%Y-%m-%d")
-                return val
+                dt = datetime.strptime(str(day), '%Y-%m-%d %H:%M:%S')
+                start = dt - timedelta(days=dt.weekday())
+                return start
                 
-            case "MONTHLY":
-                
-                dt = datetime.strptime(day, '%Y-%m-%d')
-                dt = dt.replace(tzinfo=timezone.utc)
-                dt = dt.replace(day=1)
-                start = dt - timedelta(days=dt.weekday() + 0) # was set to 1 for Plex, double check later
-                end = start + timedelta(days=0)
-                start = str(start).split()
-                end = str(end).split()
-                val = datetime.strptime(end[0], "%Y-%m-%d")
-                return val
+            case "MONTHLY": return day.replace(day=1)
                 
             case _: return 0
