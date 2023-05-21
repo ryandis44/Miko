@@ -209,8 +209,9 @@ class MikoGuild():
         )
         if val == [] or val is None: return None
         return self.guild.get_channel(int(val))
-    @property
-    async def checklists(self) -> list[Checklist]:
+    
+    
+    async def checklists(self, include_hidden: bool = False) -> list[Checklist]:
         val = await ago.execute(
             "SELECT checklist_id FROM CHECKLISTS WHERE "
             f"server_id='{self.guild.id}' "
@@ -221,14 +222,14 @@ class MikoGuild():
         if type(val) == str:
             c = Checklist(id=val, emoji="1️⃣")
             await c.ainit()
-            return [c] if c.visible else []
+            return [c] if c.visible or include_hidden else []
         
         temp = []
         i = 0
         for cid in val:
             c = Checklist(id=cid[0], emoji=emojis_1to10(i))
             await c.ainit()
-            if c.visible:
+            if c.visible or include_hidden:
                 temp.append(c)
                 i += 1
             
