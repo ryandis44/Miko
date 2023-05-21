@@ -221,13 +221,16 @@ class MikoGuild():
         if type(val) == str:
             c = Checklist(id=val, emoji="1️⃣")
             await c.ainit()
-            return [c]
+            return [c] if c.visible else []
         
         temp = []
-        for i, cid in enumerate(val):
+        i = 0
+        for cid in val:
             c = Checklist(id=cid[0], emoji=emojis_1to10(i))
             await c.ainit()
-            temp.append(c)
+            if c.visible:
+                temp.append(c)
+                i += 1
             
         return temp
 

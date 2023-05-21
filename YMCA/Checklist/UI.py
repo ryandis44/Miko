@@ -26,6 +26,7 @@ class ChecklistView(discord.ui.View):
         except: return
     
     async def get_checklists(self) -> None:
+        # self.offset = 0
         self.checklists.clear()
         for list in await self.u.checklists:
             if list.visible:
@@ -77,10 +78,6 @@ class ChecklistView(discord.ui.View):
     
     
     async def item_update_callback(self, items: list[ChecklistItem]) -> None:
-        if items == []: print("No items")
-        '''
-        Add stats
-        '''
         temp = {}
         for item in self.items_on_page: temp[item.id] = item
         
@@ -94,7 +91,7 @@ class ChecklistView(discord.ui.View):
             value: ChecklistItem
             await value.uncomplete(u=self.u)
         
-        await self.get_checklists()
+        # await self.get_checklists()
         await self.respond()
         
     
@@ -293,8 +290,7 @@ class ItemList(discord.ui.Select):
         await interaction.response.edit_message()
         temp = []
         for val in self.values: temp.append(self.view.items_on_page[int(val)])
-        try: await self.view.item_update_callback(temp)
-        except Exception as e: print(e)
+        await self.view.item_update_callback(temp)
 
 class SelectList(discord.ui.Select):
 
