@@ -1,6 +1,8 @@
 from datetime import date, datetime, timedelta, timezone
 import time
+import uuid
 from Database.database_class import AsyncDatabase
+from misc.misc import sanitize_name
 from tunables import tunables
 db = AsyncDatabase("YMCA.Checklist.Objects.py")
 
@@ -15,7 +17,8 @@ class ChecklistItem:
         creator_id: int,
         name: str,
         description: str,
-        created_at: int
+        created_at: int,
+        pos: int
     ) -> None:
         
         self.checklist = checklist
@@ -24,6 +27,7 @@ class ChecklistItem:
         self.name = name
         self.description = description
         self.created_at = created_at
+        self.pos = pos
     
     def __str__(self) -> str:
         return f"{self.name} ({self.id}) [{self.checklist.name}]"
@@ -50,6 +54,21 @@ class ChecklistItem:
         
         if self.completed_at is not None and self.completed_at >= last_reset: return True
         return False
+
+    @property
+    def creator_mention(self) -> str: return f"<@{self.creator_id}>"
+    @property
+    def created_at_formatted(self) -> str: return f"<t:{self.created_at}:F>"
+    @property
+    def completed_formatted(self) -> str:
+        if self.completed: resp = "+ COMPLETE +"
+        else: resp = "- INCOMPLETE -"
+        
+        return (
+            "```diff\n"
+            f"{resp}"
+            "\n```"
+        )
     
     async def __delete_latest_history_entry(self) -> None:
         if self.checklist.resets == "DISABLED":
@@ -65,6 +84,8 @@ class ChecklistItem:
             f"item_id='{self.id}' AND completed_at>='{int(self.checklist.last_reset.timestamp())}'"
         )
     
+    async def toggle_completion(self, u) -> None: await self.uncomplete(u) if self.completed else await self.complete(u)
+    
     async def complete(self, u) -> None:
         if self.completed: return
         await u.increment_statistic('CHECKLIST_ITEMS_COMPLETED')
@@ -75,7 +96,6 @@ class ChecklistItem:
         )
         await self.refresh()
         
-    
     async def uncomplete(self, u) -> None:
         if not self.completed: return
         await u.increment_statistic('CHECKLIST_ITEMS_UNCOMPLETED')
@@ -86,10 +106,25 @@ class ChecklistItem:
         await self.__get_last_history()
 
     async def delete(self) -> None:
-        pass
+        await db.execute(
+            "DELETE FROM CHECKLIST_ITEMS WHERE "
+            f"item_id='{self.id}'"
+        )
+        await db.execute(
+            "DELETE FROM CHECKLIST_HISTORY WHERE "
+            f"item_id='{self.id}'"
+        )
     
-    async def edit(self) -> None:
-        pass
+    async def edit(self, name: str, desc: str) -> None:
+        if desc == "": desc = "NULL"
+        else: desc = f"'{sanitize_name(desc)}'"
+        
+        await db.execute(
+            f"UPDATE CHECKLIST_ITEMS SET name='{sanitize_name(name)}', description={desc} WHERE "
+            f"item_id='{self.id}'"
+        )
+        self.name = name
+        self.description = desc if desc != "NULL" else None
 
 class ChecklistHistory:
     def __init__(
@@ -119,6 +154,10 @@ class Checklist:
         
         self.id = id
         self.emoji = emoji
+        
+    def __str__(self) -> str: return self.name
+    
+    async def ainit(self) -> None:
         self.server_id: int = None
         self.name: str = None
         self.description: str = None
@@ -127,10 +166,7 @@ class Checklist:
         self.visible: bool = False
         self.created_at: int = None
         self.creator_id: int = None
-        
-    def __str__(self) -> str: return self.name
-    
-    async def ainit(self) -> None:
+        self.pos = 0
         await self.__get_checklist()
         await self.__get_items()
     
@@ -152,8 +188,10 @@ class Checklist:
     async def __get_items(self) -> None:
         self.visible = False # do not show up if all items complete or no items in list
         val = await db.execute(
-            "SELECT checklist_id,item_id,creator_id,name,description,created_at FROM "
-            f"CHECKLIST_ITEMS WHERE checklist_id='{self.id}'"
+            "SELECT checklist_id,item_id,creator_id,name,description,created_at,pos FROM "
+            f"CHECKLIST_ITEMS WHERE checklist_id='{self.id}' "
+            "ORDER BY pos ASC "
+            f"LIMIT {tunables('MAX_ITEMS_PER_CHECKLIST')}"
         )
         if val is None or val == []:
             # self.visible = False # ignore database visibility if no items in list
@@ -165,12 +203,47 @@ class Checklist:
                     creator_id=item[2],
                     name=item[3],
                     description=item[4],
-                    created_at=item[5]
+                    created_at=item[5],
+                    pos=item[6]
             )
             await i.ainit()
             if not i.completed and self.__raw_visibility == "TRUE": self.visible = True
             self.items.append(i)
-            
+    
+    async def toggle_visibility(self) -> None:
+        if self.__raw_visibility == "TRUE": visibility = "FALSE"
+        else: visibility = "TRUE"
+        await db.execute(
+            f"UPDATE CHECKLISTS SET visible='{visibility}' "
+            f"WHERE checklist_id='{self.id}'"
+        )
+        await self.ainit()
+    
+    async def create_item(self, u, name: str, desc: str = None) -> None:
+        if desc == "": desc = "NULL"
+        else: desc = f"'{sanitize_name(desc)}'"
+        
+        while True:
+            iid = uuid.uuid4().hex
+            if await db.execute(f"SELECT * FROM CHECKLIST_ITEMS WHERE item_id='{iid}'") in [[], None]: break
+        
+        # for pos + 1
+        pos = await db.execute(f"SELECT pos FROM CHECKLIST_ITEMS WHERE checklist_id='{self.id}' ORDER BY pos DESC LIMIT 1")
+        if pos is None or pos == []: pos = -1
+        
+        await db.execute(
+            "INSERT INTO CHECKLIST_ITEMS (checklist_id,item_id,created_at,creator_id,name,description,pos) VALUES "
+            f"('{self.id}', '{iid}', '{int(time.time())}', '{u.user.id}', '{sanitize_name(name)}', {desc}, '{pos+1}')"
+        )
+        await self.ainit()
+    
+    async def delete(self) -> None:
+        for item in self.items: await item.delete()
+        
+        await db.execute(
+            f"DELETE FROM CHECKLISTS WHERE checklist_id='{self.id}'"
+        )
+
     @property
     async def history(self) -> list[ChecklistHistory]:
         val = await db.execute(
@@ -232,8 +305,10 @@ class Checklist:
         )
         if self.__raw_visibility != "TRUE":
             reason = "Disabled by admin"
-        else:
+        elif len(self.items) > 0:
             reason = "All items have been completed."
+        else:
+            reason = "There are no items in this list."
         
         return (
             "```diff\n"
@@ -241,7 +316,9 @@ class Checklist:
             f"Reason: {reason}\n"
             "```"
         )
-        
+    
+    @property
+    def raw_visibility(self) -> bool: return True if self.__raw_visibility == "TRUE" else False
         
     
     @property

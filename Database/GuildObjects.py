@@ -215,7 +215,8 @@ class MikoGuild():
         val = await ago.execute(
             "SELECT checklist_id FROM CHECKLISTS WHERE "
             f"server_id='{self.guild.id}' "
-            "ORDER BY pos ASC"
+            "ORDER BY pos ASC "
+            f"LIMIT {tunables('MAX_ITEMS_PER_CHECKLIST')}"
         )
         if val is None or val == []: return []
         
