@@ -1,5 +1,5 @@
 import discord
-from YMCA.Checklist.Objects import Checklist, ChecklistItem
+from YMCA.Checklist.Objects import Checklist, ChecklistItem, create_checklist
 from tunables import *
 from Database.GuildObjects import MikoMember
 
@@ -242,8 +242,13 @@ class ChecklistView(discord.ui.View):
             ))
         
         self.clear_items()
-        if num_checklists > 0: self.add_item(EditChecklist(checklists=all_checklists))
+        self.add_item(EditChecklist(checklists=all_checklists))
+        self.add_item(ReorderChecklists(checklists=all_checklists))
+        self.add_item(ChooseChecklistToDelete(checklists=all_checklists))
         self.add_item(HomeButton())
+        n = NewChecklist()
+        n.disabled = num_checklists >= tunables('MAX_CHECKLISTS_PER_GUILD')
+        self.add_item(n)
         await self.msg.edit(content=None, embed=embed, view=self)
         
 
@@ -267,7 +272,16 @@ class ChecklistView(discord.ui.View):
             f"Resets: **{checklist.resets if checklist.resets != 'DISABLED' else 'Never'}** {checklist.resets_in_timestamp if checklist.resets_in_timestamp != '<t:None:R>' else ''}\n"
             "List visibility:"
             f"{checklist.list_visibility_status}"
+            "\n\n"
+            "All items (**bold** means complete):\n"
         )
+        if checklist.items == []:
+            temp.append("(No items)")
+        for i, item in enumerate(checklist.items):
+            temp.append(
+                f"{i+1}. {item.bold_if_completed}\n"
+            )
+        
         
         embed = discord.Embed(description=''.join(temp), color=GREEN_BOOK_NEUTRAL_COLOR)
         embed.set_author(
@@ -285,7 +299,7 @@ class ChecklistView(discord.ui.View):
         n = NewItem(checklist=checklist)
         n.disabled = len(checklist.items) >= tunables('MAX_ITEMS_PER_CHECKLIST')
         self.add_item(n)
-        self.add_item(DeleteItemFake(obj=checklist))
+        self.add_item(EditChecklistButton(checklist=checklist))
         
         await self.msg.edit(content=None, embed=embed, view=self)
 
@@ -444,8 +458,7 @@ class AdminButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.edit_message()
         
-        if type(self.list) is Checklist: await self.view.respond_edit_checklist(self.list)
-        elif type(self.list) is ChecklistItem: await self.view.respond_edit_checklist(self.list.checklist)
+        if type(self.list) is ChecklistItem: await self.view.respond_edit_checklist(self.list.checklist)
         else: await self.view.respond_admin()
         
         # case doesnt work here for some reason
@@ -583,6 +596,39 @@ class NewItem(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.send_modal(ItemModal(title="New Item", bview=self.view, obj=self.checklist))
         
+class NewChecklist(discord.ui.Button):
+
+    def __init__(self):
+        super().__init__(
+            style=discord.ButtonStyle.green,
+            label="New Checklist",
+            custom_id="fdasfdfdd",
+            row=PAGE_BUTTONS_ROW,
+            disabled=False
+        )
+    
+    async def callback(self, interaction: discord.Interaction) -> None:
+        m = ChecklistModal(title="New Checklist", bview=self.view)
+        await interaction.response.send_modal(m)
+        
+class EditChecklistButton(discord.ui.Button):
+
+    def __init__(self, checklist: Checklist):
+        self.checklist = checklist
+        super().__init__(
+            style=discord.ButtonStyle.green,
+            label=None,
+            emoji=tunables('GENERIC_EDIT_BUTTON'),
+            custom_id="edit_checklist_b",
+            row=PAGE_BUTTONS_ROW,
+            disabled=False
+        )
+    
+    async def callback(self, interaction: discord.Interaction) -> None:
+        m = ChecklistModal(title="Edit Checklist", bview=self.view, checklist=self.checklist)
+        m.name.default = self.checklist.name
+        await interaction.response.send_modal(m)
+        
 class EditItemButton(discord.ui.Button):
 
     def __init__(self, item: ChecklistItem):
@@ -601,6 +647,38 @@ class EditItemButton(discord.ui.Button):
         m.name.default = self.item.name
         m.desc.default = self.item.description
         await interaction.response.send_modal(m)
+
+class ChecklistModal(discord.ui.Modal):
+
+    def __init__(self, title: str, bview: ChecklistView, checklist: Checklist = None):
+        self.bview = bview
+        self.checklist = checklist
+        super().__init__(title=title, custom_id="item_modal")
+
+    name = discord.ui.TextInput(
+            label="Checklist Name",
+            placeholder="Daily",
+            min_length=1,
+            max_length=tunables('MAX_CHECKLIST_NAME_LENGTH'),
+            default=None,
+            required=True
+        )
+    # desc = discord.ui.TextInput(
+    #         label="Checklist Description",
+    #         placeholder="before i kiss yours",
+    #         min_length=0,
+    #         max_length=tunables('MAX_CHECKLIST_DESCRIPTION_LENGTH'),
+    #         default=None,
+    #         required=False
+    #     )
+    
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        try:
+            await interaction.response.edit_message()
+            await create_checklist(interaction=interaction, name=self.name.value)
+            await self.bview.get_checklists()
+            await self.bview.respond_admin()
+        except Exception as e: print(e)
 
 class ItemModal(discord.ui.Modal):
 
@@ -639,6 +717,8 @@ class EditChecklist(discord.ui.Select):
         self.checklists = checklists
 
         options = []
+        disabled = True
+        placeholder = "No checklists found"
         for i, checklist in enumerate(checklists):
             checklist: Checklist
             options.append(
@@ -651,14 +731,25 @@ class EditChecklist(discord.ui.Select):
                 )
             )
 
+        if len(options) <= 1:
+            options.append(
+                discord.SelectOption(
+                    label="(no items)",
+                    value="(no items)"
+                )
+            )
+        else:
+            disabled = False
+            placeholder = "Select a checklist to edit"
+
         super().__init__(
-            placeholder="Select a list to edit",
+            placeholder=placeholder,
             min_values=1,
             max_values=1,
             options=options,
             row=SELECT_CHECKLISTS_ROW,
             custom_id="edit_checklist",
-            disabled=False
+            disabled=disabled
         )
     
     async def callback(self, interaction: discord.Interaction):
@@ -673,14 +764,15 @@ class EditItem(discord.ui.Select):
 
         options = []
         disabled = True
-        placeholder = "No items to edit"
+        placeholder = "No items found"
         for i, item in enumerate(items):
             item: ChecklistItem
             options.append(
                 discord.SelectOption(
                     label=item.name,
                     description=item.description,
-                    value=i
+                    value=i,
+                    emoji="◽"
                 )
             )
         
@@ -762,8 +854,99 @@ class ChecklistResetSelector(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.edit_message()
-        # change reset status here
+        await self.checklist.set_resets(resets=self.values[0])
+        await self.view.get_checklists()
         await self.view.respond_edit_checklist(self.checklist)
+
+class ReorderChecklists(discord.ui.Select):
+    
+    def __init__(self, checklists: list[Checklist]):
+        self.checklists = checklists
+
+        options = []
+        disabled = True
+        placeholder = "Not enough checklists to reorder"
+        for i, checklist in enumerate(checklists):
+            options.append(
+                discord.SelectOption(
+                    label=checklist.name,
+                    value=checklist.id,
+                    emoji=checklist.emoji
+                )
+            )
+
+        if len(options) <= 1:
+            options.append(
+                discord.SelectOption(
+                    label="(no items)",
+                    value="(no items)"
+                )
+            )
+        else:
+            disabled = False
+            placeholder = "Change checklist order"
+
+        super().__init__(
+            placeholder=placeholder,
+            min_values=len(options),
+            max_values=len(options),
+            options=options,
+            row=SELECT_ITEM_ROW,
+            custom_id="reorder_checklists",
+            disabled=disabled
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await interaction.response.edit_message()
+        for i, id in enumerate(self.values):
+            await db.execute(
+                f"UPDATE CHECKLISTS SET pos='{i}' WHERE "
+                f"checklist_id='{id}'"
+            )
+        await self.view.get_checklists()
+        await self.view.respond_admin()
+        
+class ChooseChecklistToDelete(discord.ui.Select):
+    
+    def __init__(self, checklists: list[Checklist]):
+        self.checklists = checklists
+
+        options = []
+        disabled = True
+        placeholder = "No checklists found"
+        for i, checklist in enumerate(checklists):
+            options.append(
+                discord.SelectOption(
+                    label=checklist.name,
+                    value=i,
+                    emoji=checklist.emoji
+                )
+            )
+
+        if len(options) <= 1:
+            options.append(
+                discord.SelectOption(
+                    label="(no items)",
+                    value="(no items)"
+                )
+            )
+        else:
+            disabled = False
+            placeholder = "Delete a checklist"
+
+        super().__init__(
+            placeholder=placeholder,
+            min_values=1,
+            max_values=1,
+            options=options,
+            row=SELECT_ITEM_ROW+1,
+            custom_id="delete_checklists",
+            disabled=disabled
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await interaction.response.edit_message()
+        await self.view.respond_u_sure(self.checklists[int(self.values[0])])
 
 class ReorderItems(discord.ui.Select):
     
@@ -773,20 +956,15 @@ class ReorderItems(discord.ui.Select):
         options = []
         disabled = True
         placeholder = "Not enough items to reorder"
-        # for i, item in enumerate(checklist.items):
-        #     item: ChecklistItem
-        #     options.append(
-        #         discord.SelectOption(
-        #             label=f"{item.name}",
-        #             description=(
-        #                     f"{item.checklist.name} - "
-        #                     f"{'Incomplete' if not item.completed else 'Complete'}"
-        #                 ),
-        #             value=i,
-        #             emoji=item.checklist.emoji,
-        #             default=item.completed
-        #         )
-        #     )
+        for i, item in enumerate(checklist.items):
+            item: ChecklistItem
+            options.append(
+                discord.SelectOption(
+                    label=item.name,
+                    value=item.id,
+                    emoji="◽"
+                )
+            )
 
         if len(options) <= 1:
             options.append(
@@ -811,7 +989,9 @@ class ReorderItems(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.edit_message()
-        # await self.view.respond_edit_checklist(self.checklist)
+        await self.checklist.reorder_items(order=self.values)
+        await self.view.get_checklists()
+        await self.view.respond_edit_checklist(self.checklist)
 
 class ItemList(discord.ui.Select):
     

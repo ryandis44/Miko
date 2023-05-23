@@ -1,6 +1,8 @@
 from datetime import date, datetime, timedelta, timezone
 import time
 import uuid
+
+import discord
 from Database.database_class import AsyncDatabase
 from misc.misc import sanitize_name
 from tunables import tunables
@@ -55,6 +57,10 @@ class ChecklistItem:
         if self.completed_at is not None and self.completed_at >= last_reset: return True
         return False
 
+    @property
+    def bold_if_completed(self) -> str:
+        if self.completed: return f"**{self.name}**"
+        return f"{self.name}"
     @property
     def creator_mention(self) -> str: return f"<@{self.creator_id}>"
     @property
@@ -243,6 +249,21 @@ class Checklist:
         await db.execute(
             f"DELETE FROM CHECKLISTS WHERE checklist_id='{self.id}'"
         )
+    
+    async def set_resets(self, resets: str) -> None:
+        await db.execute(
+            f"UPDATE CHECKLISTS SET reset='{resets}' WHERE "
+            f"checklist_id='{self.id}'"
+        )
+        await self.ainit()
+    
+    async def reorder_items(self, order: list) -> None:
+        for i, id in enumerate(order):
+            await db.execute(
+                f"UPDATE CHECKLIST_ITEMS SET pos='{i}' WHERE "
+                f"item_id='{id}'"
+            )
+        await self.ainit()
 
     @property
     async def history(self) -> list[ChecklistHistory]:
@@ -327,3 +348,22 @@ class Checklist:
     def resets_in_timestamp(self) -> str: return f"<t:{self.resets_in}:R>"
     @property
     def bold_name_if_visible(self) -> str: return f"**{self.name}**" if self.visible else self.name
+
+
+
+async def create_checklist(interaction: discord.Interaction, name: str, desc: str = None) -> None:
+    if desc == "": desc = "NULL"
+    else: desc = f"'{sanitize_name(desc)}'"
+    
+    while True:
+        cid = uuid.uuid4().hex
+        if await db.execute(f"SELECT * FROM CHECKLISTS WHERE checklist_id='{cid}'") in [[], None]: break
+    
+    pos = await db.execute(f"SELECT pos FROM CHECKLISTS WHERE server_id='{interaction.guild.id}' ORDER BY pos DESC LIMIT 1")
+    if pos in [[], None]: pos = -1
+    
+    await db.execute(
+        "INSERT INTO CHECKLISTS (server_id,created_at,creator_id,name,description,checklist_id,pos) VALUES "
+        f"('{interaction.guild.id}', '{int(time.time())}', '{interaction.user.id}', '{sanitize_name(name)}', "
+        f"{desc}, '{cid}', '{pos}')"
+    )
