@@ -675,9 +675,11 @@ class ChecklistModal(discord.ui.Modal):
     async def on_submit(self, interaction: discord.Interaction) -> None:
         try:
             await interaction.response.edit_message()
-            await create_checklist(interaction=interaction, name=self.name.value)
+            if self.checklist is None: await create_checklist(interaction=interaction, name=self.name.value)
+            else: await self.checklist.edit(name=self.name.value)
             await self.bview.get_checklists()
-            await self.bview.respond_admin()
+            if self.checklist is None: await self.bview.respond_admin()
+            else: await self.bview.respond_edit_checklist(self.checklist)
         except Exception as e: print(e)
 
 class ItemModal(discord.ui.Modal):

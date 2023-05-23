@@ -264,6 +264,16 @@ class Checklist:
                 f"item_id='{id}'"
             )
         await self.ainit()
+    
+    async def edit(self, name: str, desc: str = None) -> None:
+        if desc == "": desc = "NULL"
+        else: desc = f"'{sanitize_name(desc)}'"
+        
+        await db.execute(
+            f"UPDATE CHECKLISTS SET name='{sanitize_name(name)}', description={desc} WHERE "
+            f"checklist_id='{self.id}'"
+        )
+        await self.ainit()
 
     @property
     async def history(self) -> list[ChecklistHistory]:
