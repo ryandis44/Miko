@@ -93,7 +93,7 @@ class ChecklistItem:
     async def toggle_completion(self, u) -> None: await self.uncomplete(u) if self.completed else await self.complete(u)
     
     async def complete(self, u) -> None:
-        if self.completed: return
+        if self.completed: return False
         await u.increment_statistic('CHECKLIST_ITEMS_COMPLETED')
         await self.__delete_latest_history_entry()
         await db.execute(
@@ -101,6 +101,7 @@ class ChecklistItem:
             f"('{self.id}', '{u.user.id}', '{int(time.time())}')"
         )
         await self.refresh()
+        return True
         
     async def uncomplete(self, u) -> None:
         if not self.completed: return

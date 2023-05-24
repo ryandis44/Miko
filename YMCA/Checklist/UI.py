@@ -100,8 +100,8 @@ class ChecklistView(discord.ui.View):
         completed: list[str] = []
         for item in items:
             del temp[item.id]
-            await item.complete(u=self.u)
-            completed.append(f"`{item.name}`")
+            if await item.complete(u=self.u):
+                completed.append(f"`{item.name}`")
         
         # Any item not in 'items' list, uncomplete
         for key, value in temp.items():
