@@ -7,6 +7,10 @@ def sanitize_name(name) -> str|None:
     if name is None: return None
     return str(name).replace("'", "''")
 
+def remove_bolding(s) -> str|None:
+    if s is None: return None
+    return str(s).replace("*", "\\*")
+
 def equal_tuples(tuple1, tuple2) -> bool:
     if len(tuple1) != len(tuple2):
         return False

@@ -4,7 +4,7 @@ import uuid
 
 import discord
 from Database.database_class import AsyncDatabase
-from misc.misc import sanitize_name
+from misc.misc import remove_bolding, sanitize_name
 from tunables import tunables
 db = AsyncDatabase("YMCA.Checklist.Objects.py")
 
@@ -59,8 +59,8 @@ class ChecklistItem:
 
     @property
     def bold_if_completed(self) -> str:
-        if self.completed: return f"**{self.name}**"
-        return f"{self.name}"
+        if self.completed: return f"**{remove_bolding(self.name)}**"
+        return remove_bolding(self.name)
     @property
     def creator_mention(self) -> str: return f"<@{self.creator_id}>"
     @property
@@ -358,7 +358,7 @@ class Checklist:
     @property
     def resets_in_timestamp(self) -> str: return f"<t:{self.resets_in}:R>"
     @property
-    def bold_name_if_visible(self) -> str: return f"**{self.name}**" if self.visible else self.name
+    def bold_name_if_visible(self) -> str: return f"**{remove_bolding(self.name)}**" if self.visible else remove_bolding(self.name)
 
 
 
