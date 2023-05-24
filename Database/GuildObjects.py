@@ -209,6 +209,32 @@ class MikoGuild():
         )
         if val == [] or val is None: return None
         return self.guild.get_channel(int(val))
+    @property
+    async def ymca_checklist_channel(self) -> discord.TextChannel|None:
+        val = await ago.execute(
+            "SELECT ymca_checklist_channel FROM SERVERS WHERE "
+            f"server_id='{self.guild.id}'"
+        )
+        if val == [] or val is None: return None
+        return self.guild.get_channel(int(val))
+    @property
+    async def ymca_checklist_allowed_roles(self) -> list[discord.Role]:
+        val = await ago.execute(
+            "SELECT role_id FROM CHECKLIST_PERMISSIONS WHERE "
+            f"server_id='{self.guild.id}'"
+        )
+        if val == [] or val is None: return []
+        if type(val) in [list, tuple]:
+            temp = []
+            for id in val:
+                r = self.guild.get_role(int(id[0]))
+                if r is not None: temp.append(r)
+            return temp            
+            
+        r = self.guild.get_role(int(val))
+        return [r] if r is not None else None
+        
+
     
     
     async def checklists(self, include_hidden: bool = False) -> list[Checklist]:

@@ -1,5 +1,6 @@
 import discord
 from YMCA.Checklist.Objects import Checklist, ChecklistItem, create_checklist
+from misc.view_misc import LogChannel
 from tunables import *
 from Database.GuildObjects import MikoMember
 
@@ -16,7 +17,8 @@ class ChecklistView(discord.ui.View):
         try: self.msg = await self.original_interaction.original_response()
         except: return
         await self.get_checklists()
-        await self.respond()
+        try: await self.respond()
+        except Exception as e: print(e)
         self.num_visible_checklists = len(self.checklists)
     
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -55,6 +57,18 @@ class ChecklistView(discord.ui.View):
         return l
     
     @property
+    async def ItemListF(self):
+        l = ItemList(items=self.items_on_page)
+        roles = await self.u.ymca_checklist_allowed_roles
+        check = any(role in self.u.user.roles for role in roles)
+        if await self.u.manage_guild or check: return l
+        
+        l.disabled = True
+        l.placeholder = "No permissions to check off items"
+        
+        return l
+    
+    @property
     def listed_checklists(self) -> list[Checklist]:
         if self.active_checklists == []: return self.checklists
         
@@ -79,17 +93,28 @@ class ChecklistView(discord.ui.View):
     
     async def item_update_callback(self, items: list[ChecklistItem]) -> None:
         temp = {}
+        log_channel = await self.u.ymca_checklist_channel
         for item in self.items_on_page: temp[item.id] = item
         
         # Complete all items in the 'items' list
+        completed: list[str] = []
         for item in items:
             del temp[item.id]
             await item.complete(u=self.u)
+            completed.append(f"`{item.name}`")
         
         # Any item not in 'items' list, uncomplete
         for key, value in temp.items():
             value: ChecklistItem
             await value.uncomplete(u=self.u)
+        
+        if log_channel is not None and completed != []:
+            await log_channel.send(
+                content=(
+                    f"{self.u.user.mention} completed " + ', '.join(completed)
+                ),
+                allowed_mentions=discord.AllowedMentions(users=False)
+            )
         
         # await self.get_checklists()
         await self.respond()
@@ -115,65 +140,75 @@ class ChecklistView(discord.ui.View):
     
     # /checklist and home button response
     async def respond(self) -> None:
-        temp = []
-        temp.append(
-            "__**Active checklists**__:\n\n"
-        )
         
+        lists = self.listed_checklists
         self.__calculate_total_items()
         self.__determine_pos()
-        
-        '''
-        In these loops, 'i' is the total number of successful iterations
-        and 'j' is the total number of iterations.
-        
-        'i' is used to determine when do stop appending items to the current
-        page and 'j' is used to determine when to start appending items
-        to the current page.
-        '''
-        # Design 1
-        i = 0
-        j = 0
         self.items_on_page: list[ChecklistItem] = []
-        for checklist in self.listed_checklists:
+        temp = []
+        if len(lists) > 0:
+            temp.append(
+                "__**Active checklists**__:\n\n"
+            )
             
-            if checklist.resets != "DISABLED": resets_in = f" - Resets {checklist.resets_in_timestamp}"
-            else: resets_in = ""
-            temp.append(f"{checklist.emoji} **{checklist.name}**{resets_in}")
-            for item in checklist.items:
-                if j < self.pos:
-                    j+=1
-                    continue
-                if i >= tunables('MAX_CHECKLIST_ITEMS_PER_PAGE'): break
+
+            
+            '''
+            In these loops, 'i' is the total number of successful iterations
+            and 'j' is the total number of iterations.
+            
+            'i' is used to determine when do stop appending items to the current
+            page and 'j' is used to determine when to start appending items
+            to the current page.
+            '''
+            # Design 1
+            i = 0
+            j = 0
+            for checklist in lists:
                 
-                self.items_on_page.append(item)
-                if item.completed:
-                    temp.append(f"\n> :green_circle: __{item.name}__")
+                if checklist.resets != "DISABLED": resets_in = f" - Resets {checklist.resets_in_timestamp}"
+                else: resets_in = ""
+                temp.append(f"{checklist.emoji} **{checklist.name}**{resets_in}")
+                for item in checklist.items:
+                    if j < self.pos:
+                        j+=1
+                        continue
+                    if i >= tunables('MAX_CHECKLIST_ITEMS_PER_PAGE'): break
+                    
+                    self.items_on_page.append(item)
+                    if item.completed:
+                        temp.append(f"\n> :green_circle: __{item.name}__")
+                        i+=1
+                        continue
+                    else:
+                        temp.append(f"\n> :black_circle: __{item.name}__")
+                    
+                    if item.description is not None:
+                        temp.append(f"\n> \u200b \u200b​└─{item.description}")
+                    
                     i+=1
-                    continue
-                else:
-                    temp.append(f"\n> :black_circle: __{item.name}__")
                 
-                if item.description is not None:
-                    temp.append(f"\n> \u200b \u200b​└─{item.description}")
-                
-                i+=1
+                temp.append("\n\n")
+        
+            # print(i, j, self.pos, self.offset)
+        
+        else:
+            temp.append("There are no checklists associated with this guild.")
             
-            temp.append("\n\n")
-        
-        # print(i, j, self.pos, self.offset)
-        
         embed = discord.Embed(description=''.join(temp), color=GREEN_BOOK_NEUTRAL_COLOR)
         embed.set_author(
             icon_url=self.u.guild.icon,
             name=f"{self.u.guild} Checklists"
         )
-        embed.set_footer(
-            text=(
-                f"Showing items {self.pos+1} - {self.pos+len(self.items_on_page)} of "
-                f"{self.total_items}"
+        
+        if len(lists) > 0:
+            embed.set_footer(
+                text=(
+                    f"Showing items {self.pos+1} - {self.pos+len(self.items_on_page)} of "
+                    f"{self.total_items}"
+                )
             )
-        )
+        
         
         self.clear_items()
         self.add_item(self.SelectItems)
@@ -196,10 +231,10 @@ class ChecklistView(discord.ui.View):
         Add permissions allowing ONLY supervisors to modify
         completion status of an item
         '''
-        self.add_item(ItemList(items=self.items_on_page))
+        try: self.add_item(await self.ItemListF)
+        except Exception as e: print(e)
         
         await self.msg.edit(content=None, embed=embed, view=self)
-
 
     async def respond_admin(self) -> None:
         all_checklists = await self.u.checklists(include_hidden=True)
@@ -211,22 +246,25 @@ class ChecklistView(discord.ui.View):
             f"{num_checklists}/{tunables('MAX_CHECKLISTS_PER_GUILD')} checklists in this guild\n\n"
         )
         
-        temp.append("__**All checklists**__:\n\n")
-        
-        temp.append("**Bold** checklists are visible to everyone\n")
-        for checklist in all_checklists:
-            temp.append(
-                f"{checklist.emoji} "
-                f"{checklist.bold_name_if_visible} - "
-                f"{len(checklist.items)} item(s)"
-            )
-            if checklist.resets != "DISABLED":
+        if num_checklists > 0:
+            temp.append("__**All checklists**__:\n\n")
+            
+            temp.append("**Bold** checklists are visible to everyone\n")
+            for checklist in all_checklists:
                 temp.append(
-                    f" Resets `{checklist.resets}` "
-                    f"{checklist.resets_in_timestamp}"
+                    f"{checklist.emoji} "
+                    f"{checklist.bold_name_if_visible} - "
+                    f"{len(checklist.items)} item(s)"
                 )
-                
-            temp.append("\n")
+                if checklist.resets != "DISABLED":
+                    temp.append(
+                        f" Resets `{checklist.resets}` "
+                        f"{checklist.resets_in_timestamp}"
+                    )
+                    
+                temp.append("\n")
+        else:
+            temp.append("Click `New Checklist` to get started")
         
         
         
@@ -237,8 +275,8 @@ class ChecklistView(discord.ui.View):
             name=f"{self.u.guild} Checklists"
         )
         embed.set_footer(text=(
-                f"{num_checklists} checklist{'s' if num_checklists > 1 else ''}, "
-                f"{self.num_visible_checklists} visible checklist{'s' if self.num_visible_checklists > 1 else ''}"
+                f"{num_checklists} checklist{'s' if num_checklists != 1 else ''}, "
+                f"{self.num_visible_checklists} visible checklist{'s' if self.num_visible_checklists != 1 else ''}"
             ))
         
         self.clear_items()
@@ -249,8 +287,45 @@ class ChecklistView(discord.ui.View):
         n = NewChecklist()
         n.disabled = num_checklists >= tunables('MAX_CHECKLISTS_PER_GUILD')
         self.add_item(n)
+        self.add_item(LogChannelButton())
+        try: self.add_item(PermissionsButton())
+        except Exception as e: print(f"Permissions Button: {e}")
         await self.msg.edit(content=None, embed=embed, view=self)
         
+    async def respond_permissions(self) -> None:
+        roles = await self.u.ymca_checklist_allowed_roles
+        
+        temp = []
+        temp.append(
+            "Select roles below that will be able to check off "
+            "items on the checklist. Selecting none allows everyone "
+            "to check off items. **Max 20**"
+            "\n\n"
+        )
+        
+        if roles != []:
+            temp.append("Selected roles:\n")
+            prev = False
+            for i, role in enumerate(roles):
+                if prev: temp.append(", ")
+                if i % 3 == 0 and i > 0: temp.append("\n")
+                temp.append(f"{role.mention}")
+                if not prev: prev = True
+        else: temp.append("No roles selected. @everyone can check off items.")
+        
+        embed = discord.Embed(description=''.join(temp), color=GREEN_BOOK_NEUTRAL_COLOR)
+        embed.set_author(
+            icon_url=self.u.guild.icon,
+            name=f"{self.u.guild} Checklists"
+        )
+        
+        self.clear_items()
+        self.add_item(SelectPermittedRoles())
+        self.add_item(AdminButton(list="Poop"))
+        rm = RemoveAllPermissionsButton()
+        rm.disabled = roles == []
+        self.add_item(rm)
+        await self.msg.edit(content=None, embed=embed, view=self)
 
     async def respond_edit_checklist(self, checklist: Checklist) -> None:
         temp = []
@@ -309,7 +384,7 @@ class ChecklistView(discord.ui.View):
             f"Are you sure?"
         )
 
-        embed = discord.Embed(description=''.join(temp), color=GREEN_BOOK_NEUTRAL_COLOR, title=f"You are about to delete {obj.name}")
+        embed = discord.Embed(description=''.join(temp), color=GREEN_BOOK_NEUTRAL_COLOR, title=f"You are about to delete `{obj.name}`")
         embed.set_author(
             icon_url=self.u.guild.icon,
             name=f"{self.u.guild} Checklists",
@@ -368,7 +443,7 @@ class ChecklistView(discord.ui.View):
         )
         
         self.clear_items()
-        self.add_item(AdminButton(list=checklist))
+        self.add_item(AdminButton(list=checklist.items[0]))
         
         await self.msg.edit(content=None, embed=embed, view=self)
 
@@ -376,6 +451,24 @@ class ChecklistView(discord.ui.View):
 PAGE_BUTTONS_ROW = 4
 SELECT_CHECKLISTS_ROW = 1
 SELECT_ITEM_ROW = SELECT_CHECKLISTS_ROW + 1
+
+class LogChannelButton(discord.ui.Button):
+
+    def __init__(self):
+        super().__init__(
+            style=discord.ButtonStyle.blurple,
+            label="Log Channel",
+            custom_id="logccccc_button",
+            row=PAGE_BUTTONS_ROW
+        )
+    
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await interaction.response.edit_message()
+        await LogChannel(
+                original_interaction=interaction,
+                typ="CHECKLIST",
+                return_view=self.view
+            ).ainit()
 
 class FirstButton(discord.ui.Button):
 
@@ -441,6 +534,73 @@ class LastButton(discord.ui.Button):
         self.view.offset = self.view.total_items - tunables('MAX_CHECKLIST_ITEMS_PER_PAGE')
         await self.view.respond()
 
+class PermissionsButton(discord.ui.Button):
+
+    def __init__(self):
+        
+        s = discord.ButtonStyle
+        super().__init__(
+            style=s.gray,
+            label="Permissions",
+            emoji=tunables('GENERIC_PERMISSIONS_BUTTON'),
+            custom_id="permissions_button",
+            row=PAGE_BUTTONS_ROW
+        )
+    
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await interaction.response.edit_message()
+        await self.view.respond_permissions()
+
+class RemoveAllPermissionsButton(discord.ui.Button):
+
+    def __init__(self):
+        
+        s = discord.ButtonStyle
+        super().__init__(
+            style=s.red,
+            label="Remove all",
+            custom_id="remove_all_perms",
+            row=PAGE_BUTTONS_ROW
+        )
+    
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await interaction.response.edit_message()
+        await db.execute(f"DELETE FROM CHECKLIST_PERMISSIONS WHERE server_id='{interaction.guild.id}'")
+        await self.view.respond_permissions()
+
+class SelectPermittedRoles(discord.ui.RoleSelect):
+    def __init__(self):
+
+        super().__init__(
+            placeholder="Select role(s)",
+            min_values=1,
+            max_values=20,
+            row=SELECT_CHECKLISTS_ROW,
+            custom_id="select_roles",
+            disabled=False
+        )
+    
+    async def callback(self, interaction: discord.Interaction):
+        roles = self.values
+        await interaction.response.edit_message()
+        await db.execute(
+            "DELETE FROM CHECKLIST_PERMISSIONS WHERE "
+            f"server_id='{interaction.guild.id}'"
+        )
+        temp = [
+            "INSERT INTO CHECKLIST_PERMISSIONS (server_id,role_id) VALUES "
+        ]
+        prev = False
+        for role in roles:
+            if prev: temp.append(", ")
+            temp.append(
+                f"('{interaction.guild.id}', '{role.id}')"
+            )
+            if not prev: prev = True
+        
+        await db.execute(''.join(temp))
+        await self.view.respond_permissions()
+
 class AdminButton(discord.ui.Button):
 
     def __init__(self, list: Checklist|ChecklistItem = None):
@@ -494,7 +654,8 @@ class ChecklistHistory(discord.ui.Button):
             label=None,
             emoji=tunables('GENERIC_HISTORY_BUTTON'),
             custom_id="history_button",
-            row=PAGE_BUTTONS_ROW
+            row=PAGE_BUTTONS_ROW,
+            disabled=True if checklist.items == [] else False
         )
     
     async def callback(self, interaction: discord.Interaction) -> None:
@@ -518,6 +679,7 @@ class ItemCompletionStatus(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.edit_message()
         await self.item.toggle_completion(u=MikoMember(user=interaction.user, client=interaction.client))
+        await self.item.checklist.ainit()
         await self.view.get_checklists()
         await self.view.respond_edit_item(self.item)
         
@@ -673,14 +835,12 @@ class ChecklistModal(discord.ui.Modal):
     #     )
     
     async def on_submit(self, interaction: discord.Interaction) -> None:
-        try:
-            await interaction.response.edit_message()
-            if self.checklist is None: await create_checklist(interaction=interaction, name=self.name.value)
-            else: await self.checklist.edit(name=self.name.value)
-            await self.bview.get_checklists()
-            if self.checklist is None: await self.bview.respond_admin()
-            else: await self.bview.respond_edit_checklist(self.checklist)
-        except Exception as e: print(e)
+        await interaction.response.edit_message()
+        if self.checklist is None: await create_checklist(interaction=interaction, name=self.name.value)
+        else: await self.checklist.edit(name=self.name.value)
+        await self.bview.get_checklists()
+        if self.checklist is None: await self.bview.respond_admin()
+        else: await self.bview.respond_edit_checklist(self.checklist)
 
 class ItemModal(discord.ui.Modal):
 
@@ -733,7 +893,7 @@ class EditChecklist(discord.ui.Select):
                 )
             )
 
-        if len(options) <= 1:
+        if options == []:
             options.append(
                 discord.SelectOption(
                     label="(no items)",
@@ -778,7 +938,7 @@ class EditItem(discord.ui.Select):
                 )
             )
         
-        if len(options) == 0:
+        if options == []:
             options.append(
                 discord.SelectOption(
                     label="(no items)",
@@ -836,7 +996,7 @@ class ChecklistResetSelector(discord.ui.Select):
             )
         ]
 
-        if len(options) <= 1:
+        if options == []:
             options.append(
                 discord.SelectOption(
                     label="(no items)",
@@ -925,7 +1085,7 @@ class ChooseChecklistToDelete(discord.ui.Select):
                 )
             )
 
-        if len(options) <= 1:
+        if options == []:
             options.append(
                 discord.SelectOption(
                     label="(no items)",
@@ -1001,6 +1161,8 @@ class ItemList(discord.ui.Select):
         self.items = items
 
         options = []
+        disabled = True
+        placeholder = "No items found"
         for i, item in enumerate(items):
             item: ChecklistItem
             options.append(
@@ -1016,14 +1178,26 @@ class ItemList(discord.ui.Select):
                 )
             )
 
+
+        if options == []:
+            options.append(
+                discord.SelectOption(
+                    label="(no items)",
+                    value="(no items)"
+                )
+            )
+        else:
+            disabled = False
+            placeholder = "Check off an item"
+
         super().__init__(
-            placeholder="Check off an item",
+            placeholder=placeholder,
             min_values=0,
             max_values=len(options),
             options=options,
             row=SELECT_ITEM_ROW,
             custom_id="select_item",
-            disabled=False
+            disabled=disabled
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
@@ -1038,7 +1212,8 @@ class SelectList(discord.ui.Select):
         self.items = items
 
         options = []
-
+        disabled = True
+        placeholder = "No checklists found"
         options.append(
             discord.SelectOption(
                 label=f"All Checklists",
@@ -1060,14 +1235,26 @@ class SelectList(discord.ui.Select):
                 )
             )
 
+        if len(options) <= 1:
+            options.append(
+                discord.SelectOption(
+                    label="(no items)",
+                    value="(no items)"
+                )
+            )
+        else:
+            disabled = False
+            placeholder = "Select a checklist"
+
+
         super().__init__(
-            placeholder="Select a list",
+            placeholder=placeholder,
             min_values=1,
             max_values=len(options),
             options=options,
             row=SELECT_CHECKLISTS_ROW,
             custom_id="select_entry",
-            disabled=False
+            disabled=disabled
         )
     
     async def callback(self, interaction: discord.Interaction):

@@ -130,7 +130,7 @@ class ChecklistItem:
             f"item_id='{self.id}'"
         )
         self.name = name
-        self.description = desc if desc != "NULL" else None
+        self.description = desc[1:-1] if desc != "NULL" else None
 
 class ChecklistHistory:
     def __init__(

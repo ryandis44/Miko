@@ -28,13 +28,13 @@ class ChecklistCog(commands.Cog):
         await u.ainit()
         check = (await u.profile).cmd_enabled('CHECKLIST')
         if check == 0:
-            await interaction.response.send_message(content=tunables('COMMAND_DISABLED_TUNABLES'), ephemeral=True)
+            await interaction.response.send_message(content=tunables('COMMAND_DISABLED_GUILD'), ephemeral=True)
             return False
         elif check == 2:
-            await interaction.response.send_message(content=tunables('COMMAND_DISABLED_GUILD'))
+            await interaction.response.send_message(content=tunables('COMMAND_DISABLED_TUNABLES'), ephemeral=True)
             return False
 
-        await interaction.response.send_message(content=f"{tunables('LOADING_EMOJI')}", ephemeral=True)
+        await interaction.response.send_message(content=tunables('LOADING_EMOJI'), ephemeral=True)
         await u.increment_statistic('CHECKLIST_OPENED')
         return True
 

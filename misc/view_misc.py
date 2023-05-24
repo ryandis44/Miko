@@ -80,6 +80,10 @@ class LogChannel(discord.ui.View):
                 self.context = "Supply Needs"
                 self.column = "ymca_supplies_channel"
                 self.log_channel = await self.u.ymca_supplies_channel
+            case 'CHECKLIST':
+                self.context = "Checklists"
+                self.column = "ymca_checklist_channel"
+                self.log_channel = await self.u.ymca_checklist_channel
             case _:
                 self.context = None
                 self.column = None
