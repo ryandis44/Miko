@@ -61,7 +61,7 @@ class ChecklistView(discord.ui.View):
         l = ItemList(items=self.items_on_page)
         roles = await self.u.ymca_checklist_allowed_roles
         check = any(role in self.u.user.roles for role in roles)
-        if await self.u.manage_guild or check: return l
+        if roles == [] or await self.u.manage_guild or check: return l
         
         l.disabled = True
         l.placeholder = "No permissions to check off items"
