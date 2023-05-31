@@ -412,7 +412,7 @@ class SearchButton(discord.ui.Button):
             self.bview = bview
 
         name = discord.ui.TextInput(
-                label="Search by Name (first, last, or both):",
+                label="Search by First/Last Name or Camp Name:",
                 placeholder="Bradford",
                 min_length=1,
                 max_length=tunables('GREEN_BOOK_MAX_SEARCH_LENGTH')

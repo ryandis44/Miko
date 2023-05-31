@@ -55,10 +55,15 @@ class Person:
             'RED': "🔴"
         }
     
-    def __str__(self): return (
-                f"{self.wristband_emoji} `{self.last}, {self.first}: Age {self.age}`\n"
+    def __str__(self):
+        
+        if self.camp not in ["", None]: camp = f"\u200b \u200b├→ :camping: **`{self.camp}`**\n"
+        else: camp = ""
+        
+        return (
+                f"{self.wristband_emoji} `{self.last}, {self.first}: Age {self.age}`\n{camp}"
                 f"\u200b \u200b└→  Entered by {self.creator_id_mention} on {self.pass_time_formatted}\n"
-    )
+        )
 
     async def edit(self, modal, modifier: discord.Member) -> bool:
         modified = {
@@ -245,12 +250,13 @@ class GreenBook:
             s = (
                 f"OR (first_name LIKE '%{query[1]}%' OR "
                 f"last_name LIKE '%{query[1]}%' OR "
+                f"camp_name LIKE '%{query[1]}%' OR "
                 f"entry_id LIKE '%{query[1]}%') "
             )
         else:
             query = [query]
             s = ''
-
+            
         val = None
         if len(query) > 1:
             val = await db.execute(
@@ -258,7 +264,7 @@ class GreenBook:
                 f"server_id='{self.u.guild.id}' AND "
                 f"first_name='{query[0]}' AND "
                 f"last_name='{query[1]}' "
-                "ORDER BY last_name,pass_time DESC"
+                "ORDER BY last_name,pass_time DESC", p=True
             )
 
         if val == [] or val is None:
@@ -267,8 +273,9 @@ class GreenBook:
                 f"server_id='{self.u.guild.id}' AND "
                 f"(first_name LIKE '%{query[0]}%' OR "
                 f"last_name LIKE '%{query[0]}%' OR "
+                f"camp_name LIKE '%{query[0]}%' OR "
                 f"entry_id LIKE '%{query[0]}%') {s}"
-                "ORDER BY last_name,pass_time DESC"
+                "ORDER BY last_name,pass_time DESC", p=True
             )
 
         if val == [] or val is None: return []
