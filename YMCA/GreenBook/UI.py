@@ -70,18 +70,18 @@ class BookView(discord.ui.View):
         if self.u.user.guild_permissions.manage_guild:
             self.add_item(LogChannelButton(bview=self))
         # if admin, add more stuff self.add_item(admin)
-        if total_entries > tunables('GREEN_BOOK_RECENT_ENTRIES_LIMIT'):
-            self.__determine_button_status()
-            f = FirstButton()
-            p = PrevButton()
-            n = NextButton()
-            l = LastButton()
-            f.disabled = p.disabled = self.button_status['p']
-            l.disabled = n.disabled = self.button_status['n']
-            self.add_item(f)
-            self.add_item(p)
-            self.add_item(n)
-            self.add_item(l)
+        # if total_entries > tunables('GREEN_BOOK_RECENT_ENTRIES_LIMIT'):
+        #     self.__determine_button_status()
+        #     f = FirstButton()
+        #     p = PrevButton()
+        #     n = NextButton()
+        #     l = LastButton()
+        #     f.disabled = p.disabled = self.button_status['p']
+        #     l.disabled = n.disabled = self.button_status['n']
+        #     self.add_item(f)
+        #     self.add_item(p)
+        #     self.add_item(n)
+        #     self.add_item(l)
 
         if init: self.msg = await self.original_interaction.original_response()
         await self.msg.edit(
