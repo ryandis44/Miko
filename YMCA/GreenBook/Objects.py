@@ -237,14 +237,6 @@ class GreenBook:
 
     # Handle full names; currently only does first OR last
     async def search(self, query: str) -> list[Person]:
-
-        '''
-        
-        Add the ability to search by camp
-        
-        '''
-
-
         if ' ' in query:
             query = query.split(' ')
             s = (
