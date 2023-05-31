@@ -10,6 +10,7 @@ from Database.RedisCache import RedisCache
 from Plex.embeds import plex_update_2_2
 from Database.database import add_bot, add_react_all_to_user, add_react_to_user, add_rename_any_user, del_bot, del_react_all_to_user, del_react_to_user, del_rename_any_user, generic_list_embed, top_channels_embed_server, top_users_embed_server, user_info_embed
 from Presence.Objects import PRESENCE_UPDATES
+from YMCA.GreenBook.UI import BookView
 from misc.holiday_roles import get_holiday
 from misc.misc import time_elapsed, translate_mention
 import os
@@ -166,6 +167,7 @@ class Basic(commands.Cog):
         try: user = ctx.message.mentions[0]
         except: user = ctx.author
 
+        await BookView(ctx=ctx, client=self.client).ainit()
 
         # val = await r.search(
         #     query=1099507241293451334,
@@ -178,14 +180,14 @@ class Basic(commands.Cog):
         #     m = CachedMessage(m=loads(m['json']))
         #     print(m.content)
 
-        m = CachedMessage(message_id=1100187124071927838)
+        # m = CachedMessage(message_id=1100187124071927838)
 
-        try:
-            await m.ainit()
-            await ctx.send(
-                content=f"{m.content}"
-            )
-        except Exception as e: print(e)
+        # try:
+        #     await m.ainit()
+        #     await ctx.send(
+        #         content=f"{m.content}"
+        #     )
+        # except Exception as e: print(e)
         
         # await r.set(
         #     key=user.id,

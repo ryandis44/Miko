@@ -35,8 +35,10 @@ class Slash(commands.Cog):
             if spec == "~":
                 synced = await ctx.bot.tree.sync(guild=ctx.guild)
             elif spec == "*":
-                ctx.bot.tree.copy_global_to(guild=ctx.guild)
-                synced = await ctx.bot.tree.sync(guild=ctx.guild)
+                try:
+                    ctx.bot.tree.copy_global_to(guild=ctx.guild)
+                    synced = await ctx.bot.tree.sync(guild=ctx.guild)
+                except Exception as e: print(e)
             elif spec == "^":
                 ctx.bot.tree.clear_commands(guild=ctx.guild)
                 await ctx.bot.tree.sync(guild=ctx.guild)
@@ -59,13 +61,13 @@ class Slash(commands.Cog):
             return
 
         ret = 0
-        for guild in guilds:
-            try:
-                await ctx.bot.tree.sync(guild=guild)
-            except discord.HTTPException:
-                pass
-            else:
-                ret += 1
+        # for guild in guilds:
+        #     try:
+        #         await ctx.bot.tree.sync(guild=guild)
+        #     except discord.HTTPException:
+        #         pass
+        #     else:
+        #         ret += 1
 
         await ctx.send(f"Synced the tree to {ret}/{len(guilds)}.")
 

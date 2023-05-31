@@ -4,14 +4,17 @@ from tunables import *
 from YMCA.GreenBook.Objects import GreenBook, Person
 from Database.GuildObjects import MikoMember
 from Database.database_class import AsyncDatabase
+from discord.ext.commands import Context
 db = AsyncDatabase("GreenBook.UI.py")
 
 
 class BookView(discord.ui.View):
-    def __init__(self, original_interaction: discord.Interaction):
+    def __init__(self, original_interaction: discord.Interaction=None, ctx: Context=None, client: discord.Client=None):
         super().__init__(timeout=tunables('YMCA_VIEW_TIMEOUT'))
         self.original_interaction = original_interaction
-        self.u = MikoMember(user=original_interaction.user, client=original_interaction.client, check_exists=False)
+        self.ctx = ctx
+        
+        self.u = MikoMember(user=original_interaction.user if ctx is None else ctx.author, client=original_interaction.client if client is None else client, check_exists=False)
         self.book = GreenBook(self.u)
         
         self.res: list[Person] = None
@@ -28,7 +31,10 @@ class BookView(discord.ui.View):
         try:
             msg = await self.original_interaction.original_response()
             await msg.delete()
-        except: return
+        except:
+            try:
+                await self.msg.delete()
+            except: return
     
     # /book and back button response
     async def respond(self, init=False) -> None:
@@ -83,7 +89,14 @@ class BookView(discord.ui.View):
         #     self.add_item(n)
         #     self.add_item(l)
 
-        if init: self.msg = await self.original_interaction.original_response()
+        if init:
+            try:
+                self.msg = await self.original_interaction.original_response()
+            except:
+                try:
+                    self.msg = await self.ctx.reply(content=tunables('LOADING_EMOJI'))
+                except Exception as e: print(e)
+                
         await self.msg.edit(
             content=None,
             embed=await __default_embed(),
@@ -141,7 +154,7 @@ class BookView(discord.ui.View):
         b = BackToMainButton(bview=self)
         b.row = 2
         self.add_item(b)
-        self.add_item(SelectEntries(bview=self, res=self.res))
+        self.add_item(SelectEntries(bview=self, res=self.res[self.offset:self.offset+tunables('GREEN_BOOK_RECENT_ENTRIES_LIMIT')]))
         self.add_item(SearchButton(bview=self))
         self.add_item(NewEntry(bview=self))
         if self.total_items > tunables('GREEN_BOOK_RECENT_ENTRIES_LIMIT'):
