@@ -225,12 +225,6 @@ class ChecklistView(discord.ui.View):
             self.add_item(n)
             self.add_item(l)
         if await self.u.manage_guild: self.add_item(AdminButton())
-            
-            
-        '''
-        Add permissions allowing ONLY supervisors to modify
-        completion status of an item
-        '''
         try: self.add_item(await self.ItemListF)
         except Exception as e: print(e)
         

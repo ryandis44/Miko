@@ -13,6 +13,10 @@ class BookView(discord.ui.View):
         self.original_interaction = original_interaction
         self.u = MikoMember(user=original_interaction.user, client=original_interaction.client, check_exists=False)
         self.book = GreenBook(self.u)
+        
+        self.res: list[Person] = None
+        self.total_items = 0
+        self.offset = 0
 
     async def ainit(self):
         await self.respond(init=True)
@@ -28,8 +32,9 @@ class BookView(discord.ui.View):
     
     # /book and back button response
     async def respond(self, init=False) -> None:
-        res = await self.book.recent_entries
-        res_len = len(res)
+        res = await self.book.recent_entries()
+        total_entries = await self.book.total_entries
+        self.total_items = len(res)
         async def __default_embed() -> discord.Embed:
             temp = []
 
@@ -42,14 +47,13 @@ class BookView(discord.ui.View):
                 "in the Swim Test Book.\n\n"
             )
 
-            total_entries = await self.book.total_entries
-            if res_len > 0: temp.append("__Recent entries__ `[Last Name, First Name]`:")
+            if self.total_items > 0: temp.append("__Recent entries__ `[Last Name, First Name]`:")
             else: temp.append("There are no entries in this book. Add one by pressing the  `New Entry`  button.")
             for result in res:
                 temp.append(f"\n{result}")
             
-            if res_len < total_entries:
-                temp.append(f"... and {(total_entries - res_len):,} more\n\n")
+            if self.total_items < total_entries:
+                temp.append(f"... and {(total_entries - self.total_items):,} more\n\n")
             
 
             embed = discord.Embed(description=''.join(temp), color=GREEN_BOOK_NEUTRAL_COLOR)
@@ -60,12 +64,24 @@ class BookView(discord.ui.View):
             return embed
         
         self.clear_items()
-        if res_len > 0: self.add_item(SelectEntries(bview=self, res=res))
+        self.add_item(SelectEntries(bview=self, res=res))
         self.add_item(NewEntry(bview=self))
         self.add_item(SearchButton(bview=self))
         if self.u.user.guild_permissions.manage_guild:
             self.add_item(LogChannelButton(bview=self))
         # if admin, add more stuff self.add_item(admin)
+        if total_entries > tunables('GREEN_BOOK_RECENT_ENTRIES_LIMIT'):
+            self.__determine_button_status()
+            f = FirstButton()
+            p = PrevButton()
+            n = NextButton()
+            l = LastButton()
+            f.disabled = p.disabled = self.button_status['p']
+            l.disabled = n.disabled = self.button_status['n']
+            self.add_item(f)
+            self.add_item(p)
+            self.add_item(n)
+            self.add_item(l)
 
         if init: self.msg = await self.original_interaction.original_response()
         await self.msg.edit(
@@ -74,36 +90,72 @@ class BookView(discord.ui.View):
             view=self
         )
 
+    def __determine_button_status(self) -> None:
+        self.button_status = {'p': True, 'n': True}
+        if self.offset == 0: self.button_status = {'p': True, 'n': False}
+        elif self.offset + tunables('GREEN_BOOK_RECENT_ENTRIES_LIMIT') >= self.total_items: self.button_status = {'p': False, 'n': True}
+        elif self.offset > 0 and self.offset < self.total_items: self.button_status = {'p': False, 'n': False}
+    
+    def __check_offset(self) -> None:
+        if self.offset < 0: self.offset = 0
+        elif self.offset + tunables('GREEN_BOOK_RECENT_ENTRIES_LIMIT') >= self.total_items: self.offset = self.total_items - tunables('GREEN_BOOK_RECENT_ENTRIES_LIMIT')
+
     # Response after completing search modal
-    async def respond_modal_search(self, modal) -> None:
-        res = await self.book.search(query=modal.name.value)
-        cnt = len(res)
-        if cnt == 1:
-            await self.respond_select_person(p=res[0])
+    async def respond_modal_search(self, modal=None, search=True) -> None:
+        self.__check_offset()
+        if modal is not None:
+            self.res = await self.book.search(query=modal.name.value)
+            self.total_items = len(self.res)
+            self.offset = 0
+            
+        if self.total_items == 1:
+            await self.respond_select_person(p=self.res[0])
             return
 
         def __search_embed() -> discord.Embed:
             temp = []
 
-            if cnt == 0:
+            if self.total_items == 0:
                 temp.append(f"Could not find an entry matching `{modal.name.value}`")
                 color = GREEN_BOOK_FAIL_COLOR
             else:
-                temp.append(f"{cnt if cnt < 9 else 'Top ten most relevant'} search result{'s' if cnt > 1 else ''}:\n\n__`Last Name, First Name`__\n")
+                if search: temp.append(f"__Search results__ ")
+                temp.append("__`[Last Name, First Name]`__\n")
                 color = GREEN_BOOK_NEUTRAL_COLOR
-            for result in res:
-                temp.append(f"{result}\n")
+            cnt = 0
+            for result in self.res[self.offset:self.offset+tunables('GREEN_BOOK_RECENT_ENTRIES_LIMIT')]:
+                temp.append(f"`{cnt+1+self.offset}.` {result}\n")
+                cnt += 1
 
             embed = discord.Embed(description=''.join(temp), color=color)
-            embed.set_author( icon_url=self.u.guild.icon, name=f"{self.u.guild} Swim Test Book")
+            embed.set_author(icon_url=self.u.guild.icon, name=f"{self.u.guild} Swim Test Book")
+            embed.set_footer(
+                text=(
+                    f"Showing entries {self.offset+1 if cnt > 0 else 0} - {self.offset+cnt} "
+                    f"of {self.total_items}"
+                )
+            )
             return embed
         
         self.clear_items()
         b = BackToMainButton(bview=self)
         b.row = 2
         self.add_item(b)
-        if cnt > 0: self.add_item(SelectEntries(bview=self, res=res))
+        self.add_item(SelectEntries(bview=self, res=self.res))
         self.add_item(SearchButton(bview=self))
+        self.add_item(NewEntry(bview=self))
+        if self.total_items > tunables('GREEN_BOOK_RECENT_ENTRIES_LIMIT'):
+            self.__determine_button_status()
+            f = FirstButton()
+            p = PrevButton()
+            n = NextButton()
+            l = LastButton()
+            f.disabled = p.disabled = self.button_status['p']
+            l.disabled = n.disabled = self.button_status['n']
+            self.add_item(f)
+            self.add_item(p)
+            self.add_item(n)
+            self.add_item(l)
 
         await self.msg.edit(
             content=None,
@@ -129,6 +181,8 @@ class BookView(discord.ui.View):
         self.add_item(EditEntry(bview=self, p=p))
         if self.u.user.guild_permissions.manage_guild:
             self.add_item(DeleteEntry(bview=self, p=p))
+        self.add_item(NewEntry(bview=self))
+        self.add_item(SearchButton(bview=self))
 
         await self.msg.edit(
             content=None,
@@ -140,7 +194,7 @@ class BookView(discord.ui.View):
     async def __detailed_entry_embed_description(self, p: Person, history=True) -> list:
         temp = []
         
-        if p.camp is not None: camp = f"Camp: **{p.camp}**\n"
+        if p.camp is not None: camp = f"Camp: :camping: **{p.camp}**\n"
         else: camp = ""
 
         temp.append(
@@ -258,12 +312,83 @@ class BookView(discord.ui.View):
                 self.add_item(EditEntry(bview=self, p=p))
                 if self.u.user.guild_permissions.manage_guild:
                     self.add_item(DeleteEntry(bview=self, p=p))
+                self.add_item(NewEntry(bview=self))
+                self.add_item(SearchButton(bview=self))
 
         await self.msg.edit(
             content=None,
             embed=embed,
             view=self
         )
+
+class FirstButton(discord.ui.Button):
+
+    def __init__(self):
+        super().__init__(
+            style=discord.ButtonStyle.gray,
+            label=None,
+            emoji=tunables('GENERIC_FIRST_BUTTON'),
+            custom_id="first",
+            row=4,
+            disabled=True
+        )
+    
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await interaction.response.edit_message()
+        self.view.offset = 0
+        await self.view.respond_modal_search()
+
+class PrevButton(discord.ui.Button):
+
+    def __init__(self):
+        super().__init__(
+            style=discord.ButtonStyle.gray,
+            label=None,
+            emoji=tunables('GENERIC_PREV_BUTTON'),
+            custom_id="prev",
+            row=4,
+            disabled=True
+        )
+    
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await interaction.response.edit_message()
+        self.view.offset -= tunables('GREEN_BOOK_RECENT_ENTRIES_LIMIT')
+        await self.view.respond_modal_search()
+
+class NextButton(discord.ui.Button):
+
+    def __init__(self):
+        super().__init__(
+            style=discord.ButtonStyle.gray,
+            label=None,
+            emoji=tunables('GENERIC_NEXT_BUTTON'),
+            custom_id="next",
+            row=4,
+            disabled=True
+        )
+    
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await interaction.response.edit_message()
+        self.view.offset += tunables('GREEN_BOOK_RECENT_ENTRIES_LIMIT')
+        await self.view.respond_modal_search()
+
+class LastButton(discord.ui.Button):
+
+    def __init__(self):
+        super().__init__(
+            style=discord.ButtonStyle.gray,
+            label=None,
+            emoji=tunables('GENERIC_LAST_BUTTON'),
+            custom_id="last",
+            row=4,
+            disabled=True
+        )
+    
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await interaction.response.edit_message()
+        self.view.offset = self.view.total_items - tunables('GREEN_BOOK_RECENT_ENTRIES_LIMIT')
+        await self.view.respond_modal_search()
+
 
 class SearchButton(discord.ui.Button):
 
@@ -272,7 +397,7 @@ class SearchButton(discord.ui.Button):
             style=discord.ButtonStyle.gray,
             label=None,
             emoji="🔎",
-            custom_id="search_button",
+            custom_id="sea_button",
             row=2
         )
         self.bview = bview
@@ -454,7 +579,7 @@ class EditEntry(discord.ui.Button):
             style=discord.ButtonStyle.green,
             label=None,
             emoji="✏",
-            custom_id="new_button",
+            custom_id="eit_entry_button",
             row=1
         )
         self.bview = bview
@@ -481,7 +606,8 @@ class SelectEntries(discord.ui.Select):
         self.res = res
 
         options = []
-
+        disabled = True
+        placeholder = "No entries found"
         for i, result in enumerate(res):
             result: Person = result
             options.append(
@@ -493,14 +619,25 @@ class SelectEntries(discord.ui.Select):
                 )
             )
 
+        if len(options) < 1:
+            options.append(
+                discord.SelectOption(
+                    label="(no items)",
+                    value="(no items)"
+                )
+            )
+        else:
+            disabled = False
+            placeholder = "Select an entry from above"
+
         super().__init__(
-            placeholder="Select an entry from above",
+            placeholder=placeholder,
             min_values=1,
             max_values=1,
             options=options,
             row=1,
             custom_id="select_entry",
-            disabled=False
+            disabled=disabled
         )
     
     async def callback(self, interaction: discord.Interaction):

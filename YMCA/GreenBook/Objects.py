@@ -91,10 +91,13 @@ class Person:
                 self.last = str(modal.last.value).upper()
         except: pass
         try:
-            if str(modal.camp.value) != self.camp:
+            if str(modal.camp.value) in ["", None]: cm = None
+            else: cm = str(modal.camp.value).upper()
+            
+            if cm != self.camp:
                 modified['camp'] = True
-                modified['camp_val'] = [str(self.camp), str(modal.camp.value).upper()]
-                self.camp = str(modal.camp.value).upper()
+                modified['camp_val'] = [str(self.camp), cm]
+                self.camp = cm
         except: pass
 
 
@@ -119,6 +122,8 @@ class Person:
 
             before = str(modified[f"{key}_val"][0])
             after = str(modified[f"{key}_val"][1])
+            if before == "": before = "None"
+            if after == "": after = "None"
             await db.execute(
                 "INSERT INTO YMCA_GREEN_BOOK_HISTORY (entry_id,user_id,type,before_modification,after_modification,modification_time) VALUES "
                 f"('{self.eid}', '{modifier.id}', '{key.upper()}', '{before}', '{after}', '{t}')"
@@ -201,12 +206,11 @@ class GreenBook:
         if val == [] or val is None: return 0
         return int(val)
 
-    @property
-    async def recent_entries(self) -> list:
+    async def recent_entries(self, offset: int=0) -> list:
         val = await db.execute(
             "SELECT user_id,entry_id,first_name,last_name,age,pass_time,wristband_color,camp_name FROM YMCA_GREEN_BOOK_ENTRIES WHERE "
             f"server_id='{self.u.guild.id}' "
-            f"ORDER BY pass_time DESC LIMIT {tunables('GREEN_BOOK_RECENT_ENTRIES_LIMIT')}"
+            f"ORDER BY pass_time DESC LIMIT {tunables('GREEN_BOOK_RECENT_ENTRIES_LIMIT')} OFFSET {offset}"
         )
         if val == [] or val is None: return []
         plist = []
@@ -227,7 +231,14 @@ class GreenBook:
 
 
     # Handle full names; currently only does first OR last
-    async def search(self, query: str) -> list:
+    async def search(self, query: str) -> list[Person]:
+
+        '''
+        
+        Add the ability to search by camp
+        
+        '''
+
 
         if ' ' in query:
             query = query.split(' ')
@@ -247,7 +258,7 @@ class GreenBook:
                 f"server_id='{self.u.guild.id}' AND "
                 f"first_name='{query[0]}' AND "
                 f"last_name='{query[1]}' "
-                "ORDER BY last_name,pass_time DESC LIMIT 10"
+                "ORDER BY last_name,pass_time DESC"
             )
 
         if val == [] or val is None:
@@ -257,7 +268,7 @@ class GreenBook:
                 f"(first_name LIKE '%{query[0]}%' OR "
                 f"last_name LIKE '%{query[0]}%' OR "
                 f"entry_id LIKE '%{query[0]}%') {s}"
-                "ORDER BY last_name,pass_time DESC LIMIT 10"
+                "ORDER BY last_name,pass_time DESC"
             )
 
         if val == [] or val is None: return []
