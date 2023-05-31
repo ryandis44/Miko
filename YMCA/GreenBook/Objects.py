@@ -38,7 +38,7 @@ class PersonUpdate:
 
 
 class Person:
-    def __init__(self, creator_id: int=0, eid: str=None, first: str=None, last: str=None, age: int=0, pass_time: int=0, wristband: str="GREEN", new=False):
+    def __init__(self, creator_id: int=0, eid: str=None, first: str=None, last: str=None, age: int=0, pass_time: int=0, wristband: str="GREEN", camp: str=None, new=False):
         self.creator_id = creator_id
         self.eid = eid
         self.first = first
@@ -46,6 +46,7 @@ class Person:
         self.age = age
         self.pass_time = pass_time
         self.wristband = wristband
+        self.camp = camp
         self.new = new
 
         self.__emojis = {
@@ -64,7 +65,8 @@ class Person:
             'first': False,
             'last': False,
             'age': False,
-            'wristband': False
+            'wristband': False,
+            'camp': False
         }
         
         if int(modal.age.value) != int(self.age):
@@ -88,6 +90,12 @@ class Person:
                 modified['last_val'] = [str(self.last), str(modal.last.value).upper()]
                 self.last = str(modal.last.value).upper()
         except: pass
+        try:
+            if str(modal.camp.value) != self.camp:
+                modified['camp'] = True
+                modified['camp_val'] = [str(self.camp), str(modal.camp.value).upper()]
+                self.camp = str(modal.camp.value).upper()
+        except: pass
 
 
         # Entry update command builder and history insertion
@@ -103,6 +111,10 @@ class Person:
                 case 'last': upd_cmd.append(f"{',' if upd else ''}last_name='{self.last}'")
                 case 'age': upd_cmd.append(f"{',' if upd else ''}age='{self.age}'")
                 case 'wristband': upd_cmd.append(f"{',' if upd else ''}wristband_color='{self.wristband}'")
+                case 'camp':
+                    if self.camp in ["", None]: c = "NULL"
+                    else: c = f"'{self.camp}'"
+                    upd_cmd.append(f"{',' if upd else ''}camp_name={c}")
             upd = True
 
             before = str(modified[f"{key}_val"][0])
@@ -192,7 +204,7 @@ class GreenBook:
     @property
     async def recent_entries(self) -> list:
         val = await db.execute(
-            "SELECT * FROM YMCA_GREEN_BOOK_ENTRIES WHERE "
+            "SELECT user_id,entry_id,first_name,last_name,age,pass_time,wristband_color,camp_name FROM YMCA_GREEN_BOOK_ENTRIES WHERE "
             f"server_id='{self.u.guild.id}' "
             f"ORDER BY pass_time DESC LIMIT {tunables('GREEN_BOOK_RECENT_ENTRIES_LIMIT')}"
         )
@@ -201,13 +213,14 @@ class GreenBook:
         for result in val:
             plist.append(
                 Person(
-                    creator_id=result[1],
-                    eid=result[2],
-                    first=result[3],
-                    last=result[4],
-                    age=result[5],
-                    pass_time=result[6],
-                    wristband=result[7]
+                    creator_id=result[0],
+                    eid=result[1],
+                    first=result[2],
+                    last=result[3],
+                    age=result[4],
+                    pass_time=result[5],
+                    wristband=result[6],
+                    camp=result[7]
                 )
             )
         return plist
@@ -230,7 +243,7 @@ class GreenBook:
         val = None
         if len(query) > 1:
             val = await db.execute(
-                "SELECT * FROM YMCA_GREEN_BOOK_ENTRIES WHERE "
+                "SELECT user_id,entry_id,first_name,last_name,age,pass_time,wristband_color,camp_name FROM YMCA_GREEN_BOOK_ENTRIES WHERE "
                 f"server_id='{self.u.guild.id}' AND "
                 f"first_name='{query[0]}' AND "
                 f"last_name='{query[1]}' "
@@ -239,7 +252,7 @@ class GreenBook:
 
         if val == [] or val is None:
             val = await db.execute(
-                "SELECT * FROM YMCA_GREEN_BOOK_ENTRIES WHERE "
+                "SELECT user_id,entry_id,first_name,last_name,age,pass_time,wristband_color,camp_name FROM YMCA_GREEN_BOOK_ENTRIES WHERE "
                 f"server_id='{self.u.guild.id}' AND "
                 f"(first_name LIKE '%{query[0]}%' OR "
                 f"last_name LIKE '%{query[0]}%' OR "
@@ -253,21 +266,22 @@ class GreenBook:
         for result in val:
             plist.append(
                 Person(
-                    creator_id=result[1],
-                    eid=result[2],
-                    first=result[3],
-                    last=result[4],
-                    age=result[5],
-                    pass_time=result[6],
-                    wristband=result[7]
+                    creator_id=result[0],
+                    eid=result[1],
+                    first=result[2],
+                    last=result[3],
+                    age=result[4],
+                    pass_time=result[5],
+                    wristband=result[6],
+                    camp=result[7]
                 )
             )
         return plist
     
-    async def create(self, first: str, last: str, age: int, wristband: str) -> Person:
+    async def create(self, first: str, last: str, age: int, wristband: str, camp: str=None) -> Person:
 
         val = await db.execute(
-            "SELECT * FROM YMCA_GREEN_BOOK_ENTRIES WHERE "
+            "SELECT user_id,entry_id,first_name,last_name,age,pass_time,wristband_color,camp_name FROM YMCA_GREEN_BOOK_ENTRIES WHERE "
             f"server_id='{self.u.guild.id}' AND "
             f"first_name='{first.upper()}' AND "
             f"last_name='{last.upper()}'"
@@ -277,13 +291,14 @@ class GreenBook:
         # This line could cause issues in the future.
         if val != [] and val is not None:
             return Person(
-                creator_id=val[0][1],
-                eid=val[0][2],
-                first=val[0][3],
-                last=val[0][4],
-                age=val[0][5],
-                pass_time=val[0][6],
-                wristband=val[0][7]
+                creator_id=val[0][0],
+                eid=val[0][1],
+                first=val[0][2],
+                last=val[0][3],
+                age=val[0][4],
+                pass_time=val[0][5],
+                wristband=val[0][6],
+                camp=val[0][7]
         )
         # EID generation
         eid = None
@@ -292,10 +307,12 @@ class GreenBook:
             val = await db.execute(f"SELECT * FROM YMCA_GREEN_BOOK_ENTRIES WHERE entry_id='{eid}'")
             if val == []: break
 
+        if camp in ["", None]: cmp = "NULL"
+        else: cmp = f"'{camp.upper()}'"
         pass_time = int(time.time())
         await db.execute(
-            "INSERT INTO YMCA_GREEN_BOOK_ENTRIES (server_id,user_id,entry_id,first_name,last_name,age,pass_time,wristband_color) VALUES "
-            f"('{self.u.guild.id}', '{self.u.user.id}', '{eid}', '{first.upper()}', '{last.upper()}', '{age}', '{pass_time}', '{wristband}')"
+            "INSERT INTO YMCA_GREEN_BOOK_ENTRIES (server_id,user_id,entry_id,first_name,last_name,age,pass_time,wristband_color,camp_name) VALUES "
+            f"('{self.u.guild.id}', '{self.u.user.id}', '{eid}', '{first.upper()}', '{last.upper()}', '{age}', '{pass_time}', '{wristband}', {cmp})"
         )
 
         rp = Person(
@@ -306,6 +323,7 @@ class GreenBook:
             age=age,
             pass_time=pass_time,
             wristband=wristband,
+            camp=None if camp in ["", None] else camp.upper(),
             new=True
         )
 

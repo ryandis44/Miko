@@ -140,9 +140,13 @@ class BookView(discord.ui.View):
     async def __detailed_entry_embed_description(self, p: Person, history=True) -> list:
         temp = []
         
+        if p.camp is not None: camp = f"Camp: **{p.camp}**\n"
+        else: camp = ""
+
         temp.append(
             f"Full Entry Info for **{p.last}**, **{p.first}**:\n\n"
 
+            f"{camp}"
             f"First Name: **{p.first}**\n"
             f"Last Name: **{p.last}**\n"
             f"Age: **{p.age}**\n"
@@ -150,7 +154,7 @@ class BookView(discord.ui.View):
             f"Wristband Level: {p.wristband_emoji} **{p.wristband}**\n"
             f"Entered: __{p.pass_time_formatted}__\n"
             f"By: {p.creator_id_mention}\n"
-            f"EID: `{p.eid}`\n"
+            # f"EID: `{p.eid}`\n"
         )
 
         hist = await p.history
@@ -192,7 +196,8 @@ class BookView(discord.ui.View):
                     first=modal.first.value,
                     last=modal.last.value,
                     age=modal.age.value,
-                    wristband=wristband
+                    wristband=wristband,
+                    camp=modal.camp.value
                 )
                 if p.new:
                     desc.append(
@@ -350,7 +355,7 @@ class FullEntryModal(discord.ui.Modal):
         self.p = p
 
     first = discord.ui.TextInput(
-            label="First Name",
+            label="First Name:",
             placeholder="Chris",
             min_length=1,
             max_length=tunables('GREEN_BOOK_MAX_SEARCH_LENGTH'),
@@ -358,7 +363,7 @@ class FullEntryModal(discord.ui.Modal):
         )
     
     last = discord.ui.TextInput(
-            label="Last Name",
+            label="Last Name:",
             placeholder="Bradford",
             min_length=1,
             max_length=tunables('GREEN_BOOK_MAX_SEARCH_LENGTH'),
@@ -378,6 +383,15 @@ class FullEntryModal(discord.ui.Modal):
             placeholder="r (red), y (yellow), g (green)",
             min_length=0,
             max_length=1,
+            required=False,
+            default=None
+        )
+
+    camp = discord.ui.TextInput(
+            label="Camp Name (optional):",
+            placeholder="Greenlake",
+            min_length=0,
+            max_length=tunables('GREEN_BOOK_MAX_SEARCH_LENGTH'),
             required=False,
             default=None
         )
@@ -450,6 +464,7 @@ class EditEntry(discord.ui.Button):
             self.m = FullEntryModal(bview=self.bview, p=self.p)
             self.m.first.default = p.first
             self.m.last.default = p.last
+            self.m.camp.default = p.camp
         else:
             self.m = AgeWristbandModal(bview=self.bview, p=self.p)
         self.m.age.default = p.age
