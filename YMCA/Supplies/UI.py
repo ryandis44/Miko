@@ -15,7 +15,8 @@ class SuppliesView(discord.ui.View):
         self.msg = None
 
     async def ainit(self):
-        await self.respond()
+        try: await self.respond()
+        except Exception as e: print(e)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.u.user.id
@@ -70,7 +71,7 @@ class SuppliesView(discord.ui.View):
                 ephemeral=True
             )
             return
-        await self.original_interaction.response.send_modal(NewRequestModal(supply_channel=self.supply_channel))
+        await self.original_interaction.response.send_modal(NewRequestModal(supply_channel=self.supply_channel, u=self.u))
 
 
 class NewRequestModal(discord.ui.Modal):
