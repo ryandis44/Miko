@@ -15,8 +15,7 @@ class SuppliesView(discord.ui.View):
         self.msg = None
 
     async def ainit(self):
-        try: await self.respond()
-        except Exception as e: print(e)
+        await self.respond()
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.u.user.id
