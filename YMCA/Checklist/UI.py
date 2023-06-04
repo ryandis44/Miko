@@ -112,7 +112,7 @@ class ChecklistView(discord.ui.View):
             await log_channel.send(
                 content=(
                     f"{self.u.user.mention} completed " + ', '.join(completed)
-                ),
+                ), silent=True,
                 allowed_mentions=discord.AllowedMentions(users=False)
             )
         
