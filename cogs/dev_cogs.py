@@ -176,6 +176,28 @@ class dev_cog(commands.Cog):
             case 'de_whitespace_greenbook':
                 try:
                     await msg.edit(content=f"Removing all whitespace characters from green book database... {tunables('LOADING_EMOJI')}")
+                    
+                    entries = await db.execute(
+                        "SELECT entry_id,first_name,last_name,camp_name FROM YMCA_GREEN_BOOK_ENTRIES WHERE "
+                        "(`first_name` LIKE '% %' OR `last_name` LIKE '% %' OR `camp_name` LIKE '% %')"
+                    )
+                    for entry in entries:
+                        modified = False
+                        for item in entry:
+                            if item is None: continue
+                            comparable = sanitize_name(item)
+                            if comparable != item: modified = True
+                        if modified:
+                            if entry[3] is None: camp = "NULL"
+                            else: camp = f"'{sanitize_name(entry[3])}'"
+                            await db.execute(
+                                "UPDATE YMCA_GREEN_BOOK_ENTRIES SET "
+                                f"first_name='{sanitize_name(entry[1])}', last_name='{sanitize_name(entry[2])}', camp_name={camp} "
+                                f"WHERE entry_id='{entry[0]}'"
+                            )
+                    
+                    await msg.edit(content="**Complete!** All whitespace characters have been removed from green book database.")
+                    
                 except Exception as e: await msg.edit(content=f"Error: {e}")
             
             case _: await msg.edit(content=fail)
