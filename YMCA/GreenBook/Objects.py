@@ -2,6 +2,7 @@ import time
 import uuid
 
 import discord
+from misc.misc import sanitize_name
 from tunables import tunables
 from Database.GuildObjects import MikoMember
 from Database.database_class import AsyncDatabase
@@ -84,20 +85,23 @@ class Person:
             self.set_wristband(c=str(modal.wristband.value))
             modified['wristband_val'].append(str(self.wristband))
         try:
-            if str(modal.first.value) != str(self.first):
+            first_sanitized = sanitize_name(str(modal.first.value).upper())
+            if first_sanitized != str(self.first):
                 modified['first'] = True
-                modified['first_val'] = [str(self.first), str(modal.first.value).upper()]
-                self.first = str(modal.first.value).upper()
+                modified['first_val'] = [str(self.first), first_sanitized]
+                self.first = first_sanitized
         except: pass
         try:
+            last_sanitized = sanitize_name(str(modal.last.value).upper())
             if str(modal.last.value) != str(self.last):
                 modified['last'] = True
-                modified['last_val'] = [str(self.last), str(modal.last.value).upper()]
-                self.last = str(modal.last.value).upper()
+                modified['last_val'] = [str(self.last), last_sanitized]
+                self.last = last_sanitized
         except: pass
         try:
-            if str(modal.camp.value) in ["", None]: cm = None
-            else: cm = str(modal.camp.value).upper()
+            camp_sanitized = sanitize_name(str(modal.camp.value).upper())
+            if camp_sanitized in ["", None, "None"]: cm = None
+            else: cm = camp_sanitized
             
             if cm != self.camp:
                 modified['camp'] = True
@@ -289,6 +293,10 @@ class GreenBook:
         return plist
     
     async def create(self, first: str, last: str, age: int, wristband: str, camp: str=None) -> Person:
+
+        first = sanitize_name(first)
+        last = sanitize_name(last)
+        camp = sanitize_name(camp)
 
         val = await db.execute(
             "SELECT user_id,entry_id,first_name,last_name,age,pass_time,wristband_color,camp_name FROM YMCA_GREEN_BOOK_ENTRIES WHERE "

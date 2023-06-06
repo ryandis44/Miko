@@ -166,8 +166,12 @@ class Basic(commands.Cog):
         if ctx.author.id != 221438665749037056: return
         try: user = ctx.message.mentions[0]
         except: user = ctx.author
+        
+        s = sanitize_name("1 2 'thr'ee' 3  4    5                                        ")
+        
+        await ctx.send(content=f"{s}end")
 
-        await BookView(ctx=ctx, client=self.client).ainit()
+        # await BookView(ctx=ctx, client=self.client).ainit()
 
         # val = await r.search(
         #     query=1099507241293451334,

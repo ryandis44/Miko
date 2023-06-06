@@ -27,7 +27,7 @@ class dev_cog(commands.Cog):
         
         fail = (
             "Possible options: `set_level_roles`, `tunables`, `tabulate_levels`, "
-            "`calculate_member_numbers`, `re_add_members <guild id>`"
+            "`calculate_member_numbers`, `re_add_members <guild id>`, `de_whitespace_greenbook`"
         )
         if mode is None:
             await msg.edit(content=fail)
@@ -169,6 +169,13 @@ class dev_cog(commands.Cog):
                             "numbers."
                         )
                     )
+                except Exception as e: await msg.edit(content=f"Error: {e}")
+                
+            #####################################################################################
+                
+            case 'de_whitespace_greenbook':
+                try:
+                    await msg.edit(content=f"Removing all whitespace characters from green book database... {tunables('LOADING_EMOJI')}")
                 except Exception as e: await msg.edit(content=f"Error: {e}")
             
             case _: await msg.edit(content=fail)

@@ -5,7 +5,7 @@ from datetime import date, datetime
 
 def sanitize_name(name) -> str|None:
     if name is None: return None
-    return str(name).replace("'", "''")
+    return str(name).replace("'", "''").strip()
 
 def remove_bolding(s) -> str|None:
     if s is None: return None
