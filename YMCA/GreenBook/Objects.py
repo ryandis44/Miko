@@ -93,7 +93,7 @@ class Person:
         except: pass
         try:
             last_sanitized = sanitize_name(str(modal.last.value).upper())
-            if str(modal.last.value) != str(self.last):
+            if last_sanitized != str(self.last):
                 modified['last'] = True
                 modified['last_val'] = [str(self.last), last_sanitized]
                 self.last = last_sanitized
