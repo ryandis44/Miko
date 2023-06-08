@@ -194,7 +194,7 @@ class BookView(discord.ui.View):
         self.add_item(EditEntry(bview=self, p=p))
         if self.u.user.guild_permissions.manage_guild:
             self.add_item(DeleteEntry(bview=self, p=p))
-        self.add_item(NewEntry(bview=self))
+        self.add_item(NewEntry(bview=self, p=p))
         self.add_item(SearchButton(bview=self))
 
         await self.msg.edit(
@@ -325,7 +325,7 @@ class BookView(discord.ui.View):
                 self.add_item(EditEntry(bview=self, p=p))
                 if self.u.user.guild_permissions.manage_guild:
                     self.add_item(DeleteEntry(bview=self, p=p))
-                self.add_item(NewEntry(bview=self))
+                self.add_item(NewEntry(bview=self, p=p))
                 self.add_item(SearchButton(bview=self))
 
         await self.msg.edit(
@@ -572,7 +572,7 @@ class AgeWristbandModal(discord.ui.Modal):
 
 class NewEntry(discord.ui.Button):
 
-    def __init__(self, bview: BookView):
+    def __init__(self, bview: BookView, p: Person=None):
         super().__init__(
             style=discord.ButtonStyle.green,
             label="New Entry",
@@ -581,9 +581,13 @@ class NewEntry(discord.ui.Button):
             row=2
         )
         self.bview = bview
+        self.p = p
+        if self.p is not None and self.p.camp is not None: self.label = "New Camp Entry"
     
     async def callback(self, interaction: discord.Interaction) -> None:
-        await interaction.response.send_modal(FullEntryModal(bview=self.bview))
+        f = FullEntryModal(bview=self.bview)
+        if self.p is not None and self.p.camp is not None: f.camp.default = self.p.camp
+        await interaction.response.send_modal(f)
 
 
 class EditEntry(discord.ui.Button):
