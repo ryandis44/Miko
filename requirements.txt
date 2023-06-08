@@ -4,7 +4,8 @@ PyYAML==6.0
 mysql-connector-python==8.0.29
 dnspython==2.2.1
 num2words==0.5.12
-discord.py==2.2.3
+# discord.py==2.2.3
+git+https://github.com/Rapptz/discord.py@d34a88411d3d973453d80128ab924f6aca197995
 discord.py-Console==0.1.2
 lavalink==4.0.3
 Pillow==9.3.0

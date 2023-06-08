@@ -800,9 +800,10 @@ class MikoMember(MikoGuild):
         return self.user.avatar
     @property
     async def username(self):
-        if self.user.nick is None: return self.user.name
-        elif await self.nickname_in_ctx: return self.user.nick
-        return self.user.name
+        return self.user.display_name if await self.nickname_in_ctx else self.user.global_name
+        # if self.user.nick is None: return self.user.global_name
+        # elif await self.nickname_in_ctx: return self.user.nick
+        # return self.user.global_name
     @property
     async def manage_guild(self):
         perms = self.user.guild_permissions

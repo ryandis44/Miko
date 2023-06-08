@@ -167,9 +167,20 @@ class Basic(commands.Cog):
         try: user = ctx.message.mentions[0]
         except: user = ctx.author
         
-        s = sanitize_name("1 2 'thr'ee' 3  4    5                                        ")
         
-        await ctx.send(content=f"{s}end")
+        await ctx.send(
+            content=(
+                f"{user.name} "
+                f"{user} "
+                f"{user.display_name} "
+                f"{user.global_name} "
+                f"{await u.username}"
+            )
+        )
+        
+        # s = sanitize_name("1 2 'thr'ee' 3  4    5                                        ")
+        
+        # await ctx.send(content=f"{s}end")
 
         # await BookView(ctx=ctx, client=self.client).ainit()
 

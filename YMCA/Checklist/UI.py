@@ -111,7 +111,7 @@ class ChecklistView(discord.ui.View):
         if log_channel is not None and completed != []:
             await log_channel.send(
                 content=(
-                    f"{self.u.user.mention} completed " + ', '.join(completed)
+                    f"{self.u.user.mention} (`{await self.u.username}`) completed " + ', '.join(completed)
                 ), silent=True,
                 allowed_mentions=discord.AllowedMentions(users=False)
             )
