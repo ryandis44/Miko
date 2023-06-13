@@ -223,11 +223,11 @@ class GreenBook:
         if val == [] or val is None: return 0
         return int(val)
 
-    async def recent_entries(self, offset: int=0) -> list:
+    async def recent_entries(self, offset: int=0, order: str="pass_time DESC") -> list[Person]:
         val = await db.execute(
             "SELECT user_id,entry_id,first_name,last_name,age,pass_time,wristband_color,camp_name FROM YMCA_GREEN_BOOK_ENTRIES WHERE "
             f"server_id='{self.u.guild.id}' "
-            f"ORDER BY pass_time DESC LIMIT {tunables('GREEN_BOOK_RECENT_ENTRIES_LIMIT')} OFFSET {offset}"
+            f"ORDER BY {order} LIMIT {tunables('GREEN_BOOK_RECENT_ENTRIES_LIMIT')} OFFSET {offset}"
         )
         if val == [] or val is None: return []
         plist = []
