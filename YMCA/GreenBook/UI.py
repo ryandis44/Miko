@@ -59,7 +59,7 @@ class BookView(discord.ui.View):
                 temp.append(f"\n{result}")
             
             if self.total_items < total_entries:
-                temp.append(f"... and {(total_entries - self.total_items):,} more\n\n")
+                temp.append(f"\n... and {(total_entries - self.total_items):,} more\n\n")
             
 
             embed = discord.Embed(description=''.join(temp), color=GREEN_BOOK_NEUTRAL_COLOR)
@@ -216,8 +216,12 @@ class BookView(discord.ui.View):
             f"{camp}"
             f"First Name: **{p.first}**\n"
             f"Last Name: **{p.last}**\n"
-            f"Age: **{p.age}**\n"
-            # f"DOB: "
+        )
+        
+        if p.camp is None:
+            temp.append(f"Age: **{p.age}**\n")
+        
+        temp.append(
             f"Wristband Level: {p.wristband_emoji} **{p.wristband}**\n"
             f"Entered: __{p.pass_time_formatted}__\n"
             f"By: {p.creator_id_mention}\n"
@@ -630,7 +634,7 @@ class SelectEntries(discord.ui.Select):
             options.append(
                 discord.SelectOption(
                     label=f"{result.last}, {result.first}",
-                    description=f"Age {result.age}",
+                    description=f"Age: {result.age}" if result.camp is None else f"Camp: {result.camp}",
                     value=i,
                     emoji=result.wristband_emoji
                 )

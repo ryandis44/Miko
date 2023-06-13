@@ -58,12 +58,20 @@ class Person:
     
     def __str__(self):
         
-        if self.camp not in ["", None]: camp = f"\u200b \u200b├→ :camping: **`{self.camp}`**\n"
-        else: camp = ""
+        if self.camp not in ["", None]: camp = f"` :camping: **`{self.camp}`**"
+        else: camp = f": Age {self.age}` <t:{self.pass_time}:R>"
         
+        '''
+        Old way of displaying results and recent entries. Changed to reduce clutter and
+        show more results. New way is single line
+        '''
+        # return (
+        #         f"{self.wristband_emoji} `{self.last}, {self.first}: Age {self.age}`\n{camp}"
+        #         f"\u200b \u200b└→  Entered by {self.creator_id_mention} on {self.pass_time_formatted}\n"
+        # )
+
         return (
-                f"{self.wristband_emoji} `{self.last}, {self.first}: Age {self.age}`\n{camp}"
-                f"\u200b \u200b└→  Entered by {self.creator_id_mention} on {self.pass_time_formatted}\n"
+            f"{self.wristband_emoji} `{self.last}, {self.first}{camp}"
         )
 
     async def edit(self, modal, modifier: discord.Member) -> bool:
