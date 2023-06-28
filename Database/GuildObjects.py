@@ -1402,10 +1402,13 @@ class MikoMessage():
                     await self.message.add_reaction(letter)
                 break
     
-    async def handle_instagram_reel_links(self) -> bool:
+    async def delete_regex(self) -> bool:
         if (await self.channel.profile).feature_enabled('DELETE_INSTAGRAM_REEL_LINKS') != 1: return False
-        ig_regex = r".*\binstagram.com\/reel\b.*"
-        if re.match(ig_regex, self.message.content.lower()):
+        
+        try: user_ids = tunables('DELETE_REGEX_USERS').split(' ')
+        except: user_ids = [f'{tunables("DELETE_REGEX_USERS")}']
+        if re.match(tunables('DELETE_REGEX'), self.message.content.lower()) and \
+            str(self.user.user.id) in user_ids:
             await self.message.delete()
             return True
         return False

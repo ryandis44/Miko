@@ -289,7 +289,7 @@ async def on_message(message: discord.Message):
     await mm.handle_leveling()
     if await mm.ugly_ass_sticker_removal(): return
     if await mm.handle_big_emojis(): return # Deletes message. Returns true if message deleted.
-    if await mm.handle_instagram_reel_links(): return # Also deletes message
+    if await mm.delete_regex(): return # Also deletes message
     await mm.handle_persistent_player_reposition()
     await mm.handle_rename_hell()
     await mm.handle_bruh_react()
