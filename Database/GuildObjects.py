@@ -1287,15 +1287,15 @@ class MikoMessage():
         self.__cached_count = 1
 
         await ago.execute(
-            "INSERT INTO USER_MESSAGE_COUNT (user_id,channel_id,server_id,count) VALUES "
-            f"('{self.user.user.id}', '{self.channel.channel.id}', '{self.user.guild.id}', '1')"
+            "INSERT INTO USER_MESSAGE_COUNT (user_id,channel_id,server_id,count,last_message_at) VALUES "
+            f"('{self.user.user.id}', '{self.channel.channel.id}', '{self.user.guild.id}', '1', '{int(time.time())}')"
         )
-        print(f"Added user_message_count for {self.user.user} ({self.user.user.id}) in channel {self.channel.channel} ({self.channel.channel.id}) in server {self.user.guild} ({self.user.guild.id}) to database")
+        # print(f"Added user_message_count for {self.user.user} ({self.user.user.id}) in channel {self.channel.channel} ({self.channel.channel.id}) in server {self.user.guild} ({self.user.guild.id}) to database")
     
     async def __increment_msg_count(self) -> None:
-        # Increment USER_MESSAGE_COUNT
+        # Increment USER_MESSAGE_COUNT, update last_message_at
         await ago.execute(
-            f"UPDATE USER_MESSAGE_COUNT SET count='{self.__cached_count + 1}' WHERE "
+            f"UPDATE USER_MESSAGE_COUNT SET count='{self.__cached_count + 1}', last_message_at='{int(time.time())}' WHERE "
             f"user_id={self.user.user.id} AND channel_id={self.channel.channel.id} AND server_id={self.user.guild.id}"
         )
 
