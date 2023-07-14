@@ -154,48 +154,60 @@ class Basic(commands.Cog):
         await ctx.send(embed=await user_info_embed(MikoMember(user=referenced_user, client=self.client, guild_id=ctx.guild.id)))
 
 
-    @commands.command(name='updatemessagetimestamp', aliases=['umts'])
-    @commands.guild_only()
-    async def messagetimestamprefresh(self, ctx: Context):
-        
-        u = MikoMember(user=ctx.author, client=self.client)
-        await u.ainit()
-        if await u.bot_permission_level <= 4: return
-        
-        latest_message_timestamps = {
-            'channel_id': {
-                'user_id': int,
-                'latest_message_at': int
-            }
-        }
-        
-        m = [f"Fetching latest message timestamps for all users in all text channels of **__{ctx.guild.name}__**"]
-        
-        msg = await ctx.send(
-            content=''.join(m),
-            silent=True
-        )
-        
-        m.append("\n\n• Scanning ")
-        m.append("(channel name)")
-        m.append("\n\n• Progress: ")
-        m.append("0")
-        m.append(f"/{len(ctx.guild.text_channels)} text channels")
-        
-        await asyncio.sleep(3)
-        
-        for i, channel in enumerate(ctx.guild.text_channels):
+    # @commands.command(name='updatemessagetimestamp', aliases=['umts'])
+    # @commands.guild_only()
+    # async def messagetimestamprefresh(self, ctx: Context):
+    #     try:
+    #         u = MikoMember(user=ctx.author, client=self.client)
+    #         await u.ainit()
+    #         if await u.bot_permission_level <= 4: return
             
-            m[2] = f"**{channel.mention}**"
-            m[4] = f"{i+1}"
+    #         latest_message_timestamps = {
+    #             'channel_id': {'user_id': int}
+    #         }
             
-            await msg.edit(content=''.join(m))
+    #         m = [f"Fetching latest message timestamps for all users in all text channels of **__{ctx.guild.name}__**\
+    #             \nThis process will take a while."]
             
-        del m[1]
-        del m[1]
-        m.append("\n\n**Complete!**")
-        await msg.edit(content=''.join(m))
+    #         msg = await ctx.send(
+    #             content=''.join(m),
+    #             silent=True
+    #         )
             
+    #         m.append("\n\n• Scanning ")
+    #         m.append("(channel name)")
+    #         m.append("\n\n• Progress: ")
+    #         m.append("0")
+    #         m.append(f"/{len(ctx.guild.text_channels)} text channels")
+            
+    #         await asyncio.sleep(3)
+            
+    #         for i, channel in enumerate(ctx.guild.text_channels):
+                
+    #             m[2] = f"**{channel.mention}**"
+    #             m[4] = f"{i+1}"
+    #             await msg.edit(content=''.join(m))
+    #             latest_message_timestamps[channel.id] = {'user_id': int}
+                
+    #             j = 0
+    #             async for message in channel.history(limit=None):
+    #                 j += 1
+    #                 last_message_at = latest_message_timestamps[channel.id].get(message.author.id)
+    #                 if last_message_at is None or last_message_at < int(message.created_at.timestamp()):
+    #                     latest_message_timestamps[channel.id][message.author.id] = int(message.created_at.timestamp())
+                    
+    #                 print(latest_message_timestamps[channel.id][message.author.id], message.author)
+                    
+    #                 if j % 500 == 0:
+    #                     m[2] = f"**{channel.mention}** — {j:,} messages scanned"
+    #                     await msg.edit(content=''.join(m))
+                    
+                
+    #         del m[1]
+    #         del m[1]
+    #         m.append("\n\n**Complete!**")
+    #         await msg.edit(content=''.join(m))
+    #     except Exception as e: print(e)
 
     @commands.command(name='playtime', aliases=['pt'])
     @commands.guild_only()
