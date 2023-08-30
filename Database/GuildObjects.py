@@ -147,6 +147,22 @@ class MikoGuild():
         if val == "FALSE" or (await self.profile).feature_enabled('BIG_EMOJIS') != 1: return False
         return True
     @property
+    async def greet_new_members(self) -> bool:
+        val = await ago.execute(
+            "SELECT greet_new_members FROM SERVERS WHERE "
+            f"server_id='{self.guild.id}'"
+        )
+        if val == "FALSE" or (await self.profile).feature_enabled('GREET_NEW_MEMBERS') != 1: return False
+        return True
+    @property
+    async def notify_member_leave(self) -> bool:
+        val = await ago.execute(
+            "SELECT notify_member_leave FROM SERVERS WHERE "
+            f"server_id='{self.guild.id}'"
+        )
+        if val == "FALSE" or (await self.profile).feature_enabled('NOTIFY_MEMBER_LEAVE') != 1: return False
+        return True
+    @property
     async def profile(self) -> GuildProfile:
         return tunables(f'GUILD_PROFILE_{await self.status}')
     
@@ -813,21 +829,22 @@ class MikoMember(MikoGuild):
     # async def __member_leave_message(self) -> None: pass
 
     async def __new_member_greeting(self, new=True) -> None:
+
+        if await self.greet_new_members:
+            channel = self.guild.system_channel
+            if channel is not None and channel.permissions_for(self.guild.me).send_messages:
+                await asyncio.sleep(1) # To ensure welcome message is sent after join message
+                await channel.send(
+                    content=(
+                        f'Hi {self.user.mention}, welcome{" BACK" if not new else ""} to {self.guild}! :tada:\n'
+                        f'> You are unique member `#{await self.member_number}`'
+                    ), silent=True
+                )
+
+        
         match await self.status:
 
             case "THEBOYS":
-
-                if self.client.user.id != 1017998983886545068: return # Only send welcome messages/role assignments if prod miko
-                channel = self.guild.system_channel
-                if channel is not None:
-                    await asyncio.sleep(1) # To ensure welcome message is sent after join message
-                    await channel.send(
-                        content=(
-                            f'Hi {self.user.mention}, welcome{" BACK" if not new else ""} to {self.guild}! :tada:\n'
-                            f'> You are unique member `#{await self.member_number}`'
-                        ), silent=True
-                    )
-                else: print(f"\n\n**************************\nCOULD NOT SEND WELCOME MESSAGE FOR {self.user}\n**************************\n\n")
                 
                 '''
                 As of 12/11/2022, we will no longer assign the 'OG Bro'
@@ -847,19 +864,11 @@ class MikoMember(MikoGuild):
             
             case "YMCA":
 
-                # Log channel [temporary, ensure skipping verification]
-                try:
-                    if self.guild.id != 1060357911483797704 or not self.user.pending: raise Exception
-                    channel = self.guild.get_channel(1060371116310401034)
-                    await channel.send(
-                        content=f"Bypassing Community Verification for {self.user.mention}",
-                        allowed_mentions=discord.AllowedMentions(users=False),
-                        silent=True
-                    )
-                except: pass
-
                 lifeguard = discord.utils.get(self.guild.roles, name="Lifeguard")
-                if not self.user.bot: await self.user.add_roles(lifeguard)
+                if not self.user.bot:
+                    try:
+                        await self.user.add_roles(lifeguard)
+                    except Exception as e: print(f"Could not add Lifeguard role to YMCA server: {e}")
             
             case "DEBUG":
                 channel = self.guild.system_channel
@@ -870,17 +879,19 @@ class MikoMember(MikoGuild):
                         ), silent=True
                     )
 
-    # async def handle_member_leave(self) -> None: pass
-
     async def __handle_new_member(self) -> None:
         if self.user.id == self.client.user.id or \
             (await self.profile).feature_enabled('GREET_NEW_MEMBERS') != 1: return
-        await self.__new_member_greeting()
-    
+        try:
+            await self.__new_member_greeting()
+        except: pass
+
     async def __handle_returning_member(self) -> None:
         if self.user.id == self.client.user.id or \
             (await self.profile).feature_enabled('GREET_NEW_MEMBERS') != 1: return
-        await self.__new_member_greeting(new=False)
+        try:
+            await self.__new_member_greeting(new=False)
+        except: pass
 
 
     async def __exists(self) -> None:
@@ -949,10 +960,10 @@ class MikoMember(MikoGuild):
 
         latest_join_time = int(self.user.joined_at.timestamp())
         if latest_join_time != rows[0][1]:
-           if updating: params_temp.append(",")
-           updating = True
-           params_temp.append(f"latest_join_time='{latest_join_time}'")
-           if rows[0][1] != 0 and type(rows[0][1] == int): await self.__handle_returning_member() # returning member
+            if updating: params_temp.append(",")
+            updating = True
+            params_temp.append(f"latest_join_time='{latest_join_time}'")
+            if rows[0][1] != 0 and type(rows[0][1] == int): await self.__handle_returning_member() # returning member
         
         if updating:
             params_temp.append(f" WHERE user_id=\"{self.user.id}\" AND server_id=\"{self.guild.id}\"")
