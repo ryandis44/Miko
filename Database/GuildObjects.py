@@ -165,6 +165,14 @@ class MikoGuild():
     @property
     async def profile(self) -> GuildProfile:
         return tunables(f'GUILD_PROFILE_{await self.status}')
+    @property
+    async def introductions_required(self) -> bool:
+        val = await ago.execute(
+            "SELECT introductions_required FROM SERVERS WHERE "
+            f"server_id='{self.guild.id}'"
+        )
+        if val == "FALSE" or (await self.profile).feature_enabled('REQUIRE_INTRODUCTIONS') != 1: return False
+        return True
     
     
     
@@ -610,6 +618,10 @@ class MikoMember(MikoGuild):
         self.user = user
     
     async def ainit(self, check_exists: bool = True, check_exists_guild: bool = True, skip_if_locked: bool = False):
+        
+        if await self.introductions_required and self.user.top_role.name == "@everyone":
+            return # Do not add users to database if they have not introduced themselves
+        
         if (check_exists and not (self.user.pending and (await self.profile).feature_enabled('SKIP_VERIFICATION') != 1)) and \
             not (skip_if_locked and lock_status(key=self.user.id)):
             async with check_lock(key=self.user.id):
@@ -626,7 +638,7 @@ class MikoMember(MikoGuild):
             f"user_id='{self.user.id}' AND server_id='{self.guild.id}'"
         )
         if val is not None and val != []: return int(val)
-        print(f"Error when checking 'last_updated' in MikoMember object: {val} | {self.user} | {self.user.id} | {self.guild} | {self.guild.id} | {int(time.time())}")
+        # print(f"Error when checking 'last_updated' in MikoMember object: {val} | {self.user} | {self.user.id} | {self.guild} | {self.guild.id} | {int(time.time())}")
         return 1
     @property
     async def first_joined(self) -> int:
