@@ -213,25 +213,55 @@ class Basic(commands.Cog):
     @commands.guild_only()
     async def playtime(self, ctx: Context):
         
+        
         u = MikoMember(user=ctx.author, client=self.client)
-        if (await u.profile).cmd_enabled('PLAYTIME') != 1: return
         
-        await ctx.channel.send("This command is depreciated. Please use `/playtime` instead.")
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        # if (await u.profile).cmd_enabled('PLAYTIME') != 1: return
+        
+        # await ctx.channel.send("This command is depreciated. Please use `/playtime` instead.")
 
-        if ctx.author.id != 221438665749037056: return
-        try: user = ctx.message.mentions[0]
-        except: user = ctx.author
+        # if ctx.author.id != 221438665749037056: return
+        # try: user = ctx.message.mentions[0]
+        # except: user = ctx.author
         
         
-        await ctx.send(
-            content=(
-                f"{user.name} "
-                f"{user} "
-                f"{user.display_name} "
-                f"{user.global_name} "
-                f"{await u.username}"
-            )
-        )
+        # await ctx.send(
+        #     content=(
+        #         f"{user.name} "
+        #         f"{user} "
+        #         f"{user.display_name} "
+        #         f"{user.global_name} "
+        #         f"{await u.username}"
+        #     )
+        # )
         
         # s = sanitize_name("1 2 'thr'ee' 3  4    5                                        ")
         
