@@ -8,11 +8,20 @@ import mysql.connector as mariadb
 from dotenv import load_dotenv
 load_dotenv()
 
+# IP = None
 
-resolve = dns.resolver.query(os.getenv('REMOTE_DOMAIN'), 'A')
-ip = None
-for ipval in resolve:
-    ip = ipval.to_text()
+# def resolve_ip():
+#     print("RESOLVING IP******")
+#     global IP
+#     resolve = dns.resolver.query(os.getenv('REMOTE_DOMAIN'), 'A')
+#     for ipval in resolve:
+#         IP = ipval.to_text()
+#     print(IP)
+
+try:
+    IP = dns.resolver.resolve(os.getenv('REMOTE_DOMAIN'), 'A').rrset[0].to_text()
+except dns.resolver.NoAnswer:
+    IP = 'No answer'
 
 pool = None
 async def connect_pool():
@@ -36,7 +45,7 @@ async def connect_pool():
         print(f"Database server not running locally, attempting database pool connection via Cloudflare...")
         try:
             pool = await aiomysql.create_pool(
-                    host=ip,
+                    host=IP,
                     port=3306,
                     user=os.getenv('DATABASE_USERNAME'),
                     password=os.getenv('DATABASE_PASSWORD'),
@@ -114,7 +123,7 @@ conn = None
 def dbclass_connect():
     global db
     global cur
-    global ip
+    global IP
 
     # Prefer local database connection. Fallback to external Cloudflare
     # connection if local connection is not possible.
@@ -138,7 +147,7 @@ def dbclass_connect():
             db = mariadb.connect(
                 user=os.getenv('DATABASE_USERNAME'),
                 password=os.getenv('DATABASE_PASSWORD'),
-                host=ip,
+                host=IP,
                 port=3306,
                 database=os.getenv('DATABASE')
             )
