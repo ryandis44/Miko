@@ -148,6 +148,10 @@ async def embed(choice=None, channel=None):
 
 
 @client.event
+async def on_audit_log_entry_create(entry: discord.AuditLogEntry):
+    if not tunables('EVENT_ENABLED_ON_AUDIT_LOG_ENTRY_CREATE'): return
+
+@client.event
 async def on_guild_join(guild: discord.Guild):
     if not tunables('EVENT_ENABLED_ON_GUILD_JOIN'): return
     g = MikoGuild(guild=guild, client=client)
