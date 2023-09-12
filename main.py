@@ -1,5 +1,5 @@
 # Miko Bot main file
-from AuditLog.AuditLogReader import auditEntry
+from AuditLog.AuditLogReader import auditEntry, handle_disconnect
 from Database.database_class import connect_pool
 from tunables import tunables_init, tunables, GLOBAL_EMBED_COLOR, tunables_refresh
 tunables_init()
@@ -151,7 +151,8 @@ async def embed(choice=None, channel=None):
 @client.event
 async def on_audit_log_entry_create(entry: discord.AuditLogEntry):
     if not tunables('EVENT_ENABLED_ON_AUDIT_LOG_ENTRY_CREATE'): return
-    await auditEntry(entry)
+    try: await auditEntry(entry)
+    except Exception as e: print(f"Audit Log event: {e}")
     
 
 @client.event
@@ -254,6 +255,10 @@ async def on_presence_update(before: discord.Member, cur: discord.Member):
 @client.event
 async def on_voice_state_update(member: discord.Member, bef: discord.VoiceState, cur: discord.VoiceState):
     if not tunables('EVENT_ENABLED_ON_VOICE_STATE_UPDATE'): return
+    
+    try: await handle_disconnect(member.guild)
+    except Exception as e: print(f"Voice state event {e}")
+    
     u = MikoMember(user=member, client=client)
     await u.ainit()
     
