@@ -2,6 +2,10 @@ import discord
 import datetime
 
 
+# Plain English is commented with #
+''' CS explanation is marked with six ' '''
+
+
 '''
 We have been calling 'dict' book
 
@@ -42,7 +46,8 @@ https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#disc
 async def auditEntry(entry: discord.AuditLogEntry):
     if entry.action == discord.AuditLogAction.member_disconnect:
         provision_hash_table(entry)
-        print("auditEntry")
+        print("added entry via auditEntry")
+        await punish(entry.user)
 
 
 def provision_hash_table(entry: discord.AuditLogEntry):
@@ -94,25 +99,59 @@ def provision_hash_table(entry: discord.AuditLogEntry):
     # ...(2nd else) or someone else did it already and you just wrote 'Hibbs'
     # on one of the folders and put ur vape in it
     if DISCONNECT_ENTRIES.get(entry.guild.id) is None:
-        # create the dict then add to it
+        '''create the dict then add to it'''
         DISCONNECT_ENTRIES[entry.guild.id] = {entry.user_id: entry}
     else:
-        # add to the dict
+        '''add to the dict'''
         DISCONNECT_ENTRIES[entry.guild.id][entry.user_id] = entry
 
 
+
+'''
+This function grabs the last 10 disconnect entries from the audit log
+and compares each entry to all of the entries we have stored for this
+guild under 'DISCONNECT_ENTRIES'.
+'''
 async def handle_disconnect(guild: discord.Guild):
     async for entry in guild.audit_logs(action=discord.AuditLogAction.member_disconnect, limit=10):
         try:
             cached_entry: discord.AuditLogEntry = DISCONNECT_ENTRIES[entry.guild.id][entry.user.id]
         except:
             provision_hash_table(entry)
+            print("added entry via handle_disconnect")
+            
+            '''
+            We put continue here because we are running this chunk of code in
+            the first place because the code above in 'try:' has failed.
+            
+            'cached_entry' will not have avalue so we cannot compare it
+            to anything: continue
+            '''
             continue
         
-        
-        if cached_entry.extra.count != entry.extra.count and cached_entry.created_at == entry.created_at:
-            DISCONNECT_ENTRIES[entry.guild.id][entry.user_id] = entry
+        '''
+        We compare two attributes:
+            - 'entry.extra.count'
+            - 'entry.id'
             
-            await entry.user.timeout(
-                datetime.datetime.now().astimezone() + datetime.timedelta(minutes=1)
-            )
+        > The 'extra.count' attribute shows us how many times someone has disconnected
+        someone else from VC.
+        > The 'id' ensures we compare the same unique entry to itself
+        '''
+        if cached_entry.extra.count != entry.extra.count and cached_entry.id == entry.id:
+            DISCONNECT_ENTRIES[entry.guild.id][entry.user_id] = entry
+            await punish(entry.user)
+
+
+
+async def punish(user: discord.Member):
+    '''
+    Using try:except here because if Miko tries to timeout
+    me or someone else it cant kick then it will raise an
+    error (exception). Catch this error and do nothing
+    '''
+    try:
+        await user.timeout(
+            datetime.datetime.now().astimezone() + datetime.timedelta(minutes=1)
+        )
+    except Exception as e: print(f"Punish error: {e}")
