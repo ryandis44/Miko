@@ -1,4 +1,5 @@
 # Miko Bot main file
+from AuditLog.AuditLogReader import auditEntry
 from Database.database_class import connect_pool
 from tunables import tunables_init, tunables, GLOBAL_EMBED_COLOR, tunables_refresh
 tunables_init()
@@ -148,6 +149,12 @@ async def embed(choice=None, channel=None):
 
 
 @client.event
+async def on_audit_log_entry_create(entry: discord.AuditLogEntry):
+    if not tunables('EVENT_ENABLED_ON_AUDIT_LOG_ENTRY_CREATE'): return
+    await auditEntry(entry)
+    
+
+@client.event
 async def on_guild_join(guild: discord.Guild):
     if not tunables('EVENT_ENABLED_ON_GUILD_JOIN'): return
     g = MikoGuild(guild=guild, client=client)
@@ -182,13 +189,17 @@ async def on_raw_member_remove(payload: discord.RawMemberRemoveEvent):
     g = MikoGuild(guild=None, client=client, guild_id=payload.guild_id)
     await g.ainit()
 
-    
+    if not await g.notify_member_leave: return
     temp = []
     temp.append(f"<@{payload.user.id}>『`{payload.user}`』left")
-    match await g.status:
+    guild_status = await g.status
+    match guild_status:
+        
+        case "YMCA":
+            channel = client.get_guild(payload.guild_id).system_channel
+            await channel.send(''.join(temp))
 
-        case "THEBOYS":
-            if client.user.id != 1017998983886545068: return
+        case _:
             guild = client.get_guild(payload.guild_id)
             channel = guild.system_channel
             if channel is None: return
@@ -197,15 +208,13 @@ async def on_raw_member_remove(payload: discord.RawMemberRemoveEvent):
                 case 0: temp.append(" :pray:")
                 case 1: temp.append(". Thank God")
                 case 2: temp.append(". Finally!")
-                case 3: temp.append(". Hector scared them off")
+                case 3:
+                    if guild_status == "THEBOYS": temp.append(". Hector scared them off")
+                    else: temp.append(". They got scared off")
                 case 4: temp.append(". Good riddance")
                 case 5: temp.append(". Oh no! Anyway...")
                 case 6: temp.append(". I thought they would never leave... :triumph:")
 
-            await channel.send(''.join(temp))
-        
-        case "YMCA":
-            channel = client.get_guild(payload.guild_id).system_channel
             await channel.send(''.join(temp))
 
 

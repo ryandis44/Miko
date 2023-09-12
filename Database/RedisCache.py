@@ -4,7 +4,7 @@ import redis.asyncio as redis
 from redis.commands.json.path import Path
 from redis.commands.search.query import Query
 from tunables import *
-from Database.database_class import ip, AsyncDatabase
+from Database.database_class import IP, AsyncDatabase
 db = AsyncDatabase('Database.RedisCache.py')
 
 connection = None
@@ -30,7 +30,7 @@ async def connect_redis():
         print(f"[REDIS] Server not running locally. Attempting connection via Cloudflare...")
         try:
             connection = redis.Redis(
-                host=ip,
+                host=IP,
                 port=int(port),
                 password=tunables('REDIS_PASSWORD'),
                 decode_responses=True
