@@ -6,7 +6,7 @@ import re
 from discord.ext import commands
 from discord import app_commands
 from Database.GuildObjects import MikoMember
-from Database.database_class import ip
+from Database.database_class import IP
 from dotenv import load_dotenv
 from Music.UI import SongSelectView, PlaylistButtons, show_playlist_result, song_search_results
 from Music.PersistentPlayer import PersistentPlayer
@@ -42,7 +42,7 @@ class MusicCog(commands.Cog):
             )
         else:
             self.client.lavalink.add_node(
-                ip,
+                IP,
                 2333,
                 tunables('LAVALINK_PASSWORD'),
                 'na',
