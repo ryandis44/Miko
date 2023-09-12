@@ -217,10 +217,11 @@ class Basic(commands.Cog):
         u = MikoMember(user=ctx.author, client=self.client)
 
         await ctx.send(
-            "fuck"
+            content=(
+                f"messages {await u.user_messages}"
+            )
         )
-        
-        
+          
         
         
         
