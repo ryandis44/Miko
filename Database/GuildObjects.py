@@ -165,6 +165,18 @@ class MikoGuild():
     @property
     async def profile(self) -> GuildProfile:
         return tunables(f'GUILD_PROFILE_{await self.status}')
+    @property
+    async def introductions_required(self) -> bool:
+        # do not enforce introductions if an introduction channel/role is not set
+        if await self.introductions_channel is None or await self.introduction_role is None:
+            return False
+        
+        val = await ago.execute(
+            "SELECT introductions_required FROM SERVERS WHERE "
+            f"server_id='{self.guild.id}'"
+        )
+        if val == "FALSE" or (await self.profile).feature_enabled('REQUIRE_INTRODUCTIONS') != 1: return False
+        return True
     
     
     
@@ -249,7 +261,22 @@ class MikoGuild():
             
         r = self.guild.get_role(int(val))
         return [r] if r is not None else None
-        
+    @property
+    async def introductions_channel(self) -> discord.TextChannel|None:
+        val = await ago.execute(
+            "SELECT introductions_channel FROM SERVERS WHERE "
+            f"server_id='{self.guild.id}'"
+        )
+        if val == [] or val is None: return None
+        return self.guild.get_channel(int(val))
+    @property
+    async def introduction_role(self) -> discord.Role:
+        val = await ago.execute(
+            "SELECT introductions_role FROM SERVERS WHERE "
+            f"server_id='{self.guild.id}'"
+        )
+        if val == [] or val is None: return None
+        return self.guild.get_role(int(val))
 
     
     
@@ -278,6 +305,19 @@ class MikoGuild():
             
         return temp
 
+    async def toggle_introductions(self) -> None:
+        if await self.introductions_required:
+            s = "FALSE"
+        else: s = "TRUE"
+        
+        await ago.execute(
+            f"UPDATE SERVERS SET introductions_required='{s}'"
+        )
+    
+    async def set_introduction_role(self, role: discord.Role) -> None:
+        await ago.execute(
+            f"UPDATE SERVERS SET introductions_role='{role.id}'"
+        )
 
     async def set_member_numbers(self) -> None:
         member_ids = await ago.execute(
@@ -610,6 +650,10 @@ class MikoMember(MikoGuild):
         self.user = user
     
     async def ainit(self, check_exists: bool = True, check_exists_guild: bool = True, skip_if_locked: bool = False):
+        
+        if await self.introductions_required and self.user.top_role.name == "@everyone":
+            return # Do not add users to database if they have not introduced themselves
+        
         if (check_exists and not (self.user.pending and (await self.profile).feature_enabled('SKIP_VERIFICATION') != 1)) and \
             not (skip_if_locked and lock_status(key=self.user.id)):
             async with check_lock(key=self.user.id):
@@ -626,7 +670,7 @@ class MikoMember(MikoGuild):
             f"user_id='{self.user.id}' AND server_id='{self.guild.id}'"
         )
         if val is not None and val != []: return int(val)
-        print(f"Error when checking 'last_updated' in MikoMember object: {val} | {self.user} | {self.user.id} | {self.guild} | {self.guild.id} | {int(time.time())}")
+        # print(f"Error when checking 'last_updated' in MikoMember object: {val} | {self.user} | {self.user.id} | {self.guild} | {self.guild.id} | {int(time.time())}")
         return 1
     @property
     async def first_joined(self) -> int:
