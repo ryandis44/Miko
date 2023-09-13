@@ -3,7 +3,7 @@ import datetime
 
 
 # Plain English is commented with #
-''' CS explanation is marked with six ' '''
+''' CS explanation is marked with ' '''
 
 
 '''
@@ -46,7 +46,6 @@ https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#disc
 async def auditEntry(entry: discord.AuditLogEntry):
     if entry.action == discord.AuditLogAction.member_disconnect:
         provision_hash_table(entry)
-        print("added entry via auditEntry")
         await punish(entry.user)
 
 
@@ -71,7 +70,6 @@ def provision_hash_table(entry: discord.AuditLogEntry):
     if DISCONNECT_ENTRIES.get(entry.guild.id) is not None:
         cached_entry: discord.AuditLogEntry = DISCONNECT_ENTRIES[entry.guild.id].get(entry.user.id)
         if cached_entry is not None and cached_entry.created_at >= entry.created_at:
-            print("Found newer entry, skipping this one")
             return # if we have a newer entry, discard the older one
     
     
@@ -118,7 +116,6 @@ async def handle_disconnect(guild: discord.Guild):
             cached_entry: discord.AuditLogEntry = DISCONNECT_ENTRIES[entry.guild.id][entry.user.id]
         except:
             provision_hash_table(entry)
-            print("added entry via handle_disconnect")
             
             '''
             We put continue here because we are running this chunk of code in
