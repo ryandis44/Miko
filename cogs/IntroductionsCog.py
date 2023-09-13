@@ -25,9 +25,7 @@ class IntroductionsCog(commands.Cog):
     @app_commands.command(name="introductions", description=f"{os.getenv('APP_CMD_PREFIX')}Introductions setting page")
     @app_commands.guild_only
     async def introductions(self, interaction: discord.Interaction):
-        try:
-            await IntroductionsView(original_interaction=interaction).ainit()
-        except Exception as e: print(e)
+        await IntroductionsView(original_interaction=interaction).ainit()
 
 
 
