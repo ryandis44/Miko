@@ -32,7 +32,8 @@ DISCONNECT_ENTRIES -->
 # 37th drawer is the guild ID
 # Last name is user ID
 # Vape is the audit log entry
-DISCONNECT_ENTRIES = {discord.Guild.id: dict[discord.Member.id: discord.AuditLogEntry]}
+# DISCONNECT_ENTRIES = {discord.Guild.id: dict[discord.Member.id: discord.AuditLogEntry]}
+DISCONNECT_ENTRIES = {}
 
 
 
