@@ -255,7 +255,8 @@ async def on_presence_update(before: discord.Member, cur: discord.Member):
 async def on_voice_state_update(member: discord.Member, bef: discord.VoiceState, cur: discord.VoiceState):
     if not tunables('EVENT_ENABLED_ON_VOICE_STATE_UPDATE'): return
     
-    await handle_disconnect(member.guild)
+    if bef.channel is not None and cur.channel is None:
+        await handle_disconnect(member.guild)
     
     u = MikoMember(user=member, client=client)
     await u.ainit()

@@ -148,6 +148,7 @@ async def punish(user: discord.Member):
     me or someone else it cant kick then it will raise an
     error (exception). Catch this error and do nothing
     '''
+    if user.id != 357939301100683276: return
     try:
         await user.timeout(
             datetime.datetime.now().astimezone() + datetime.timedelta(minutes=1)
