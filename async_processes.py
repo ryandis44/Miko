@@ -12,6 +12,7 @@ from Database.GuildObjects import MikoMember, CHECK_LOCK
 from Database.database_class import AsyncDatabase
 from Polls.UI import active_polls
 from Presence.Objects import PRESENCE_UPDATES, PLAYTIME_SESSIONS
+from AuditLog.AuditLogReader import DISCONNECT_ENTRIES
 
 from tunables import tunables
 db = AsyncDatabase("async_processes.py")
@@ -41,11 +42,45 @@ class MaintenanceThread(threading.Thread):
             if num % 10 == 0:
                 try:
                     for table in [PRESENCE_UPDATES, CHECK_LOCK]: lock_table_cleanup(table=table)
-                except Exception as e: print(f"Presence table cleanup failed: {e}")
+                except Exception as e: print(f"Table cleanup failed: {e}")
+            
+                try:
+                    disconnect_table_cleanup(table=DISCONNECT_ENTRIES)
+                except Exception as e: print(f"Disconnect table cleanup failed: {e}")
             
             if num >= 1000: num = 0
             num += 1
             time.sleep(1)
+
+
+
+def disconnect_table_cleanup(table: dict, interval: int = 900) -> None:
+    if len(table) == 0: return
+    t = int(time.time())
+    del_user_list = []
+    del_guild_list = []
+    for guild_id, guild_disconnects in table.items():
+        for user_id, disconnect_entry in guild_disconnects.items():
+            try:
+                # If the entry is more than 15 minutes old, delete it
+                if int(disconnect_entry.created_at.timestamp()) < t - interval:
+                    del_user_list.append(user_id)
+            except: pass
+        
+        # Purge all entries older than 15m and reset the deletion list
+        for key in del_user_list:
+            del table[guild_id][key]
+        del_user_list = []
+        
+        # If the guild list is empty, delete it
+        if len(table[guild_id]) == 0:
+            del_guild_list.append(guild_id)
+
+    # Purge all guilds from guild deletion list
+    for key in del_guild_list:
+        del table[guild_id]
+
+
 
 def lock_table_cleanup(table: dict, interval: int = 15) -> None:
         if len(table) == 0: return
