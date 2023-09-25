@@ -148,10 +148,10 @@ async def embed(choice=None, channel=None):
 
 
 
-@client.event
-async def on_audit_log_entry_create(entry: discord.AuditLogEntry):
-    if not tunables('EVENT_ENABLED_ON_AUDIT_LOG_ENTRY_CREATE'): return
-    await auditEntry(entry)
+# @client.event
+# async def on_audit_log_entry_create(entry: discord.AuditLogEntry):
+#     if not tunables('EVENT_ENABLED_ON_AUDIT_LOG_ENTRY_CREATE'): return
+#     await auditEntry(entry)
     
 
 @client.event
@@ -255,8 +255,8 @@ async def on_presence_update(before: discord.Member, cur: discord.Member):
 async def on_voice_state_update(member: discord.Member, bef: discord.VoiceState, cur: discord.VoiceState):
     if not tunables('EVENT_ENABLED_ON_VOICE_STATE_UPDATE'): return
     
-    if bef.channel is not None and cur.channel is None:
-        await handle_disconnect(member.guild)
+    # if bef.channel is not None and cur.channel is None:
+    #     await handle_disconnect(member.guild)
     
     u = MikoMember(user=member, client=client)
     await u.ainit()
