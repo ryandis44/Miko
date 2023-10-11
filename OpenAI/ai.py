@@ -431,11 +431,22 @@ class MikoGPT(discord.ui.View):
             )
             await self.mm.user.increment_statistic('REPLY_TO_MENTION_OPENAI')
         except Exception as e:
-            print(f">>> OpenAI response error: {type(Exception)}: {print(e)}")
-            # if retries <= 2:
-            #     await asyncio.sleep(1)
-            #     await self.respond(retries + 1)
-            #     return
+            # print(f">>> OpenAI response error: {type(Exception)}: {print(e)}")
+            
+            if retries <= 5 and type(Exception) is type:
+                
+                try:
+                    await self.msg.edit(content=f"`Error. Retrying...`")
+                except: pass
+                
+                await asyncio.sleep(2)
+                
+                try:
+                    await self.msg.edit(content=tunables('LOADING_EMOJI'))
+                except: pass
+                
+                await self.respond(retries + 1)
+                return
             await self.mm.user.increment_statistic('REPLY_TO_MENTION_OPENAI_REJECT')
             try:
                 await self.msg.edit(
