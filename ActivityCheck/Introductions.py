@@ -203,7 +203,7 @@ class IntroductionModal(discord.ui.Modal):
             label="3 things about you and how did you find us?",
             # placeholder="",
             min_length=0,
-            max_length=tunables('GREEN_BOOK_MAX_SEARCH_LENGTH'),
+            max_length=tunables('INTRODUCTIONS_MAX_OTHER_INFO'),
             required=True,
             default=None,
             style=discord.TextStyle.paragraph
