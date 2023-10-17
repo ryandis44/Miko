@@ -183,7 +183,7 @@ class IntroductionModal(discord.ui.Modal):
     
     pronouns = discord.ui.TextInput(
             label="Pronouns (leave blank for no preference):",
-            placeholder="Bitch/Ass",
+            placeholder="He/Him",
             min_length=1,
             max_length=10,
             default=None,
