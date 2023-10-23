@@ -79,6 +79,7 @@ class AsyncDatabase:
                 async with pool.acquire() as conn:
                     cursor = await conn.cursor()
                     await cursor.execute(exec_cmd)
+                    conn.close()
             except Exception as e:
                 if attempt < 5:
                     if os.getenv('DATABASE_DEBUG') != "1": await asyncio.sleep(5)
@@ -90,10 +91,12 @@ class AsyncDatabase:
         
         if exec_cmd.startswith("SELECT"):
             val = await cursor.fetchall()
+            await cursor.close()
             if len(val) == 1:
                 if len(val[0]) == 1:
                     return val[0][0]
             return val if val != () else [] # easier migration from old synchronous code
+        await cursor.close()
         return
     
     def exists(self, rows):
