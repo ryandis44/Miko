@@ -1442,7 +1442,8 @@ class MikoMessage():
         return False
     
     async def handle_bruh_react(self) -> None:
-        if (await self.channel.profile).feature_enabled('BRUH_REACT') != 1 or self.user.client.user.id != 1017998983886545068: return
+        if (await self.channel.profile).feature_enabled('BRUH_REACT') != 1 or self.user.client.user.id != 1017998983886545068\
+            and not self.user.user.bot: return
         for word in tunables('BRUH_REACT_WORDS').split():
             racist_regex =  rf".*\b{word}\b.*"
             if re.match(racist_regex, self.message.content.lower()) or word == self.message.content.lower():
