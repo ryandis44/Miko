@@ -174,6 +174,8 @@ class MikoGPT(discord.ui.View):
             "to this thread, just @ mention them and they will appear. They will be able to invite anyone else from "
             "this server once added. You and anyone else in this thread can leave it by right-clicking (or long pressing) "
             "on the thread in the channels side menu.\n\n"
+            "Additionally, if you would like to message in this thread without me reading the message and responding to it, "
+            "put an exclamation mark `!` at the beginning of your message and I will ignore it.\n\n"
             "Also, __**no need to @ mention me in this thread**__. I will respond to all messages that are not just an @ mention "
             "(for adding people to this thread)."
             "\n\n"
