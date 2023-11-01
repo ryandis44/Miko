@@ -431,7 +431,6 @@ class MikoGPT(discord.ui.View):
             )
             await self.mm.user.increment_statistic('REPLY_TO_MENTION_OPENAI')
         except Exception as e:
-            # print(f">>> OpenAI response error: {type(Exception)}: {print(e)}")
             
             if retries <= 5 and type(Exception) is type:
                 
@@ -470,26 +469,20 @@ class MikoGPT(discord.ui.View):
             - AND it has manage threads permission
             - AND FINALLY the user interacting with Miko is able to
             send messages in threads.
-            - OR if gpt_threads == "ALWAYS" and has permission
+            - OR if gpt_threads == "ALWAYS" and the above
+            is satisfied
         '''
         create = self.channel.permissions_for(self.channel.guild.me).create_private_threads
         manage = self.channel.permissions_for(self.channel.guild.me).manage_threads
         user_can_send_messages = self.channel.permissions_for(self.mm.message.author).send_messages_in_threads
-        # if self.ctype not in self.thread_types and (create and manage):# and len(self.chat) <= 2:
-        if self.ctype == discord.ChannelType.text and (create and manage and user_can_send_messages):# and len(self.chat) <= 2:
+        if self.ctype == discord.ChannelType.text and (create and manage and user_can_send_messages):
             if len(self.mm.message.content) > 90:
                 name = ' '.join(self.__remove_mention(self.mm.message.content.split()))
             else:
                 name = self.__remove_mention(self.mm.message.content.split())
                 if len(name) > 1: name = ' '.join(name)
                 else: name = ''.join(name)
-            
-            # self.thread = await self.mm.message.create_thread(
-            #     name=name,
-            #     auto_archive_duration=60,
-            #     slowmode_delay=tunables('CHATGPT_THREAD_SLOWMODE_DELAY'),
-            #     reason=f"User requested ChatGPT response"
-            # )
+                
             self.thread = await self.channel.create_thread(
                 name=name[0:90] if len(name) < 89 else name[0:90] + "...",
                 auto_archive_duration=60,
@@ -550,12 +543,5 @@ class MikoGPT(discord.ui.View):
             messages=self.chat
         )
         
-        # If ChatGPT response contains original prompt,
-        # put `` around that prompt.
-        # r = r"^.+(\n){2}(.|\n)*$"
         text = resp.choices[0].message.content
         self.response['data'] = text
-        # if re.match(r, text):
-        #     self.response['data'] = f"`{''.join(self.__remove_mention(self.mm.message.content))}`\n{text}"
-        
-        # else: self.response['data'] = text
