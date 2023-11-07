@@ -218,7 +218,6 @@ class MikoGPT(discord.ui.View):
             system_personality = {"role": "system", "content": self.response['personality']}
             user_current_content = {"role": "user", "content": mssg}
             cnt += self.__num_tokens_from_messages(messages=[system_personality, user_current_content])
-            cnt += 1
             
             self.chat.append(user_current_content)
             
@@ -269,7 +268,6 @@ class MikoGPT(discord.ui.View):
                     
                     
                 cnt += self.__num_tokens_from_messages(messages=[ct])
-                cnt += 1
                 if cnt >= tunables('CHATGPT_MAX_CONTEXT_LENGTH'): break 
                 self.chat.append(ct)
         
