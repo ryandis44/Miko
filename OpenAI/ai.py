@@ -53,7 +53,7 @@ class MikoGPT(discord.ui.View):
         self.response_extra_content = ""
         self.channel = mm.message.channel
         self.ctype = self.channel.type
-        self.model = "gpt-4-32k-0613"
+        self.model = "gpt-4-0613"
 
         self.msg: discord.Message = None
         self.response = {
@@ -562,7 +562,7 @@ class MikoGPT(discord.ui.View):
     
     def __openai_interaction(self) -> None:
         resp = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model=self.model,
             messages=self.chat
         )
         
