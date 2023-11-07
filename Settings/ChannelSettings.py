@@ -49,7 +49,7 @@ class ChatGPTThreads(Setting):
                 ),
                 discord.SelectOption(
                     label=f"Disabled",
-                    description=f"Create a thread for every response.",
+                    description=f"Always respond in this channel.",
                     value="DISABLED",
                     emoji="❌"
                 )

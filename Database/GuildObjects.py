@@ -1267,7 +1267,7 @@ class MikoMessage():
             await self.__exists()
     
     async def __cache_message(self) -> None:
-        if not tunables('MESSAGE_CACHING'): return
+        if not tunables('MESSAGE_CACHING') or self.message.content.startswith("!"): return
         
         m = await r.get(key=f"m:{self.message.id}", type="JSON")
         if m is None:

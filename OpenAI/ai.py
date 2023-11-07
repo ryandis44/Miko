@@ -53,7 +53,7 @@ class MikoGPT(discord.ui.View):
         self.response_extra_content = ""
         self.channel = mm.message.channel
         self.ctype = self.channel.type
-        self.model = "gpt-3.5-turbo"
+        self.model = "gpt-4-32k-0613"
 
         self.msg: discord.Message = None
         self.response = {
@@ -85,7 +85,7 @@ class MikoGPT(discord.ui.View):
     
     
     async def ainit(self) -> None:
-        if self.mm.message.author.bot: return
+        if self.mm.message.author.bot or self.mm.message.content.startswith("!"): return
         self.gpt_threads = await self.mm.channel.gpt_threads
         
         self.response['personality'] = await self.mm.channel.gpt_personality
@@ -174,6 +174,8 @@ class MikoGPT(discord.ui.View):
             "to this thread, just @ mention them and they will appear. They will be able to invite anyone else from "
             "this server once added. You and anyone else in this thread can leave it by right-clicking (or long pressing) "
             "on the thread in the channels side menu.\n\n"
+            "Additionally, if you would like to message in this thread without me reading the message and responding to it, "
+            "put an exclamation mark `!` at the beginning of your message and I will ignore it.\n\n"
             "Also, __**no need to @ mention me in this thread**__. I will respond to all messages that are not just an @ mention "
             "(for adding people to this thread)."
             "\n\n"
@@ -335,25 +337,46 @@ class MikoGPT(discord.ui.View):
                 msg.pop(i)
         return msg
     
+    
     def __num_tokens_from_messages(self, messages: list):
-        """Returns the number of tokens used by a list of messages."""
+        """Return the number of tokens used by a list of messages."""
         try:
             encoding = tiktoken.encoding_for_model(self.model)
         except KeyError:
+            print("Warning: model not found. Using cl100k_base encoding.")
             encoding = tiktoken.get_encoding("cl100k_base")
-        if self.model == "gpt-3.5-turbo":  # note: future models may deviate from this
-            num_tokens = 0
-            for message in messages:
-                num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
-                for key, value in message.items():
-                    num_tokens += len(encoding.encode(value))
-                    if key == "name":  # if there's a name, the role is omitted
-                        num_tokens += -1  # role is always required and always 1 token
-            num_tokens += 2  # every reply is primed with <im_start>assistant
-            return num_tokens
+        if self.model in {
+            "gpt-3.5-turbo-0613",
+            "gpt-3.5-turbo-16k-0613",
+            "gpt-4-0314",
+            "gpt-4-32k-0314",
+            "gpt-4-0613",
+            "gpt-4-32k-0613",
+            }:
+            tokens_per_message = 3
+            tokens_per_name = 1
+        elif self.model == "gpt-3.5-turbo-0301":
+            tokens_per_message = 4  # every message follows <|start|>{role/name}\n{content}<|end|>\n
+            tokens_per_name = -1  # if there's a name, the role is omitted
+        # elif "gpt-3.5-turbo" in self.model:
+        #     print("Warning: gpt-3.5-turbo may update over time. Returning num tokens assuming gpt-3.5-turbo-0613.")
+        #     return self.__num_tokens_from_messages(messages, model="gpt-3.5-turbo-0613")
+        # elif "gpt-4" in self.model:
+        #     print("Warning: gpt-4 may update over time. Returning num tokens assuming gpt-4-0613.")
+        #     return self.__num_tokens_from_messages(messages, model="gpt-4-0613")
         else:
-            raise NotImplementedError(f"""num_tokens_from_messages() is not presently implemented for model {self.model}.
-        See https://github.com/openai/openai-python/blob/main/chatml.md for information on how messages are converted to tokens.""")
+            raise NotImplementedError(
+                f"""num_tokens_from_messages() is not implemented for model {self.model}. See https://github.com/openai/openai-python/blob/main/chatml.md for information on how messages are converted to tokens."""
+            )
+        num_tokens = 0
+        for message in messages:
+            num_tokens += tokens_per_message
+            for key, value in message.items():
+                num_tokens += len(encoding.encode(value))
+                if key == "name":
+                    num_tokens += tokens_per_name
+        num_tokens += 3  # every reply is primed with <|start|>assistant<|message|>
+        return num_tokens
     
     
     async def respond(self, retries=0) -> None:
@@ -431,7 +454,6 @@ class MikoGPT(discord.ui.View):
             )
             await self.mm.user.increment_statistic('REPLY_TO_MENTION_OPENAI')
         except Exception as e:
-            # print(f">>> OpenAI response error: {type(Exception)}: {print(e)}")
             
             if retries <= 5 and type(Exception) is type:
                 
@@ -470,26 +492,20 @@ class MikoGPT(discord.ui.View):
             - AND it has manage threads permission
             - AND FINALLY the user interacting with Miko is able to
             send messages in threads.
-            - OR if gpt_threads == "ALWAYS" and has permission
+            - OR if gpt_threads == "ALWAYS" and the above
+            is satisfied
         '''
         create = self.channel.permissions_for(self.channel.guild.me).create_private_threads
         manage = self.channel.permissions_for(self.channel.guild.me).manage_threads
         user_can_send_messages = self.channel.permissions_for(self.mm.message.author).send_messages_in_threads
-        # if self.ctype not in self.thread_types and (create and manage):# and len(self.chat) <= 2:
-        if self.ctype == discord.ChannelType.text and (create and manage and user_can_send_messages):# and len(self.chat) <= 2:
+        if self.ctype == discord.ChannelType.text and (create and manage and user_can_send_messages):
             if len(self.mm.message.content) > 90:
                 name = ' '.join(self.__remove_mention(self.mm.message.content.split()))
             else:
                 name = self.__remove_mention(self.mm.message.content.split())
                 if len(name) > 1: name = ' '.join(name)
                 else: name = ''.join(name)
-            
-            # self.thread = await self.mm.message.create_thread(
-            #     name=name,
-            #     auto_archive_duration=60,
-            #     slowmode_delay=tunables('CHATGPT_THREAD_SLOWMODE_DELAY'),
-            #     reason=f"User requested ChatGPT response"
-            # )
+                
             self.thread = await self.channel.create_thread(
                 name=name[0:90] if len(name) < 89 else name[0:90] + "...",
                 auto_archive_duration=60,
@@ -540,7 +556,7 @@ class MikoGPT(discord.ui.View):
             name=f"Generated by {await self.mm.user.username}"
         )
         embed.set_footer(
-            text=f"{self.mm.channel.client.user.name} ChatGPT 3.5 Integration v1.0"
+            text=f"{self.mm.channel.client.user.name} ChatGPT 4.0 Integration v1.1"
         )
         return embed
     
@@ -550,12 +566,5 @@ class MikoGPT(discord.ui.View):
             messages=self.chat
         )
         
-        # If ChatGPT response contains original prompt,
-        # put `` around that prompt.
-        # r = r"^.+(\n){2}(.|\n)*$"
         text = resp.choices[0].message.content
         self.response['data'] = text
-        # if re.match(r, text):
-        #     self.response['data'] = f"`{''.join(self.__remove_mention(self.mm.message.content))}`\n{text}"
-        
-        # else: self.response['data'] = text
