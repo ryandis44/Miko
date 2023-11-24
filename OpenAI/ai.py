@@ -53,7 +53,7 @@ class MikoGPT(discord.ui.View):
         self.response_extra_content = ""
         self.channel = mm.message.channel
         self.ctype = self.channel.type
-        self.model = "gpt-4-0613"
+        self.model = tunables('CHATGPT_MODEL')
 
         self.msg: discord.Message = None
         self.response = {
