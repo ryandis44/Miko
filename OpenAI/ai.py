@@ -347,6 +347,7 @@ class MikoGPT(discord.ui.View):
             encoding = tiktoken.get_encoding("cl100k_base")
         if self.model in {
             "gpt-3.5-turbo-0613",
+            "gpt-3.5-turbo-1106",
             "gpt-3.5-turbo-16k-0613",
             "gpt-4-0314",
             "gpt-4-32k-0314",
