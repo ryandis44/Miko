@@ -108,7 +108,7 @@ class Slash(commands.Cog):
     @app_commands.describe(
         name='Name to set everyone to (leave blank to remove all nicknames and restore to previous state)'
     )
-    async def rna(self, interaction: discord.Interaction,
+    async def rn(self, interaction: discord.Interaction,
                   name: typing.Optional[str] = None):
         
         u = MikoMember(user=interaction.user, client=interaction.client)
