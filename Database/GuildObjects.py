@@ -1493,6 +1493,16 @@ class MikoMessage():
                 for emoji in sample_list:
                     await asyncio.sleep(0.5)
                     await self.message.add_reaction(emoji)
+    
+    async def handle_anita_max_wynn(self) -> None:
+        if self.channel.guild.id != 890638458211680256: return
+        
+        if "anita max wynn" in self.message.content.lower():
+            try:
+                await self.message.author.timeout(datetime.datetime.now().astimezone() + datetime.timedelta(minutes=1))
+                await self.channel.channel.send(content=f"Stfu {self.message.author.mention}")
+                await self.message.delete()
+            except: pass
 
 
 # Placed here due to circular import
