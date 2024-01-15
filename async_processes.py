@@ -4,8 +4,8 @@ import aiohttp
 import discord
 import threading
 from Database.ApplicationObjects import Application
-from Plex.background import end_of_week_int
-from Plex.embeds import plex_multi_embed, plex_upcoming
+from Plex.background import end_of_week_int, end_of_day_int
+from Plex.embeds import plex_multi_embed
 from Presence.GameActivity import GameActivity
 from Voice.VoiceActivity import VoiceActivity, VOICE_SESSIONS
 from Database.GuildObjects import MikoMember, CHECK_LOCK
@@ -97,15 +97,21 @@ async def heartbeat():
     num = 1
     while True:
         if num % 10 == 0:
-            try: await voice_heartbeat()
-            except Exception as e: print(f"some shit stopped working idk [voice heartbeat]: {e}")
+            # Depreciated
+            # try: await voice_heartbeat()
+            # except Exception as e: print(f"some shit stopped working idk [voice heartbeat]: {e}")
+            pass
             
         if num % 60 == 0:
-            try: await check_notify()
-            except Exception as e: print(f"Plex notify check failed, trying again in 60 seconds...: {e}")
+            # Depreciated
+            # try: await check_notify()
+            # except Exception as e: print(f"Plex notify check failed, trying again in 60 seconds...: {e}")
             
             try: await playtime_heartbeat()
             except Exception as e: print(f"Playtime heartbeat failed: {e}")
+            
+            try: await wordle_reminder()
+            except Exception as e: print(f"Wordle reminder failed: {e}")
 
         # Check if miko is still in guilds
         # if num % 3600 == 0:
@@ -117,6 +123,32 @@ async def heartbeat():
         await asyncio.sleep(1)
 
     
+async def wordle_reminder() -> None:
+    if client.user.id != 1017998983886545068: return
+    notify_time = await db.execute(
+        "SELECT value FROM PERSISTENT_VALUES WHERE variable='WORDLE_REMINDER_TIME'"
+    )
+    if notify_time is None or int(time.time()) >= notify_time:
+        await db.execute(
+            f"UPDATE PERSISTENT_VALUES set value='{end_of_day_int()}' "
+            "WHERE variable='WORDLE_REMINDER_TIME'"
+        )
+    
+    temp = []
+    temp.append(
+        "# IT'S TIME!!!!\n\n"
+        "https://wordlewebsite.com/"
+    )
+    
+    embed = discord.Embed(description=''.join(temp), color=0xFFB637)
+    embed.set_image(url=tunables('WORDLE_EMBED_IMAGE_URL'))
+    
+    ch_id = tunables('WORDLE_REMINDER_CHANNEL_ID')
+    ch = await client.fetch_channel(int(ch_id))
+    
+    role_id = tunables('WORDLE_ROLE_ID')
+    await ch.send(embed=embed, content=f"<@&{role_id}>")
+
 
 async def voice_heartbeat(): # For leveling and tokens. The boys hangout only
     global client

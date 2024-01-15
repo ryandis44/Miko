@@ -27,6 +27,13 @@ def end_of_week_int() -> int:
     val = datetime.strptime(end, "%Y-%m-%d")
     return int(val.timestamp())
 
+def end_of_day_int() -> int:
+    now = datetime.now()
+    next_day = now + timedelta(days=1)
+    # next_day = next_day.replace(tzinfo=timezone.utc)
+    next_day_midnight = next_day.replace(hour=0, minute=0, second=0, microsecond=0)
+    return int(next_day_midnight.timestamp())
+
 def utc_to_central(t) -> datetime:
 
     val = datetime.strptime(t, "%Y-%m-%dT%H:%M:%SZ")
