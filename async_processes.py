@@ -134,20 +134,20 @@ async def wordle_reminder() -> None:
             "WHERE variable='WORDLE_REMINDER_TIME'"
         )
     
-    temp = []
-    temp.append(
-        "# IT'S TIME!!!!\n\n"
-        "https://wordlewebsite.com/"
-    )
-    
-    embed = discord.Embed(description=''.join(temp), color=0xFFB637)
-    embed.set_image(url=tunables('WORDLE_EMBED_IMAGE_URL'))
-    
-    ch_id = tunables('WORDLE_REMINDER_CHANNEL_ID')
-    ch = await client.fetch_channel(int(ch_id))
-    
-    role_id = tunables('WORDLE_ROLE_ID')
-    await ch.send(embed=embed, content=f"<@&{role_id}>")
+        temp = []
+        temp.append(
+            "# IT'S TIME!!!!\n\n"
+            "https://wordlewebsite.com/"
+        )
+        
+        embed = discord.Embed(description=''.join(temp), color=0xFFB637)
+        embed.set_image(url=tunables('WORDLE_EMBED_IMAGE_URL'))
+        
+        ch_id = tunables('WORDLE_REMINDER_CHANNEL_ID')
+        ch = await client.fetch_channel(int(ch_id))
+        
+        role_id = tunables('WORDLE_ROLE_ID')
+        await ch.send(embed=embed, content=f"<@&{role_id}>")
 
 
 async def voice_heartbeat(): # For leveling and tokens. The boys hangout only
