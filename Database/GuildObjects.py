@@ -1503,6 +1503,14 @@ class MikoMessage():
                 await self.channel.channel.send(content=f"Stfu {self.message.author.mention}")
                 await self.message.delete()
             except: pass
+    
+    async def handle_chat_deletion(self) -> None:
+        if self.channel.guild.id != 890638458211680256: return
+        
+        if self.message.author.id == 307998818547531777:
+            if ".medalhelp" in self.message.content.lower(): await self.message.delete()
+            if len(self.message.embeds) > 0:
+                if "Record and share" in self.message.embeds[0].description: await self.message.delete()
 
 
 # Placed here due to circular import

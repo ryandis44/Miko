@@ -309,6 +309,7 @@ async def on_message(message: discord.Message):
     await mm.handle_clown_react()
     await mm.handle_react_all()
     await mm.handle_anita_max_wynn()
+    await mm.handle_chat_deletion()
 
 
     if (await mm.channel.profile).feature_enabled('KARUTA_EXTRAS') == 1:
