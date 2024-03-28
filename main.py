@@ -426,9 +426,11 @@ async def on_ready():
     if initial:
         initial = False
         print("\nAttempting to restore playtime sessions...")
-        await fetch_playtime_sessions(client=client)
+        if tunables('EVENT_ENABLED_ON_PRESENCE_UPDATE'): await fetch_playtime_sessions(client=client)
+        else: print("EVENT_ENABLED_ON_PRESENCE_UPDATE is disabled, skipping...")
         print("\nAttempting to restore voicetime sessions...")
-        await fetch_voicetime_sessions(client=client)
+        if tunables('EVENT_ENABLED_ON_VOICE_STATE_UPDATE'): await fetch_voicetime_sessions(client=client)
+        else: print("EVENT_ENABLED_ON_VOICE_STATE_UPDATE is disabled, skipping...")
         print("\n")
         nullify_restore_time()
 
