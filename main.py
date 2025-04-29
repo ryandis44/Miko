@@ -35,7 +35,7 @@ from Events.VoiceStateUpdate.Core import caller as on_voice_state_update_caller 
 Set up logger and load variables
 '''
 
-log_level = os.getenv('LOG_LEVEL')
+log_level = os.getenv('LOG_LEVEL', 20)
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.WARNING if log_level is None else int(log_level)) # default log level is WARNING
 handler = logging.FileHandler(filename='miko.log', encoding='utf-8', mode='w')
