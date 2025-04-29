@@ -176,3 +176,17 @@ def emojis_1to10(i):
             "<:15:1249771558688526499>", # 15
         ]
     return emojis[i]
+
+
+
+def replace_line_in_string(original_string, search_criteria, new_line):
+    # Split the original string into lines
+    lines = original_string.split('\n')
+    
+    # Iterate through lines and replace the matching line
+    for i in range(len(lines)):
+        if search_criteria in lines[i]:  # Check if search criteria is in the line
+            lines[i] = new_line  # Replace the entire line
+
+    # Join the modified lines back into a single string
+    return '\n'.join(lines)
