@@ -44,8 +44,8 @@ class PterodactylCog(commands.Cog):
         
         match do.value:
             
-            case 'startall': await ptero.signal_all(signal='start')
-            case 'stopall': await ptero.signal_all(signal='stop')
+            case 'startall': await ptero.signal_server(signal='start', server_ids=mc.tunables('KGB_SERVER_IDS'))
+            case 'stopall': await ptero.signal_server(signal='stop', server_ids=mc.tunables('KGB_SERVER_IDS'))
         
 
 
@@ -60,7 +60,7 @@ class PterodactylCog(commands.Cog):
             return False
         
         if str(interaction.user.id) not in mc.tunables('PTERODACTYL_ADMIN_IDS').splitlines():
-            await interaction.response.send_message(content=mc.tunables('PTERODACTYL_NOT_AUTHORIZED'), ephemeral=False, silent=True)
+            await interaction.response.send_message(content=mc.tunables('PTERODACTYL_NOT_AUTHORIZED'), ephemeral=True, silent=True)
             return False
 
         await interaction.response.send_message(content=f"{mc.tunables('LOADING_EMOJI')}", ephemeral=False, silent=True)
