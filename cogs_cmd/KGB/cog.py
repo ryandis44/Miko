@@ -27,12 +27,12 @@ class KGBCog(commands.Cog):
 
 
 
-    start = app_commands.Group(name="startkgb", description="Start KGB Servers", guild_ids=GUILD_IDS)
-    stop = app_commands.Group(name="stopkgb", description="Stop KGB Servers", guild_ids=GUILD_IDS)
+    start = app_commands.Group(name="startkgb", description="Start KGB Containers", guild_ids=GUILD_IDS)
+    stop = app_commands.Group(name="stopkgb", description="Stop KGB Containers", guild_ids=GUILD_IDS)
 
 
 
-    @start.command(name="all", description=f"Start all KGB servers")
+    @start.command(name="all", description=f"Start all KGB containers")
     @app_commands.guild_only
     async def kgb_startall(self, interaction: discord.Interaction):
 
@@ -42,7 +42,7 @@ class KGBCog(commands.Cog):
 
 
 
-    @stop.command(name="all", description=f"Stop all KGB servers")
+    @stop.command(name="all", description=f"Stop all KGB containers")
     @app_commands.guild_only
     async def kgb_stopall(self, interaction: discord.Interaction):
 
@@ -52,7 +52,7 @@ class KGBCog(commands.Cog):
 
 
 
-    @start.command(name="server", description=f"Start a KGB server by name")
+    @start.command(name="container", description=f"Start a KGB container by name")
     @app_commands.guild_only
     async def kgb_start(self, interaction: discord.Interaction, name: str):
 
@@ -69,7 +69,7 @@ class KGBCog(commands.Cog):
 
 
 
-    @stop.command(name="server", description=f"Stop a KGB server by name")
+    @stop.command(name="container", description=f"Stop a KGB container by name")
     @app_commands.guild_only
     async def kgb_stop(self, interaction: discord.Interaction, name: str):
 
