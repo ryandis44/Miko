@@ -11,6 +11,7 @@ from Database.MikoCore import MikoCore
 from discord.ext.commands import Bot
 from Events.Message.BigEmojis import big_emojis
 from Events.Message.BruhReact import bruh_react
+from Events.Message.KarutaOps import karuta_ops
 from Events.Message.MusicPlayerReposition import reposition_music_player
 from Events.Message.ReplyToMention import reply_to_mention
 from GenerativeAI.Core import GenerativeAI
@@ -39,6 +40,9 @@ async def caller(message: discord.Message, client: Bot) -> None:
     
     try: await bruh_react(mc) # BRUH_REACT_WORDS in tunables
     except Exception as e: LOGGER.error(f"Error in bruh_react: {e}")
+    
+    try: await karuta_ops(mc) # miscellaneous karuta operations
+    except Exception as e: LOGGER.error(f"Error in karuta_ops: {e}")
     
     try: await GenerativeAI(mc).ainit() # generative AI
     except Exception as e: LOGGER.error(f"Error in GenerativeAI: {e}")
