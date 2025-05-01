@@ -63,9 +63,9 @@ class GenerativeAI(discord.ui.View):
     async def ainit(self) -> None:
         
         # Do not run any of this code if AI is disabled
-        if self.mc.channel.ai_mode == "DISABLED": return
+        if self.mc.channel.channel_settings['ai_mode'] == "DISABLED": return
         
-        try: self.ai_mode = self.mc.tunables(f'GENERATIVE_AI_MODE_{self.mc.channel.ai_mode}')
+        try: self.ai_mode = self.mc.tunables(f'GENERATIVE_AI_MODE_{self.mc.channel.channel_settings['ai_mode']}')
         except:
             await self.mc.channel.set_ai_mode(mode="DISABLED")
             return

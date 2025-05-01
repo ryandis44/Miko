@@ -20,5 +20,5 @@ async def caller(payload: discord.RawMessageUpdateEvent, client: Bot) -> None:
         await mc.channel_ainit(ch, client)
         await mc.guild_ainit(ch.guild, client)
         
-        if mc.channel.ai_mode != "DISABLED" and mc.profile.feature_enabled("AI_MODE"):
+        if mc.channel.channel_settings['ai_mode'] != "DISABLED" and mc.profile.feature_enabled("AI_MODE"):
             await mc.message.edit_cached_message(payload)
