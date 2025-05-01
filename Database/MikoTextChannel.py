@@ -20,6 +20,11 @@ class MikoTextChannel:
     def __init__(self) -> None:
         self.channel: discord.TextChannel|discord.Thread = None
         self.thread: discord.Thread = None
+        self.channel_settings: dict = {
+            'ai_mode': None,
+            'ai_threads': None,
+            'karuta_ops': None,
+        }
     
     
     
@@ -50,8 +55,10 @@ class MikoTextChannel:
         
         else: await self.__update_database(__rawchannel)
         
+        
+        __cols = [col for col, value in self.channel_settings.items()]
         __db_string = (
-            "SELECT ai_mode,ai_threads "
+            f"SELECT `{'`, `'.join(__cols)}` "
             f"FROM CHANNEL_SETTINGS WHERE channel_id='{self.channel.id}'"
         )
         __rawchannel_settings = await db.execute(__db_string)
@@ -63,8 +70,9 @@ class MikoTextChannel:
             LOGGER.info(f"Added {self.channel.name} settings in guild {self.channel.guild} to database")
             __rawchannel_settings = await db.execute(__db_string)
         
-        self.ai_mode = __rawchannel_settings[0][0]
-        self.ai_threads = __rawchannel_settings[0][1]
+        # unpack values from the database and assign them
+        for i, col in enumerate(__cols):
+            self.channel_settings[col] = __rawchannel_settings[0][i]
     
     
     
@@ -81,15 +89,6 @@ class MikoTextChannel:
 
 
 ###########################################################################################################################
-
-
-
-    @property
-    def channel_settings(self) -> dict:
-        return {
-            'ai_mode': self.ai_mode,
-            'ai_threads': self.ai_threads
-        }
     
     
     
