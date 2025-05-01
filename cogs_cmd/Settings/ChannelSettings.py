@@ -83,7 +83,7 @@ class KarutaOps(Setting):
                     1,
                     discord.SelectOption(
                         label=f"Enabled: ALL",
-                        description=f"Delete all Karuta commands.",
+                        description=f"Delete all Karuta commands. Regex: `^k.*$`",
                         value="ALL",
                         emoji="🟢"
                     )
@@ -92,7 +92,7 @@ class KarutaOps(Setting):
                     1,
                     discord.SelectOption(
                         label=f"Enabled: Visual commands",
-                        description=f"Delete kv, ka",
+                        description="Delete specific Karuta commands. Regex: `^k{cmd}.*$`",
                         value="VISUAL",
                         emoji="🖼️"
                     )

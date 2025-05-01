@@ -15,13 +15,12 @@ async def karuta_ops(mc: MikoCore) -> None:
     match mc.channel.channel_settings['karuta_ops']:
         case 'ALL':
             
-            if re.match(r"^k\w+(\s+\w+)?$", mc.message.message.content.lower()):
+            if re.match(r"^k.*$", mc.message.message.content.lower()):
                 await mc.message.message.delete()
                 return
             
         case 'VISUAL':
             for command in mc.tunables('KARUTA_COMMANDS_TO_DELETE').split(','):
-                react_regex =  rf"^k{command}(\s+\w+)?$"
-                if re.match(react_regex, mc.message.message.content.lower()) or command == mc.message.message.content.lower():
+                if re.match(rf"^k{command}.*$", mc.message.message.content.lower()) or command == mc.message.message.content.lower():
                     await mc.message.message.delete()
                     break
