@@ -97,4 +97,4 @@ class MikoTextChannel:
         await db.execute(
             f"UPDATE CHANNEL_SETTINGS SET ai_mode='{mode}' WHERE channel_id='{self.channel.id}'"
         )
-        self.ai_mode = mode
+        self.channel_settings['ai_mode'] = mode

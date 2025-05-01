@@ -214,7 +214,7 @@ class GenerativeAI(discord.ui.View):
             - If the response is 750 characters or more, create thread
         '''
         resp_len = len(self.text_response)
-        if ((resp_len >= self.mc.tunables('GENERATIVE_AI_SEND_EMBED_THRESHOLD') and resp_len <= (self.mc.tunables('GLOBAL_MAX_MESSAGE_LENGTH') - 1)) or self.mc.channel.ai_threads == "ALWAYS"):
+        if ((resp_len >= self.mc.tunables('GENERATIVE_AI_SEND_EMBED_THRESHOLD') and resp_len <= (self.mc.tunables('GLOBAL_MAX_MESSAGE_LENGTH') - 1)) or self.mc.channel.channel_settings['ai_threads'] == "ALWAYS"):
             embed = self.__embed()
             thread_content = (
                 self.__thread_info() +
@@ -274,7 +274,7 @@ class GenerativeAI(discord.ui.View):
 
 
     async def __create_thread(self, content: str, embed: discord.Embed, attachments) -> bool:
-        if self.mc.channel.ai_threads == "DISABLED" or (self.msg is not None and self.msg.channel.type in self.mc.threads): return False
+        if self.mc.channel.channel_settings['ai_threads'] == "DISABLED" or (self.msg is not None and self.msg.channel.type in self.mc.threads): return False
         if self.mc.profile.feature_enabled('AI_THREADS') != 1: return False
         
         '''
