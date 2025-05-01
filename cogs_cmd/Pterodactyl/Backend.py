@@ -128,7 +128,7 @@ class PterodactylActions:
             for server_id in server_ids:
                 await self.__signals(session, server_id=server_id, signal=signal)
                 await self.__update_message()
-                await asyncio.sleep(10)
+                if signal == 'start': await asyncio.sleep(10)
             await self.__update_message(force=True)
 
 
