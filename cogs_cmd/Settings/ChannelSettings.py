@@ -8,6 +8,7 @@ def all_channel_settings(mc) -> list:
     return [
         TextAI(mc),
         TextAIThreads(mc),
+        KarutaOps(mc)
     ]
     
     
@@ -17,7 +18,7 @@ class TextAI(Setting):
         super().__init__(
             mc=mc,
             name = "Generative Text AI Integration",
-            desc = "Choose to enable Generative Text AI Integration and what personality to use",
+            desc = "Choose to enable Generative Text AI Integration and what personality to use.",
             emoji = "🌐",
             table = "CHANNEL_SETTINGS",
             col = "ai_mode",
@@ -58,6 +59,49 @@ class TextAIThreads(Setting):
                     discord.SelectOption(
                         label=f"Disabled",
                         description=f"Always respond in this channel.",
+                        value="DISABLED",
+                        emoji="❌"
+                    )
+                ]
+            ]
+        )
+
+
+
+class KarutaOps(Setting):
+
+    def __init__(self, mc):
+        super().__init__(
+            mc=mc,
+            name = "Karuta Ops",
+            desc = "Delete specific or all Karuta commands for better readability.",
+            emoji = "🃏",
+            table = "CHANNEL_SETTINGS",
+            col = "karuta_ops",
+            options=[
+                [
+                    1,
+                    discord.SelectOption(
+                        label=f"Enabled: ALL",
+                        description=f"Delete all Karuta commands.",
+                        value="ALL",
+                        emoji="🟢"
+                    )
+                ],
+                [
+                    1,
+                    discord.SelectOption(
+                        label=f"Enabled: Visual commands",
+                        description=f"Delete kv, ka",
+                        value="VISUAL",
+                        emoji="🖼️"
+                    )
+                ],
+                [
+                    0,
+                    discord.SelectOption(
+                        label=f"Disabled",
+                        description=f"Do not delete any Karuta commands.",
                         value="DISABLED",
                         emoji="❌"
                     )
