@@ -20,7 +20,7 @@ from Database.MikoCore import MikoCore
 from Database.Redis import RedisCache
 from GenerativeAI.CachedObjects import CachedMessage
 from GenerativeAI.OpenAI.ChatGPT import ChatGPT
-from io import BytesIO # for message.txt
+from io import BytesIO # for message.md
 from json import loads # for loading redis data
 LOGGER = logging.getLogger()
 r = RedisCache(__file__)
@@ -239,9 +239,9 @@ class GenerativeAI(discord.ui.View):
 
         elif resp_len >= self.mc.tunables('GLOBAL_MAX_MESSAGE_LENGTH'):
             b = bytes(self.text_response, 'utf-8')
-            attachments = [discord.File(BytesIO(b), "message.txt")]
+            attachments = [discord.File(BytesIO(b), "message.md")]
             
-            # Create thread with message.txt and info
+            # Create thread with message.md and info
             if await self.__create_thread(
                 content=(
                     self.__thread_info() + self.mc.tunables('GENERATIVE_AI_MESSAGE_TOO_LONG_MSG')
@@ -250,7 +250,7 @@ class GenerativeAI(discord.ui.View):
                 attachments=attachments
             ): return
             
-            # Send message with message.txt and info
+            # Send message with message.md and info
             await self.msg.edit(
                 content=(self.mc.tunables('GENERATIVE_AI_MESSAGE_TOO_LONG_MSG')),
                 attachments=attachments,
