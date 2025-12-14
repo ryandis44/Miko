@@ -8,9 +8,11 @@ import discord
 import logging
 
 from Database.MySQL import AsyncDatabase
+from Database.Redis import RedisCache
 from discord.ext.commands import Bot
 from misc.misc import sanitize_name
 db = AsyncDatabase(__file__)
+r = RedisCache(__file__)
 LOGGER = logging.getLogger()
 
 
@@ -142,9 +144,42 @@ class MikoGuild:
     
     
     
+    @property
+    async def guild_messages(self) -> int:
+        count = await r.get(key=f"msg_count:{self.guild.id}", type="STRING")
+        if count is None: return 0
+        return int(count)
+    
+    
+    
+    @property
+    async def rename_hell_members(self) -> list:
+        val = await db.execute(
+            "SELECT user_id FROM USERS WHERE rename_hell=\"TRUE\""
+        )
+        return [item[0] for item in val] if type(val) is tuple else [val] if val != [] else []
+    
+    
+    
     async def set_role_assign(self, role_id: int = None) -> None:
         if role_id is not None: __str = f"role_assign='{role_id}'"
         else: __str = "role_assign=NULL"
         await db.execute(
             f"UPDATE GUILD_SETTINGS SET {__str} WHERE guild_id='{self.guild.id}'"
         )
+    
+    
+    
+    async def remove_user_from_rename_hell(self, user_id: str) -> None:
+        await db.execute(
+            "UPDATE USER_SETTINGS SET rename_hell='FALSE' WHERE "
+            f"user_id='{user_id}'"
+        )
+    
+    
+    
+    async def increment_message_count(self) -> None:
+        count = await r.get(key=f"msg_count:{self.guild.id}", type="STRING") # get it
+        if count is None: count = "0" # handle non existing
+        count = str(int(count) + 1) # increment it
+        await r.set(key=f"msg_count:{self.guild.id}", value=count, type="STRING") # save it
