@@ -155,7 +155,7 @@ class MikoGuild:
     @property
     async def rename_hell_members(self) -> list:
         val = await db.execute(
-            "SELECT user_id FROM USERS WHERE rename_hell=\"TRUE\""
+            "SELECT user_id FROM USER_SETTINGS WHERE rename_hell=\"TRUE\""
         )
         return [item[0] for item in val] if type(val) is tuple else [val] if val != [] else []
     
