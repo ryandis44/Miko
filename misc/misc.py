@@ -108,7 +108,7 @@ def time_elapsed(seconds, format):
             
 
 def generate_nickname(message: discord.Message):
-    if message.content == "": return f"{message.author.name}"
+    if message.content == "": return f"i <3 {message.author.name}'s cock 😩"
     letters = 0
     for word in message.content.split():
         letters += len(word)
